@@ -49,6 +49,8 @@ async function main(): Promise<void> {
   const app = document.getElementById("app");
   const ui = document.getElementById("ui");
   if (!app || !ui) throw new Error("index.html is missing #app / #ui");
+  // #app is a fixed full-screen layer; until it holds a canvas it would swallow clicks on the start page / error cards.
+  app.hidden = true;
 
   const q = new URLSearchParams(window.location.search);
   const sceneName = q.get("scene");
@@ -80,9 +82,11 @@ async function main(): Promise<void> {
 
   let viewer: Viewer;
   try {
+    app.hidden = false;
     viewer = new Viewer(app, config, device);
   } catch (err) {
     // Typically: WebGL2 unavailable.
+    app.hidden = true;
     showMessage(ui, { title: "Renderer failed to start", lines: [(err as Error).message], error: true });
     return;
   }
