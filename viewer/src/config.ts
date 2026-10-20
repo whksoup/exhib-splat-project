@@ -7,6 +7,12 @@
  * Phase 4 (WebXR) with an `xr` block. Unknown keys are ignored here.
  */
 import type { DeviceProfileId } from "./device";
+import {
+  navStartsFirstPerson,
+  resolveNavigationConfig,
+  type NavigationConfig,
+  type NavigationConfigFile,
+} from "./nav/navConfig";
 
 export type Vec3 = [number, number, number];
 
@@ -28,7 +34,8 @@ export interface CameraSpec {
   fov?: number;
 }
 
-export type ControlsMode = "orbit" | "fly";
+/** "walk" = first-person collision navigation (src/nav/); "fly" = Spark debug fly (no collision). */
+export type ControlsMode = "orbit" | "fly" | "walk";
 
 export interface ViewerConfig {
   models: ModelSpec[];
@@ -48,6 +55,8 @@ export interface ViewerConfig {
   /** SparkRenderer.pagedExtSplats (paged) / SplatMesh.extSplats (plain files). */
   extSplats?: boolean;
   controls: ControlsMode;
+  /** First-person collision navigation (src/nav/navConfig.ts). */
+  navigation: NavigationConfig;
   overlay: boolean;
   /** How long Spark must stay idle before LoD counts as "settled". */
   settleWindowMs: number;
@@ -56,7 +65,8 @@ export interface ViewerConfig {
 }
 
 /** Shape of the optional JSON file. Everything optional; URL params override. */
-export interface ViewerConfigFile extends Partial<Omit<ViewerConfig, "models">> {
+export interface ViewerConfigFile extends Partial<Omit<ViewerConfig, "models" | "navigation">> {
+  navigation?: NavigationConfigFile;
   models?: (ModelSpec | string)[];
   model?: string;
 }
@@ -153,7 +163,11 @@ export async function loadConfig(search = window.location.search): Promise<Viewe
   const device = deviceParam && DEVICE_IDS.includes(deviceParam) ? deviceParam : file.device;
   const controlsParam = q.get("controls");
   const controls: ControlsMode =
-    controlsParam === "fly" || controlsParam === "orbit" ? controlsParam : (file.controls ?? "orbit");
+    controlsParam === "fly" || controlsParam === "orbit" || controlsParam === "walk"
+      ? controlsParam
+      : q.get("nav") === "walk" || q.get("nav") === "fly"
+        ? "walk"
+        : (file.controls ?? (navStartsFirstPerson(file.navigation, q) ? "walk" : "orbit"));
 
   return {
     models,
@@ -166,6 +180,7 @@ export async function loadConfig(search = window.location.search): Promise<Viewe
     lodRenderScale: num(q.get("lodRenderScale")) ?? file.lodRenderScale,
     extSplats: bool(q.get("extSplats")) ?? file.extSplats,
     controls,
+    navigation: resolveNavigationConfig(file.navigation, q),
     overlay: bool(q.get("overlay")) ?? file.overlay ?? true,
     settleWindowMs: num(q.get("settleMs")) ?? file.settleWindowMs ?? 1500,
     configUrl,

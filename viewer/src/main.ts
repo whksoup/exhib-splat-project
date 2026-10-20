@@ -1,7 +1,9 @@
 import "./style.css";
 import { loadConfig } from "./config";
 import { resolveDevice } from "./device";
+import { attachNavigation } from "./nav";
 import { appendModelPicker, Overlay, showMessage } from "./overlay";
+import { PlanMode } from "./plan/planMode";
 import { Viewer } from "./viewer";
 
 async function main(): Promise<void> {
@@ -31,7 +33,12 @@ async function main(): Promise<void> {
   (window as unknown as { viewer: Viewer }).viewer = viewer;
 
   new Overlay(ui, viewer);
+  attachNavigation(viewer, ui);
+  // Plan mode + plan export (M key / "Plan" button); exposed for console use.
+  (window as unknown as { plan: PlanMode }).plan = new PlanMode(ui, viewer);
 
+  // No model is fine when starting in first-person (navigation testing, e.g. configs/nav-test.json).
+  if (config.models.length === 0 && config.controls === "walk") return;
   if (config.models.length === 0) {
     const card = showMessage(ui, {
       title: "No model specified",

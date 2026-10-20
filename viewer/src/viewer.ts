@@ -46,6 +46,8 @@ export class Viewer {
   readonly models: LoadedModel[] = [];
   readonly errors: string[] = [];
   readonly onFrame: FrameHook[] = [];
+  /** When set, the render loop draws with this camera instead of `camera` (plan mode, plan capture). */
+  renderCamera: THREE.Camera | null = null;
   /** Effective pixel ratio after caps/overrides. */
   readonly pixelRatio: number;
 
@@ -117,6 +119,7 @@ export class Viewer {
   }
 
   resetView(): void {
+    if (this.rig.resetWalk()) return; // first-person: back to the nav spawn point
     if (this.startPose) this.rig.setPose(this.startPose.position, this.startPose.target);
   }
 
@@ -219,7 +222,7 @@ export class Viewer {
     if (this.cameraMoved()) this.timeline.markInteraction(now);
     for (const hook of this.onFrame) hook({ dtMs, now, viewer: this });
 
-    this.renderer.render(this.scene, this.camera);
+    this.renderer.render(this.scene, this.renderCamera ?? this.camera);
     this.timeline.update(now, this.spark.activeSplats, this.isLodIdle());
   }
 

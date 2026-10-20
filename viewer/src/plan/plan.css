@@ -1,0 +1,131 @@
+/* Plan mode UI (src/plan/planMode.ts). */
+
+.plan-surface {
+  position: absolute;
+  inset: 0;
+  cursor: grab;
+  touch-action: none;
+}
+
+.plan-surface:active {
+  cursor: grabbing;
+}
+
+.plan-toggle {
+  position: absolute;
+  right: calc(8px + env(safe-area-inset-right, 0px));
+  bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+}
+
+.plan-toggle.on {
+  background: #3b5bdb;
+  border-color: #5c7cfa;
+}
+
+.plan-panel {
+  position: absolute;
+  top: calc(8px + env(safe-area-inset-top, 0px));
+  right: calc(8px + env(safe-area-inset-right, 0px));
+  width: min(340px, calc(100vw - 32px));
+  max-height: calc(100vh - 64px);
+  overflow: auto;
+  box-sizing: border-box;
+  background: rgba(10, 11, 14, 0.86);
+  border: 1px solid #33363d;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 12px;
+  backdrop-filter: blur(4px);
+}
+
+.plan-panel.dim {
+  opacity: 0.45;
+}
+
+.plan-panel.busy .plan-row,
+.plan-panel.busy select {
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.plan-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.plan-sub {
+  margin: 8px 0 3px;
+  color: #a9adb8;
+}
+
+.plan-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin: 3px 0;
+}
+
+.plan-row input[type="number"] {
+  width: 72px;
+}
+
+.plan-row input[type="text"] {
+  width: 96px;
+}
+
+.plan-row input[type="range"] {
+  flex: 1;
+  min-width: 60px;
+}
+
+.plan-panel input[type="number"],
+.plan-panel input[type="text"],
+.plan-panel select {
+  font: inherit;
+  color: #e8e8ea;
+  background: #17181d;
+  border: 1px solid #44474f;
+  border-radius: 3px;
+  padding: 2px 4px;
+}
+
+.plan-panel select {
+  max-width: 100%;
+}
+
+.plan-primary {
+  background: #2f4b9c;
+  border-color: #4c6fd6;
+}
+
+.plan-note {
+  margin: 4px 0;
+  color: #a9adb8;
+}
+
+.plan-note.bad,
+.plan-status.bad {
+  color: #ff8a8a;
+}
+
+.plan-status {
+  margin-top: 6px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  font: 11px/1.4 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+.plan-hint {
+  position: absolute;
+  top: calc(8px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  background: #2f4b9c;
+  border: 1px solid #4c6fd6;
+  border-radius: 4px;
+  padding: 6px 12px;
+  max-width: calc(100vw - 32px);
+}

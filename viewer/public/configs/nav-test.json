@@ -1,0 +1,22 @@
+{
+  "models": [],
+  "controls": "walk",
+  "overlay": false,
+  "navigation": {
+    "collision": "examples/nav-test-room.glb",
+    "mode": "walk",
+    "allowFly": false,
+    "allowJump": false,
+    "eyeHeight": 1.6,
+    "radius": 0.3,
+    "height": 1.8,
+    "stepHeight": 0.35,
+    "maxSlopeDeg": 45,
+    "walkSpeed": 1.6,
+    "runSpeed": 3.6,
+    "flySpeed": 3,
+    "fallbackFloorY": 0,
+    "spawn": { "position": [0, 1.6, 0], "yaw": 0, "pitch": 0 },
+    "debug": true
+  }
+}

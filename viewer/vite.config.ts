@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 import { modelFilesPlugin } from "./dev-server/modelFiles.ts";
+import { planExportPlugin } from "./dev-server/planExport.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, "..");
@@ -21,9 +22,13 @@ export default defineConfig({
       mounts: [
         { prefix: "/models/", dir: path.join(repoRoot, "assets", "rad_output") },
         { prefix: "/source/", dir: path.join(repoRoot, "assets", "source_ply") },
+        // Collision GLBs (and plan exports) for navigation: /nav/<model>/<file>.glb
+        { prefix: "/nav/", dir: path.join(repoRoot, "assets", "nav") },
       ],
       reportsDir: path.join(repoRoot, "reports", "raw"),
     }),
+    // Plan export (src/plan/): POST /__plan-export writes into assets/nav/<model>/ only.
+    planExportPlugin({ navDir: path.join(repoRoot, "assets", "nav"), repoRoot }),
   ],
   server: {
     host: true, // listen on 0.0.0.0 so phones / Quest on the LAN can connect

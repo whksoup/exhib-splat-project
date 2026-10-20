@@ -34,6 +34,11 @@ const CONTENT_TYPES: Record<string, string> = {
   ".zip": "application/zip",
   ".json": "application/json",
   ".webp": "image/webp",
+  // Navigation assets (/nav/): collision meshes, plan images.
+  ".glb": "model/gltf-binary",
+  ".gltf": "model/gltf+json",
+  ".bin": "application/octet-stream",
+  ".png": "image/png",
 };
 
 /** Files that can be opened directly as a model (chunk files are excluded). */

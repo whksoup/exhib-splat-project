@@ -14,10 +14,22 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { SparkControls } from "@sparkjsdev/spark";
 import type { ControlsMode } from "./config";
 
+/**
+ * First-person "walk" mode (collision navigation, src/nav/). Attached after
+ * construction with attachWalk(); until then "walk" just freezes the camera.
+ */
+export interface WalkModeController {
+  setActive(active: boolean): void;
+  update(camera: THREE.PerspectiveCamera): void;
+  /** Back to the spawn point ("Reset view" / V). */
+  reset(): void;
+}
+
 export class CameraRig {
   private readonly orbit: OrbitControls;
   private readonly fly: SparkControls;
   private _mode: ControlsMode;
+  private walk: WalkModeController | null = null;
 
   constructor(
     private readonly camera: THREE.PerspectiveCamera,
@@ -52,16 +64,33 @@ export class CameraRig {
     this.applyMode();
   }
 
+  /** Cycle orbit -> fly -> walk (when a walk controller is attached) -> orbit. */
   toggleMode(): ControlsMode {
-    this.setMode(this._mode === "orbit" ? "fly" : "orbit");
+    const next: ControlsMode =
+      this._mode === "orbit" ? "fly" : this._mode === "fly" && this.walk ? "walk" : "orbit";
+    this.setMode(next);
     return this._mode;
+  }
+
+  attachWalk(walk: WalkModeController): void {
+    this.walk = walk;
+    this.applyMode();
+  }
+
+  /** In walk mode, send the player back to spawn. Returns false in other modes. */
+  resetWalk(): boolean {
+    if (this._mode !== "walk" || !this.walk) return false;
+    this.walk.reset();
+    return true;
   }
 
   private applyMode(): void {
     const orbit = this._mode === "orbit";
+    const fly = this._mode === "fly";
     this.orbit.enabled = orbit;
-    this.fly.fpsMovement.enable = !orbit;
-    this.fly.pointerControls.enable = !orbit;
+    this.fly.fpsMovement.enable = fly;
+    this.fly.pointerControls.enable = fly;
+    this.walk?.setActive(this._mode === "walk");
     if (orbit) this.orbit.update();
   }
 
@@ -78,6 +107,7 @@ export class CameraRig {
 
   update(): void {
     if (this._mode === "orbit") this.orbit.update();
+    else if (this._mode === "walk") this.walk?.update(this.camera);
     else this.fly.update(this.camera);
   }
 }
