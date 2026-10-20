@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.vite/
+*.log
+.env
+.env.*
+
+# Large binary assets stay out of git
+assets/source_ply/*
+assets/rad_output/*
+!assets/source_ply/.gitkeep
+!assets/rad_output/.gitkeep
+*.ply
+*.sog
+*.spz
+*.rad
+*.radc
