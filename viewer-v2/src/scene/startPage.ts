@@ -6,6 +6,7 @@ import { isValidSceneName } from "../../../shared/scene-schema.mjs";
 import { appendModelPicker } from "../overlay";
 import { dialog, el, fmtBytes, fmtCount, fmtTime, toast } from "../ui/dom";
 import { api, type SceneListEntry } from "./api";
+import { sourcePicker } from "./partsPanel";
 
 const sceneHref = (name: string) => `?${new URLSearchParams({ scene: name })}`;
 
@@ -107,9 +108,11 @@ export class StartPage {
     }
     const flags: HTMLElement[] = [];
     const flag = (text: string, cls: string, title = "") => flags.push(el("span", { className: `flag ${cls}`, textContent: text, title }));
+    const sum = s.summary;
     if (s.building) flag("building…", "run");
-    if (s.built) flag("built", "ok");
-    else flag("not built", "warn", "Opens a plain preview of the source; build to stream it with LoD");
+    if (s.built && (!sum || sum.complete)) flag("built", "ok");
+    else if (s.built && sum) flag(`built ${sum.built}/${sum.enabled} parts`, "warn", "Build to finish the other parts (built parts are reused)");
+    else flag("not built", "warn", "Opens a plain preview of the source (if small enough); build to stream it with LoD");
     if (s.buildAttempt?.status === "failed") flag("last build failed", "bad", s.buildAttempt.error ?? "");
     if (s.transformChanged) flag("transform changed since build", "warn", "Build to apply the new alignment");
     if (s.navWarning) flag("nav may be misaligned", "bad", "Navigation assets were authored for a different transform");
@@ -117,14 +120,18 @@ export class StartPage {
 
     const attempt = s.buildAttempt;
     const lastBuild = s.build
-      ? `${fmtTime(s.build.finishedAt)}${s.build.wallClockSeconds ? ` (${Math.round(s.build.wallClockSeconds)} s)` : ""}`
+      ? `${fmtTime(s.build.finishedAt)}${s.build.wallClockSeconds ? ` (${Math.round(s.build.wallClockSeconds)} s${s.build.peakMemoryBytes ? `, peak ${fmtBytes(s.build.peakMemoryBytes)}` : ""})` : ""}`
       : "never";
+    const parts = s.parts ?? [];
+    const sourceText = parts.length > 1
+      ? `${parts.length} parts: ${parts.map((p) => p.id + (p.enabled ? "" : " (off)")).join(", ")}`
+      : (s.source ?? "—");
     return el("div", { className: "scene-card" }, [
       el("h2", {}, [el("a", { href: sceneHref(s.name), textContent: s.name })]),
       el("div", { className: "flags" }, flags),
       el("dl", {}, [
-        el("dt", { textContent: "Source" }),
-        el("dd", { textContent: s.source ?? "—" }),
+        el("dt", { textContent: parts.length > 1 ? "Parts" : "Source" }),
+        el("dd", { textContent: sourceText, title: parts.map((p) => p.source).join("\n") }),
         el("dt", { textContent: "Last build" }),
         el("dd", { textContent: lastBuild }),
         el("dt", { textContent: "Status" }),
@@ -167,35 +174,43 @@ export class StartPage {
       toast(`No source files in ${dir}/. Put a .ply / .sog / .spz there first.`, "warn");
       return;
     }
-    const select = el(
-      "select",
-      {},
-      sources.map((f) => el("option", { value: f.path, textContent: `${f.path.slice(f.path.lastIndexOf("/") + 1)}  (${fmtBytes(f.bytes)})` })),
-    );
-    const stem = (p: string) =>
-      p.slice(p.lastIndexOf("/") + 1).replace(/\.[^.]+$/, "").replace(/[^A-Za-z0-9_-]+/g, "_").replace(/^[_-]+/, "").slice(0, 64).toLowerCase();
-    const field = nameField(this.taken(), stem(sources[0].path));
-    let touched = false;
-    field.input.addEventListener("input", () => (touched = true));
-    select.addEventListener("change", () => {
-      if (!touched) {
-        field.input.value = stem(select.value);
-        field.input.dispatchEvent(new Event("input"));
-        touched = false;
+    const clean = (s: string) => s.replace(/\.[^.]+$/, "").replace(/[^A-Za-z0-9_-]+/g, "_").replace(/^[_-]+/, "").slice(0, 64).toLowerCase();
+    /** One file: its stem. Several in one folder: the folder name ("parts/OculusV1/part*.ply" -> "oculusv1"). */
+    const suggest = (paths: string[]): string => {
+      if (paths.length === 0) return "";
+      if (paths.length === 1) return clean(paths[0].slice(paths[0].lastIndexOf("/") + 1));
+      const dirs = new Set(paths.map((p) => p.slice(0, p.lastIndexOf("/"))));
+      if (dirs.size === 1) {
+        const d = [...dirs][0];
+        const folder = d.slice(d.lastIndexOf("/") + 1);
+        if (folder && folder !== "source_ply") return clean(folder);
       }
+      return `${clean(paths[0].slice(paths[0].lastIndexOf("/") + 1))}_parts`.slice(0, 64);
+    };
+    const picker = sourcePicker(sources, [sources[0].path]);
+    const field = nameField(this.taken(), suggest(picker.selected()));
+    let touched = false;
+    field.input.addEventListener("input", (e) => {
+      if (e.isTrusted) touched = true;
+    });
+    picker.onChange(() => {
+      if (touched) return;
+      field.input.value = suggest(picker.selected());
+      field.input.dispatchEvent(new Event("input"));
     });
     const ok = await dialog({
       title: "New scene",
       body: [
-        el("label", { textContent: `Source (${dir}/, referenced, never copied or modified)` }),
-        select,
+        el("label", { textContent: `Sources (${dir}/, referenced, never copied or modified)` }),
+        el("p", { className: "panel-note", textContent: "Pick one file, or several parts of one scan in the same coordinate frame (e.g. the parts Spirula Studio trained separately): each becomes a part, built on its own and shown together." }),
+        picker.root,
         el("label", { textContent: "Scene name" }),
         field.input,
         field.msg,
       ],
       buttons: [
         { label: "Cancel", value: false },
-        { label: "Create and open", value: true, primary: true, enabled: field.valid },
+        { label: "Create and open", value: true, primary: true, enabled: () => field.valid() && picker.selected().length > 0 },
       ],
       cancelValue: false,
       focus: field.input,
@@ -203,7 +218,7 @@ export class StartPage {
     if (!ok) return;
     const name = field.input.value.trim();
     try {
-      await api.create(name, select.value);
+      await api.create(name, picker.selected());
       window.location.href = sceneHref(name);
     } catch (err) {
       toast(`Create failed: ${(err as Error).message}`, "error");

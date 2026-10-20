@@ -101,7 +101,7 @@ import path from 'node:path';
 const args = process.argv.slice(2);
 const input = args.filter((a) => !a.startsWith('--')).pop();
 for (const a of args.filter((a) => a.startsWith('--'))) console.log('Using ' + a);
-if (process.env.FAKE_FAIL_DECODE) { console.error('Decoding failed: "bad file"'); process.exit(0); }
+if (process.env.FAKE_FAIL_DECODE && (!process.env.FAKE_FAIL_MATCH || input.includes(process.env.FAKE_FAIL_MATCH))) { console.error('Decoding failed: "bad file"'); process.exit(0); }
 const stem = input.slice(0, input.lastIndexOf('.')) + '-lod';
 const buf = Buffer.alloc(50 * 1024 * 1024, 1); // touch some memory
 console.log('Read: num_splats: 4 with sh_degree: 3');

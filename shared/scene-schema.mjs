@@ -9,10 +9,28 @@
 //
 // Transforms are three.js Object3D TRS (scale, then rotate, then translate, about
 // the world origin), stored like the v1 Align transform JSON. `scene.transform`
-// is always relative to the ORIGINAL source file; rebuilds start from the source.
+// is always relative to the ORIGINAL source files; rebuilds start from the sources.
 // Matrices are column-major 4x4 (three.js Matrix4.elements order).
+//
+// Schema 2: a scene is made of PARTS (`parts: [{ id, source, label?, enabled }]`),
+// e.g. the spatial parts a scan was trained in (Spirula Studio). Every part is
+// in the same source coordinate frame, so ONE scene transform applies to all of
+// them identically. Each part is built to its own .rad (build/<partId>/...),
+// one build-lod process at a time, and streamed as its own paged SplatMesh.
+// Schema 1 files (single `source`) are migrated on read (migrateScene): the
+// source becomes `parts: [{ id: "main", source }]` and the v1 build record
+// becomes that part's build. Files are only rewritten when saved or built.
 
-export const SCENE_SCHEMA_VERSION = 1;
+export const SCENE_SCHEMA_VERSION = 2;
+/** Part id given to the single source of a migrated schema-1 scene. */
+export const DEFAULT_PART_ID = 'main';
+/** Part ids: letters, digits, "_" and "-", 1-48 chars (they become folder names under build/). */
+export const PART_ID_RE = /^[A-Za-z0-9][A-Za-z0-9_-]{0,47}$/;
+/**
+ * Unbuilt preview loads source files WHOLE into the browser (no LoD paging).
+ * Above this total the viewer does not auto-load them (configurable in the viewer).
+ */
+export const PREVIEW_SOURCE_CAP_BYTES = 1.5e9;
 export const SCENE_FILE = 'scene.json';
 export const SCENE_NAV_DIR = 'nav';
 export const SCENE_BUILD_DIR = 'build';
@@ -39,20 +57,51 @@ export const SOURCE_EXTS = ['.ply', '.sog', '.spz', '.splat', '.ksplat'];
  */
 
 /**
- * @typedef {object} SceneBuild  Describes what is in scenes/<name>/build/ (last successful build).
+ * @typedef {object} ScenePart  One source file of the scene.
+ * @property {string} id  unique in the scene (PART_ID_RE); build output goes to build/<id>/
+ * @property {string} source  repo-relative path of the original source (never modified)
+ * @property {string} [label]  free text for people
+ * @property {boolean} enabled  disabled parts are neither built nor shown
+ */
+
+/**
+ * @typedef {object} ScenePartBuild  What build/ holds for one part.
+ * @property {string} id
  * @property {'ok'} status
- * @property {number[]} transformMatrix  scene transform baked into the .rad (column-major)
- * @property {string} radFile  file name inside build/, e.g. "oculus-lod.rad"
- * @property {string} source  source path used
+ * @property {string} radFile  path inside build/, e.g. "p0/oculus-p0-lod.rad" (schema-1 builds: "oculus-lod.rad")
+ * @property {number[]} transformMatrix  scene transform baked into this part's .rad
+ * @property {string} source
+ * @property {number} [sourceBytes]  source size when built (incremental builds compare it)
+ * @property {string} [sourceModified]  source mtime (ISO) when built
+ * @property {string[]} buildLodFlags
+ * @property {string|null} [sparkTag]
+ * @property {string} [startedAt]
+ * @property {string} [finishedAt]
+ * @property {number} [wallClockSeconds]
+ * @property {number|null} [peakMemoryBytes]  build-lod peak working set
+ * @property {{ input: number|null, final: number|null }} [splatCount]
+ * @property {{ bboxMin: Vec3, bboxMax: Vec3 } | null} [bounds]  bbox of the transformed build input
+ * @property {number} [chunkCount]
+ * @property {number} [totalBytes]
+ * @property {object|null} [transformStep]
+ * @property {string} [reusedFrom]  set when an incremental build carried this output over unchanged (finishedAt of the build that made it)
+ */
+
+/**
+ * @typedef {object} SceneBuild  Describes what is in scenes/<name>/build/ (last successful build).
+ * @property {'ok'|'partial'} status  partial: some enabled parts have no output or an outdated transform
+ * @property {number[]} transformMatrix  scene transform the build was made for (column-major)
+ * @property {ScenePartBuild[]} parts  one entry per part that has output in build/
  * @property {string} [startedAt]
  * @property {string} finishedAt
  * @property {number} [wallClockSeconds]
- * @property {{ input: number|null, final: number|null }} [splatCount]
- * @property {{ bboxMin: Vec3, bboxMax: Vec3 } | null} [bounds]  bbox of the transformed build input
+ * @property {{ input: number|null, final: number|null }} [splatCount]  sums over parts
+ * @property {{ bboxMin: Vec3, bboxMax: Vec3 } | null} [bounds]  union over parts
  * @property {string[]} buildLodFlags
  * @property {string|null} [sparkTag]
  * @property {number} [chunkCount]
  * @property {number} [totalBytes]
+ * @property {number|null} [peakMemoryBytes]  max over the parts built in this run
  */
 
 /**
@@ -61,6 +110,7 @@ export const SOURCE_EXTS = ['.ply', '.sog', '.spz', '.splat', '.ksplat'];
  * @property {string} startedAt
  * @property {string} finishedAt
  * @property {string|null} error
+ * @property {{ id: string, status: string, error?: string|null, seconds?: number, peakMemoryBytes?: number|null }[]} [parts]
  */
 
 /**
@@ -72,10 +122,10 @@ export const SOURCE_EXTS = ['.ply', '.sog', '.spz', '.splat', '.ksplat'];
 
 /**
  * @typedef {object} SceneDoc
- * @property {1} schemaVersion
+ * @property {2} schemaVersion
  * @property {string} name
- * @property {string} source  repo-relative path of the original source (never modified)
- * @property {SceneTransform} transform
+ * @property {ScenePart[]} parts  source files (all in one coordinate frame)
+ * @property {SceneTransform} transform  applies identically to every part
  * @property {number|null} floorY  floor height in scene (aligned) coordinates
  * @property {Record<string, any>} navigation  v1 navigation block; `collision` is relative to the scene folder
  * @property {SceneCamera|null} camera  start viewpoint
@@ -342,19 +392,88 @@ export function isSafeSourcePath(p) {
   return SOURCE_EXTS.some((e) => lower.endsWith(e));
 }
 
+// --- parts ------------------------------------------------------------------
+
+export function isValidPartId(id) {
+  return typeof id === 'string' && PART_ID_RE.test(id);
+}
+
+/** File name of a repo-relative path ("assets/source_ply/a.ply" -> "a.ply"). */
+export function sourceFileName(source) {
+  const s = String(source);
+  return s.slice(Math.max(s.lastIndexOf('/'), s.lastIndexOf('\\')) + 1);
+}
+
+/**
+ * A part id derived from the source file name ("parts/OculusV1/part0.ply" -> "part0"),
+ * made unique against `taken` (lower-case ids) by appending _2, _3, ...
+ */
+export function partIdFromSource(source, taken = new Set()) {
+  let base = sourceFileName(source)
+    .replace(/\.[^.]+$/, '')
+    .replace(/[^A-Za-z0-9_-]+/g, '_')
+    .replace(/^[_-]+/, '')
+    .slice(0, 40);
+  if (!base) base = 'part';
+  let id = base;
+  for (let i = 2; taken.has(id.toLowerCase()); i++) id = `${base}_${i}`;
+  return id;
+}
+
+/** Parts for a list of sources (ids from the file names, all enabled). */
+export function partsFromSources(sources) {
+  const taken = new Set();
+  return sources.map((source) => {
+    const id = partIdFromSource(source, taken);
+    taken.add(id.toLowerCase());
+    return { id, source, enabled: true };
+  });
+}
+
+/** @returns {ScenePart[]} */
+export function enabledParts(scene) {
+  return (scene.parts ?? []).filter((p) => p.enabled !== false);
+}
+
+/** The build record of one part, or null. @returns {ScenePartBuild|null} */
+export function partBuild(scene, id) {
+  return scene.build?.parts?.find((b) => b.id === id) ?? null;
+}
+
+/**
+ * Build state of one part, for lists and badges:
+ *   disabled   part is switched off (not built, not shown)
+ *   not-built  no output in build/
+ *   outdated   built, but with a different scene transform (or another source file)
+ *   built      up to date as far as scene.json can tell (the pipeline also checks the source's size/mtime)
+ * @returns {'disabled'|'not-built'|'outdated'|'built'}
+ */
+export function partState(scene, part) {
+  if (part.enabled === false) return 'disabled';
+  const b = partBuild(scene, part.id);
+  if (!b) return 'not-built';
+  if (b.source !== part.source || !matricesEqual(scene.transform.matrix, b.transformMatrix)) return 'outdated';
+  return 'built';
+}
+
 // --- scene documents --------------------------------------------------------
 
 /**
- * New scene document.
- * @param {{ name: string, source: string, transform?: object, now?: string }} o
+ * New scene document. Pass `sources` (one part per file) or `parts`; `source` is
+ * the single-file shorthand.
+ * @param {{ name: string, source?: string, sources?: string[], parts?: ScenePart[], transform?: object, now?: string }} o
  * @returns {SceneDoc}
  */
-export function createScene({ name, source, transform, now = new Date().toISOString() }) {
+export function createScene({ name, source, sources, parts, transform, now = new Date().toISOString() }) {
   if (!isValidSceneName(name)) throw new Error(`invalid scene name "${name}" (letters, digits, _ and -, max 64)`);
+  const list = parts
+    ? parts.map((p) => ({ ...p, enabled: p.enabled !== false }))
+    : partsFromSources(sources ?? (source !== undefined ? [source] : []));
+  if (list.length === 0) throw new Error('a scene needs at least one source');
   return {
     schemaVersion: SCENE_SCHEMA_VERSION,
     name,
-    source,
+    parts: list,
     transform: transform ? normalizeTransform(transform) : identityTransform(),
     floorY: null,
     navigation: {},
@@ -380,11 +499,34 @@ export function validateScene(raw) {
   const errors = [];
   const warnings = [];
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { scene: null, errors: ['scene.json must be an object'], warnings };
+  if (raw.schemaVersion === 1) {
+    raw = migrateScene(raw);
+    warnings.push('schema 1 scene migrated to schema 2 in memory (written as schema 2 on the next save or build)');
+  }
   if (raw.schemaVersion !== SCENE_SCHEMA_VERSION) {
-    errors.push(`unsupported schemaVersion ${JSON.stringify(raw.schemaVersion)} (expected ${SCENE_SCHEMA_VERSION})`);
+    errors.push(`unsupported schemaVersion ${JSON.stringify(raw.schemaVersion)} (expected 1 or ${SCENE_SCHEMA_VERSION})`);
   }
   if (!isValidSceneName(raw.name)) errors.push(`invalid name ${JSON.stringify(raw.name)}`);
-  if (typeof raw.source !== 'string' || !raw.source) errors.push('"source" must be a path');
+  let parts = [];
+  if (!Array.isArray(raw.parts) || raw.parts.length === 0) errors.push('"parts" must be a non-empty array of { id, source, enabled }');
+  else {
+    const seen = new Set();
+    raw.parts.forEach((p, i) => {
+      if (!p || typeof p !== 'object') return void errors.push(`parts[${i}] must be an object`);
+      if (!isValidPartId(p.id)) errors.push(`parts[${i}].id ${JSON.stringify(p.id)} is invalid (letters, digits, _ and -, max 48)`);
+      else if (seen.has(p.id.toLowerCase())) errors.push(`parts[${i}].id "${p.id}" is used twice`);
+      else seen.add(p.id.toLowerCase());
+      if (typeof p.source !== 'string' || !p.source) errors.push(`parts[${i}].source must be a path`);
+      if (p.enabled !== undefined && typeof p.enabled !== 'boolean') errors.push(`parts[${i}].enabled must be true or false`);
+      if (p.label !== undefined && p.label !== null && (typeof p.label !== 'string' || p.label.length > 200)) errors.push(`parts[${i}].label must be a short string`);
+    });
+    parts = raw.parts.map((p) => {
+      const out = { ...p, enabled: p?.enabled !== false };
+      if (out.label === null || out.label === '') delete out.label;
+      return out;
+    });
+    if (!errors.length && parts.every((p) => !p.enabled)) warnings.push('every part is disabled');
+  }
   let transform = null;
   try {
     transform = normalizeTransform(raw.transform ?? identityTransform());
@@ -422,19 +564,30 @@ export function validateScene(raw) {
 
   const build = raw.build ?? null;
   if (build !== null) {
-    if (!isVec(build.transformMatrix, 16)) errors.push('build.transformMatrix must be 16 numbers');
-    if (typeof build.radFile !== 'string' || !isSafeSceneRelPath(build.radFile) || build.radFile.includes('/')) errors.push('build.radFile must be a file name');
+    if (typeof build !== 'object' || Array.isArray(build)) errors.push('"build" must be an object or null');
+    else {
+      if (!isVec(build.transformMatrix, 16)) errors.push('build.transformMatrix must be 16 numbers');
+      if (!Array.isArray(build.parts)) errors.push('build.parts must be an array');
+      else {
+        build.parts.forEach((b, i) => {
+          if (!b || !isValidPartId(b.id)) return void errors.push(`build.parts[${i}].id is invalid`);
+          if (typeof b.radFile !== 'string' || !isSafeSceneRelPath(b.radFile) || !b.radFile.endsWith('.rad')) errors.push(`build.parts[${i}].radFile must be a .rad path inside build/`);
+          if (!isVec(b.transformMatrix, 16)) errors.push(`build.parts[${i}].transformMatrix must be 16 numbers`);
+        });
+      }
+    }
   }
   const hotspots = raw.hotspots ?? [];
   if (!Array.isArray(hotspots)) errors.push('"hotspots" must be an array');
 
   if (errors.length) return { scene: null, errors, warnings };
+  const { source: _legacySource, ...rest } = raw;
   /** @type {SceneDoc} */
   const scene = {
-    ...raw,
+    ...rest,
     schemaVersion: SCENE_SCHEMA_VERSION,
     name: raw.name,
-    source: raw.source,
+    parts,
     transform: /** @type {SceneTransform} */ (transform),
     floorY,
     navigation: { ...navigation },
@@ -449,10 +602,57 @@ export function validateScene(raw) {
   return { scene, errors, warnings };
 }
 
-/** True when the scene transform differs from the one baked into build/ (or there is no build). */
+/**
+ * Schema 1 -> 2 (pure; returns a new object). `source` becomes the single part
+ * "main"; a v1 build record (radFile directly in build/) becomes that part's build.
+ * Other fields are kept as they are.
+ */
+export function migrateScene(raw) {
+  if (!raw || raw.schemaVersion !== 1) return raw;
+  const { source, build, ...rest } = raw;
+  const out = { ...rest, schemaVersion: SCENE_SCHEMA_VERSION, parts: [{ id: DEFAULT_PART_ID, source, enabled: true }] };
+  if (build && typeof build === 'object') {
+    const partFields = [
+      'radFile', 'transformMatrix', 'source', 'sourceBytes', 'sourceModified', 'buildLodFlags', 'sparkTag', 'startedAt',
+      'finishedAt', 'wallClockSeconds', 'peakMemoryBytes', 'splatCount', 'bounds', 'chunkCount', 'totalBytes', 'transformStep',
+    ];
+    const part = { id: DEFAULT_PART_ID, status: 'ok' };
+    for (const k of partFields) if (build[k] !== undefined) part[k] = build[k];
+    part.source ??= source;
+    const { radFile: _r, source: _s, sourceBytes: _b, sourceModified: _m, transformStep: _t, ...top } = build;
+    out.build = { ...top, status: 'ok', parts: [part] };
+  } else {
+    out.build = build ?? null;
+  }
+  return out;
+}
+
+/** True when the transform differs from the one baked into any enabled part's build (false when nothing is built). */
 export function transformChangedSinceBuild(scene) {
   if (!scene.build) return false;
-  return !matricesEqual(scene.transform.matrix, scene.build.transformMatrix);
+  if (!matricesEqual(scene.transform.matrix, scene.build.transformMatrix)) return true;
+  return enabledParts(scene).some((p) => {
+    const b = partBuild(scene, p.id);
+    return !!b && !matricesEqual(scene.transform.matrix, b.transformMatrix);
+  });
+}
+
+/**
+ * Per-part build summary for badges.
+ * @returns {{ total: number, enabled: number, built: number, outdated: number, notBuilt: number, complete: boolean }}
+ */
+export function buildSummary(scene) {
+  const out = { total: scene.parts.length, enabled: 0, built: 0, outdated: 0, notBuilt: 0, complete: false };
+  for (const p of scene.parts) {
+    const s = partState(scene, p);
+    if (s === 'disabled') continue;
+    out.enabled++;
+    if (s === 'built') out.built++;
+    else if (s === 'outdated') out.outdated++;
+    else out.notBuilt++;
+  }
+  out.complete = out.enabled > 0 && out.built === out.enabled;
+  return out;
 }
 
 /** True when the scene has nav assets (floor, collision, spawn, plan exports...). */
@@ -473,14 +673,85 @@ export function navMayBeMisaligned(scene, navFileCount = 0) {
 }
 
 /**
- * How the viewer should show the scene and with which mesh matrix.
+ * @typedef {object} PartLoad  How the viewer shows one part.
+ * @property {string} id
+ * @property {string} source
+ * @property {string} [label]
+ * @property {'built'|'source'|'blocked'|'missing'|'disabled'} mode
+ *   built: stream build/<radFile> (paged); source: load the source whole (unbuilt preview);
+ *   blocked: unbuilt and over the preview size cap; missing: no build and no source; disabled: switched off
+ * @property {string|null} radFile  path inside build/ (mode built)
+ * @property {number[]|null} loadedMatrix  transform baked into what is loaded (null = raw source coordinates)
+ * @property {number[]} localMatrix  matrix of the part's mesh inside the scene root (identity in the normal case)
+ * @property {number|null} sourceBytes
+ * @property {'disabled'|'not-built'|'outdated'|'built'} state
+ */
+
+/**
+ * What the viewer loads for every part, and with which matrices. All part meshes
+ * hang under one root object:
+ *   root  = T_new * T_ref^-1   (T_ref: the build's transform when any part is shown built, else identity)
+ *   child = T_ref * B_i^-1     (B_i: transform baked into what part i loads; identity for a raw source)
+ * so root * child * p_loaded = T_new * p_source for every part, and the editor
+ * (Align) only ever moves the root. Normally every built part has B_i = T_ref,
+ * so the children are identity.
+ *
+ * Unbuilt parts preview their source loaded whole. When the enabled unbuilt
+ * sources add up to more than `capBytes` they are 'blocked' (not auto-loaded),
+ * except the parts listed in `previewParts` while those fit under the cap.
+ *
+ * @param {SceneDoc} scene
+ * @param {{ builtOnDisk?: (id: string) => boolean, sourceBytes?: Record<string, number|null>, capBytes?: number, previewParts?: string[]|null }} [o]
+ * @returns {{ refMatrix: number[]|null, rootMatrix: number[], parts: PartLoad[], unbuiltBytes: number, overCap: boolean }}
+ */
+export function loadPlan(scene, o = {}) {
+  const builtOnDisk = o.builtOnDisk ?? ((id) => !!partBuild(scene, id));
+  const bytesOf = (id) => {
+    const v = o.sourceBytes ? o.sourceBytes[id] : undefined;
+    return typeof v === 'number' && Number.isFinite(v) ? v : null;
+  };
+  const cap = o.capBytes ?? PREVIEW_SOURCE_CAP_BYTES;
+  const parts = scene.parts.map((p) => {
+    const b = partBuild(scene, p.id);
+    const state = partState(scene, p);
+    const base = { id: p.id, source: p.source, ...(p.label && { label: p.label }), sourceBytes: bytesOf(p.id), state, radFile: null, loadedMatrix: null, localMatrix: [...IDENTITY] };
+    if (state === 'disabled') return { ...base, mode: 'disabled' };
+    if (b && b.source === p.source && builtOnDisk(p.id)) return { ...base, mode: 'built', radFile: b.radFile, loadedMatrix: [...b.transformMatrix] };
+    // When the dev server reported sizes, a part without one has no source file.
+    if (o.sourceBytes && base.sourceBytes === null) return { ...base, mode: 'missing' };
+    return { ...base, mode: 'source' };
+  });
+  const unbuilt = parts.filter((p) => p.mode === 'source');
+  const unbuiltBytes = unbuilt.reduce((s, p) => s + (p.sourceBytes ?? 0), 0);
+  const overCap = unbuiltBytes > cap;
+  if (overCap) {
+    const wanted = new Set(o.previewParts ?? []);
+    let used = 0;
+    for (const p of unbuilt) {
+      const size = p.sourceBytes ?? 0;
+      if (wanted.has(p.id) && used + size <= cap) used += size;
+      else p.mode = 'blocked';
+    }
+  }
+  const built = parts.find((p) => p.mode === 'built');
+  const refMatrix = built ? (scene.build?.transformMatrix ? [...scene.build.transformMatrix] : [...built.loadedMatrix]) : null;
+  for (const p of parts) {
+    if (p.mode !== 'built' && p.mode !== 'source') continue;
+    const ref = refMatrix ?? IDENTITY;
+    const local = p.loadedMatrix ? mat4Multiply(ref, mat4Invert(p.loadedMatrix)) : [...ref];
+    p.localMatrix = isIdentityMatrix(local, 1e-12) ? [...IDENTITY] : local;
+  }
+  const rootMatrix = refMatrix ? deltaMatrix(scene.transform.matrix, refMatrix) : [...scene.transform.matrix];
+  return { refMatrix, rootMatrix, parts, unbuiltBytes, overCap };
+}
+
+/**
+ * Short form of loadPlan for the whole scene.
  * @returns {{ mode: 'built'|'source', matrix: number[] }}
  */
 export function previewPlan(scene, { builtAvailable = !!scene.build } = {}) {
-  if (builtAvailable && scene.build) {
-    return { mode: 'built', matrix: deltaMatrix(scene.transform.matrix, scene.build.transformMatrix) };
-  }
-  return { mode: 'source', matrix: [...scene.transform.matrix] };
+  const plan = loadPlan(scene, { builtOnDisk: (id) => builtAvailable && !!partBuild(scene, id) });
+  return { mode: plan.refMatrix ? 'built' : 'source', matrix: plan.rootMatrix };
 }
 
 /** Serialise with stable formatting (2-space JSON + newline). */

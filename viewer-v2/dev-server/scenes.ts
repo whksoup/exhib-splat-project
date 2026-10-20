@@ -5,19 +5,21 @@
  * themselves are served by the /scenes/ mount in modelFiles.ts. This plugin adds:
  *
  *   GET  /__scenes                          list with build status            -> {ok, scenes: [...]}
- *   GET  /__scenes/sources                  files in assets/source_ply        -> {ok, files: [...]}
- *   POST /__scenes/create     {name, source}
+ *   GET  /__scenes/sources                  splat files under assets/source_ply (subfolders too) -> {ok, files: [...]}
+ *   POST /__scenes/create     {name, sources: [...]}   one part per source ({source} also accepted)
  *   POST /__scenes/duplicate  {from, name}   copies scene.json + nav/ (not build/)
- *   POST /__scenes/delete     {name, confirm} removes scenes/<name>/ only (never the source)
- *   POST /__scenes/save?name=<n>            body = scene.json (validated; build fields stay server-owned)
+ *   POST /__scenes/delete     {name, confirm} removes scenes/<name>/ only (never the sources)
+ *   POST /__scenes/save?name=<n>            body = scene.json (validated; build fields stay server-owned;
+ *                                           added parts must be files under assets/source_ply)
+ *   GET  /__scenes/info?name=<n>            per part: source size, splat count (.ply header), .rad on disk
  *   GET  /__scenes/nav?name=<n>             files in scenes/<n>/nav/
  *   POST /__scenes/nav-file?name=<n>&file=<f>  raw body -> scenes/<n>/nav/<f> (plan exports)
- *   GET  /__scene-source/<n>/<file>         the scene's source file, Range-served (unbuilt preview)
- *   POST /__build             {name}         run pipeline/build-scene.mjs (one at a time)
- *   GET  /__build/status                    {running, name, progress, result, external, ...}
+ *   GET  /__scene-source/<n>/<part>/<file>  a part's source file, Range-served (unbuilt preview)
+ *   POST /__build             {name, force?, parts?}  run pipeline/build-scene.mjs (one at a time)
+ *   GET  /__build/status                    {running, name, progress, parts, result, external, ...}
  *                                           external = a build started elsewhere (build-scene.bat),
  *                                           seen through the pipeline's scenes/.build.lock
- *   GET  /__build/events                    Server-Sent Events: reset, log, progress, done
+ *   GET  /__build/events                    Server-Sent Events: reset, log, progress, part, done
  *   POST /__build/cancel
  *
  * Safety: scene names must match SCENE_NAME_RE (shared/scene-schema.mjs: letters,
@@ -32,10 +34,15 @@ import type { Plugin } from "vite";
 import {
   SCENE_FILE,
   SOURCE_EXTS,
+  buildSummary,
   createScene,
+  isSafeSceneRelPath,
   isSafeSourcePath,
+  isValidPartId,
   isValidSceneName,
   navMayBeMisaligned,
+  partState,
+  partsFromSources,
   stringifyScene,
   transformChangedSinceBuild,
   validateScene,
@@ -114,9 +121,31 @@ interface BuildState {
   startedAt: string | null;
   finishedAt: string | null;
   lines: string[];
-  progress: { stage: string; pct: number; message: string } | null;
+  progress: { stage: string; pct: number; message: string; part?: { id: string; index: number; count: number; pct: number } } | null;
+  /** Per-part state, from build-scene.mjs @part lines (and @progress part percentages). */
+  parts: Json[];
   result: { status: string; error: string | null } | null;
   exitCode: number | null;
+}
+
+/** Splat count from a .ply header (first 64 KB), null when not a readable .ply. */
+function plySplatCount(file: string): number | null {
+  if (!file.toLowerCase().endsWith(".ply")) return null;
+  let fd: number | null = null;
+  try {
+    fd = fs.openSync(file, "r");
+    const buf = Buffer.alloc(64 * 1024);
+    const n = fs.readSync(fd, buf, 0, buf.length, 0);
+    const text = buf.subarray(0, n).toString("latin1");
+    const end = text.indexOf("end_header");
+    if (!text.startsWith("ply") || end < 0) return null;
+    const m = /^element vertex (\d+)\s*$/m.exec(text.slice(0, end));
+    return m ? Number(m[1]) : null;
+  } catch {
+    return null;
+  } finally {
+    if (fd !== null) fs.closeSync(fd);
+  }
 }
 
 export interface ScenesPluginOptions {
@@ -132,7 +161,7 @@ export function scenesPlugin(options: ScenesPluginOptions): Plugin {
   const buildScript = path.join(repoRoot, "pipeline", "build-scene.mjs");
   const rel = (p: string) => path.relative(repoRoot, p).split(path.sep).join("/");
 
-  const build: BuildState = { child: null, id: 0, name: null, startedAt: null, finishedAt: null, lines: [], progress: null, result: null, exitCode: null };
+  const build: BuildState = { child: null, id: 0, name: null, startedAt: null, finishedAt: null, lines: [], progress: null, parts: [], result: null, exitCode: null };
   const clients = new Set<ServerResponse>();
 
   /** Absolute scene folder for a validated name (throws 400 otherwise). */
@@ -162,16 +191,26 @@ export function scenesPlugin(options: ScenesPluginOptions): Plugin {
       .sort((a, b) => a.file.localeCompare(b.file));
   }
 
+  /** Splat files under assets/source_ply, including subfolders (e.g. parts/<scan>/part0.ply), up to 4 levels. */
   function listSources(): { path: string; bytes: number }[] {
     if (!fs.existsSync(sourcesRoot)) return [];
     const out: { path: string; bytes: number }[] = [];
-    for (const e of fs.readdirSync(sourcesRoot, { withFileTypes: true })) {
-      if (!e.isFile() || e.name.startsWith(".")) continue;
-      const p = rel(path.join(sourcesRoot, e.name));
-      if (!isSafeSourcePath(p)) continue;
-      out.push({ path: p, bytes: fs.statSync(path.join(sourcesRoot, e.name)).size });
-    }
-    return out.sort((a, b) => a.path.localeCompare(b.path));
+    const walk = (dir: string, depth: number) => {
+      for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+        if (e.name.startsWith(".")) continue;
+        const full = path.join(dir, e.name);
+        if (e.isDirectory()) {
+          if (depth < 4) walk(full, depth + 1);
+          continue;
+        }
+        if (!e.isFile()) continue;
+        const p = rel(full);
+        if (!isSafeSourcePath(p)) continue;
+        out.push({ path: p, bytes: fs.statSync(full).size });
+      }
+    };
+    walk(sourcesRoot, 0);
+    return out.sort((a, b) => a.path.localeCompare(b.path, "en", { numeric: true }));
   }
 
   /** Repo-relative source -> absolute path, only if it is a regular file inside the repo. */
@@ -186,6 +225,32 @@ export function scenesPlugin(options: ScenesPluginOptions): Plugin {
     }
   }
 
+  /** A part's built .rad inside scenes/<n>/build/, if it is really there. */
+  function builtRad(dir: string, radFile: string | undefined): string | null {
+    if (!radFile || !isSafeSceneRelPath(radFile)) return null;
+    const buildDir = path.join(dir, "build");
+    const abs = path.resolve(buildDir, ...radFile.split("/"));
+    if (!abs.startsWith(buildDir + path.sep)) return null;
+    return fs.existsSync(abs) ? abs : null;
+  }
+
+  type Scene = NonNullable<ReturnType<typeof validateScene>["scene"]>;
+
+  function partInfo(dir: string, s: Scene) {
+    return s.parts.map((p) => {
+      const abs = resolveSource(p.source);
+      const b = s.build?.parts?.find((x) => x.id === p.id);
+      return {
+        id: p.id,
+        source: p.source,
+        exists: !!abs,
+        bytes: abs ? fs.statSync(abs).size : null,
+        splats: abs ? plySplatCount(abs) : null,
+        builtOnDisk: !!b && !!builtRad(dir, b.radFile),
+      };
+    });
+  }
+
   function listScenes() {
     if (!fs.existsSync(scenesRoot)) return [];
     const out: Json[] = [];
@@ -197,14 +262,23 @@ export function scenesPlugin(options: ScenesPluginOptions): Plugin {
       try {
         const s = readSceneFile(dir);
         const nav = navFiles(dir);
-        const radPresent = !!s.build && fs.existsSync(path.join(dir, "build", s.build.radFile));
+        const parts = s.parts.map((p) => ({
+          id: p.id,
+          source: p.source,
+          enabled: p.enabled !== false,
+          sourceExists: !!resolveSource(p.source),
+          state: partState(s, p),
+        }));
+        const radPresent = (s.build?.parts ?? []).some((b) => !!builtRad(dir, b.radFile));
         out.push({
           name: e.name,
-          source: s.source,
-          sourceExists: !!resolveSource(s.source),
+          source: s.parts[0]?.source,
+          parts,
+          summary: buildSummary(s),
+          sourceExists: parts.every((p) => !p.enabled || p.sourceExists),
           built: radPresent,
           build: s.build
-            ? { finishedAt: s.build.finishedAt, radFile: s.build.radFile, splatCount: s.build.splatCount ?? null, wallClockSeconds: s.build.wallClockSeconds ?? null }
+            ? { finishedAt: s.build.finishedAt, status: s.build.status, splatCount: s.build.splatCount ?? null, wallClockSeconds: s.build.wallClockSeconds ?? null, peakMemoryBytes: s.build.peakMemoryBytes ?? null }
             : null,
           buildAttempt: s.buildAttempt,
           transformChanged: transformChangedSinceBuild(s),
@@ -231,7 +305,25 @@ export function scenesPlugin(options: ScenesPluginOptions): Plugin {
     if (line.startsWith("@progress ")) {
       try {
         build.progress = JSON.parse(line.slice(10)) as BuildState["progress"];
+        const pp = build.progress?.part;
+        if (pp) {
+          const row = build.parts.find((r) => r.id === pp.id);
+          if (row) row.pct = pp.pct;
+        }
         broadcast("progress", build.progress);
+      } catch {
+        /* ignore malformed */
+      }
+      return;
+    }
+    if (line.startsWith("@part ")) {
+      try {
+        const p = JSON.parse(line.slice(6)) as Json & { id: string };
+        const i = build.parts.findIndex((r) => r.id === p.id);
+        const row = { ...(i >= 0 ? build.parts[i] : {}), ...p, ...(p.status === "built" || p.status === "reused" || p.status === "kept" ? { pct: 100 } : {}) };
+        if (i >= 0) build.parts[i] = row;
+        else build.parts.push(row);
+        broadcast("part", row);
       } catch {
         /* ignore malformed */
       }
@@ -261,15 +353,21 @@ export function scenesPlugin(options: ScenesPluginOptions): Plugin {
     };
   }
 
-  function startBuild(name: string): void {
+  function startBuild(name: string, opts: { force?: unknown; parts?: unknown } = {}): void {
     const dir = sceneDir(name);
     if (!fs.existsSync(path.join(dir, SCENE_FILE))) throw httpError(404, `scene not found: ${name}`);
     if (build.child) throw httpError(409, `a build is already running (scene "${build.name}")`);
     const ext = externalBuild();
     if (ext) throw httpError(409, `a build of scene "${ext.scene}" is already running from the command line (pid ${ext.pid})`);
+    const args = [buildScript, name];
+    if (opts.force === true) args.push("--force");
+    if (opts.parts !== undefined) {
+      if (!Array.isArray(opts.parts) || !opts.parts.every((p) => isValidPartId(p))) throw httpError(400, "parts must be a list of part ids");
+      for (const p of opts.parts as string[]) args.push("--part", p);
+    }
     build.id++;
-    Object.assign(build, { name, startedAt: new Date().toISOString(), finishedAt: null, lines: [], progress: { stage: "start", pct: 0, message: "starting" }, result: null, exitCode: null });
-    const child = spawn(process.execPath, [buildScript, name], { cwd: repoRoot, windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
+    Object.assign(build, { name, startedAt: new Date().toISOString(), finishedAt: null, lines: [], progress: { stage: "start", pct: 0, message: "starting" }, parts: [], result: null, exitCode: null });
+    const child = spawn(process.execPath, args, { cwd: repoRoot, windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
     build.child = child;
     broadcast("reset", { id: build.id, name, startedAt: build.startedAt });
     child.stdout?.on("data", lineSplitter());
@@ -325,6 +423,7 @@ export function scenesPlugin(options: ScenesPluginOptions): Plugin {
       startedAt: build.startedAt,
       finishedAt: build.finishedAt,
       progress: build.progress,
+      parts: build.parts,
       result: build.result,
       exitCode: build.exitCode,
       lines: build.lines.slice(-200),
@@ -349,10 +448,15 @@ export function scenesPlugin(options: ScenesPluginOptions): Plugin {
     if (p === "/__scenes/create" && m === "POST") {
       const body = await readJson(req);
       const dir = sceneDir(body.name);
-      const source = String(body.source ?? "");
-      if (!listSources().some((s) => s.path === source)) throw httpError(400, `source must be one of the files in ${rel(sourcesRoot)}/`);
+      const sources = Array.isArray(body.sources) ? body.sources.map(String) : body.source !== undefined ? [String(body.source)] : [];
+      if (sources.length === 0) throw httpError(400, "pick at least one source file");
+      if (sources.length > 256) throw httpError(400, "at most 256 parts");
+      if (new Set(sources).size !== sources.length) throw httpError(400, "a source is listed twice");
+      const known = new Set(listSources().map((s) => s.path));
+      const bad = sources.find((s) => !known.has(s));
+      if (bad !== undefined) throw httpError(400, `source must be one of the files under ${rel(sourcesRoot)}/ (got "${bad}")`);
       if (fs.existsSync(dir)) throw httpError(409, `scene "${body.name}" already exists`);
-      const scene = createScene({ name: body.name as string, source });
+      const scene = createScene({ name: body.name as string, parts: partsFromSources(sources) });
       fs.mkdirSync(path.join(dir, "nav"), { recursive: true });
       writeAtomic(path.join(dir, SCENE_FILE), stringifyScene(scene));
       reply(res, 200, { ok: true, scene });
@@ -391,11 +495,24 @@ export function scenesPlugin(options: ScenesPluginOptions): Plugin {
       const { scene, errors } = validateScene(body);
       if (!scene) throw httpError(422, errors.join("; "));
       if (scene.name !== q.get("name")) throw httpError(400, "scene.name must match the folder name");
-      if (scene.source !== current.source) throw httpError(400, "source cannot be changed (create a new scene instead)");
+      // Parts can be added, removed, enabled and disabled; a new source must be a file under assets/source_ply.
+      const before = new Set(current.parts.map((p) => p.source));
+      const added = scene.parts.filter((p) => !before.has(p.source));
+      if (added.length) {
+        const known = new Set(listSources().map((s) => s.path));
+        const bad = added.find((p) => !known.has(p.source));
+        if (bad) throw httpError(400, `part "${bad.id}": source must be one of the files under ${rel(sourcesRoot)}/ (got "${bad.source}")`);
+      }
       // Build info is written by build-scene.mjs only; never let a stale client overwrite it.
       const saved = { ...scene, build: current.build, buildAttempt: current.buildAttempt, updatedAt: new Date().toISOString() };
       writeAtomic(path.join(dir, SCENE_FILE), stringifyScene(saved));
       reply(res, 200, { ok: true, scene: saved, file: rel(path.join(dir, SCENE_FILE)) });
+      return true;
+    }
+    if (p === "/__scenes/info" && m === "GET") {
+      const dir = sceneDir(q.get("name"));
+      const scene = readSceneFile(dir);
+      reply(res, 200, { ok: true, parts: partInfo(dir, scene) });
       return true;
     }
     if (p === "/__scenes/nav" && m === "GET") {
@@ -418,17 +535,21 @@ export function scenesPlugin(options: ScenesPluginOptions): Plugin {
       return true;
     }
     if (p.startsWith("/__scene-source/") && (m === "GET" || m === "HEAD")) {
-      const [name] = p.slice("/__scene-source/".length).split("/");
-      const dir = sceneDir(decodeURIComponent(name ?? ""));
+      // /__scene-source/<scene>/<part id>/<file name> (the file name is cosmetic: Spark infers the type from it)
+      const [name, partId] = p.slice("/__scene-source/".length).split("/").map((s) => decodeURIComponent(s ?? ""));
+      const dir = sceneDir(name);
+      if (!isValidPartId(partId)) throw httpError(400, "invalid part id");
       const scene = readSceneFile(dir);
-      const abs = resolveSource(scene.source);
-      if (!abs) throw httpError(404, `source not found: ${scene.source}`);
+      const part = scene.parts.find((x) => x.id === partId);
+      if (!part) throw httpError(404, `no part "${partId}" in scene "${name}"`);
+      const abs = resolveSource(part.source);
+      if (!abs) throw httpError(404, `source not found: ${part.source}`);
       serveFile(req, res, abs);
       return true;
     }
     if (p === "/__build" && m === "POST") {
       const body = await readJson(req);
-      startBuild(body.name as string);
+      startBuild(body.name as string, { force: body.force, parts: body.parts });
       reply(res, 200, buildStatus());
       return true;
     }
@@ -444,6 +565,7 @@ export function scenesPlugin(options: ScenesPluginOptions): Plugin {
       res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-store", Connection: "keep-alive" });
       res.write(`event: reset\ndata: ${JSON.stringify({ id: build.id, name: build.name, startedAt: build.startedAt })}\n\n`);
       for (const l of build.lines) res.write(`event: log\ndata: ${JSON.stringify(l)}\n\n`);
+      for (const row of build.parts) res.write(`event: part\ndata: ${JSON.stringify(row)}\n\n`);
       if (build.progress) res.write(`event: progress\ndata: ${JSON.stringify(build.progress)}\n\n`);
       if (!build.child && build.finishedAt) {
         res.write(`event: done\ndata: ${JSON.stringify({ id: build.id, name: build.name, exitCode: build.exitCode, ...build.result })}\n\n`);

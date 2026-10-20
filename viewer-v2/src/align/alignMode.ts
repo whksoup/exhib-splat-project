@@ -51,13 +51,12 @@ export function localAlignBinding(viewer: Viewer): AlignBinding {
     get: () => t,
     set: (n) => {
       t = n;
+      // Every model hangs under viewer.root: moving the root moves them all.
       const m = meshTRSFor(composeTRS(t.position, t.quaternion, t.scale), null);
-      for (const { mesh } of viewer.models) {
-        mesh.position.set(...m.position);
-        mesh.quaternion.set(...m.quaternion);
-        mesh.scale.setScalar(m.scale);
-        mesh.updateMatrixWorld(true);
-      }
+      viewer.root.position.set(...m.position);
+      viewer.root.quaternion.set(...m.quaternion);
+      viewer.root.scale.setScalar(m.scale);
+      viewer.root.updateMatrixWorld(true);
     },
     builtMatrix: () => null,
     describe: () => "Debug (?model=): preview only, not saved. Open a scene to save and build.",
@@ -97,7 +96,7 @@ export class AlignMode {
   private readonly helpers = new THREE.Group();
   private gizmoMode: GizmoMode = "rotate";
   private snap = true;
-  /** Splat centres in the loaded file's coordinates, sampled with a fixed stride (x, y, z, ...). */
+  /** Splat centres of every loaded part in Viewer.root's coordinates, sampled with a fixed stride (x, y, z, ...). */
   private samples: Float32Array | null = null;
   private samplesVersion = -1;
   private boundsDirty = true;
@@ -422,19 +421,38 @@ export class AlignMode {
 
   // --- bounds ---------------------------------------------------------------
 
-  /** Sample splat centres in the loaded file's coordinates (for paged meshes: what is loaded now). */
+  /**
+   * Sample splat centres of all parts (for paged meshes: what is loaded now) in
+   * Viewer.root's coordinates, i.e. through each part's own mesh matrix (identity
+   * unless the part was built with another transform). Bounds, centre-on-origin
+   * and the floor guess therefore cover the whole scene.
+   */
   private resample(): void {
     const xyz: number[] = [];
-    for (const mesh of this.meshes) {
+    const meshes = this.meshes;
+    const perMesh = Math.max(1, Math.floor(MAX_SAMPLES / Math.max(1, meshes.length)));
+    for (const mesh of meshes) {
       try {
+        mesh.updateMatrix();
+        const local = mesh.matrix.elements;
+        const identity = mesh.matrix.equals(new THREE.Matrix4());
         const sources = [mesh, mesh.packedSplats?.lodSplats, mesh.extSplats?.lodSplats];
         for (const src of sources) {
           if (!src) continue;
           const count = src === mesh ? mesh.numSplats : src.numSplats;
-          const stride = Math.max(1, Math.ceil((count || 1) / MAX_SAMPLES));
+          const stride = Math.max(1, Math.ceil((count || 1) / perMesh));
           const before = xyz.length;
           src.forEachSplat((i, c) => {
-            if (i % stride === 0) xyz.push(c.x, c.y, c.z);
+            if (i % stride !== 0) return;
+            if (identity) xyz.push(c.x, c.y, c.z);
+            else {
+              const x = c.x, y = c.y, z = c.z;
+              xyz.push(
+                local[0] * x + local[4] * y + local[8] * z + local[12],
+                local[1] * x + local[5] * y + local[9] * z + local[13],
+                local[2] * x + local[6] * y + local[10] * z + local[14],
+              );
+            }
           });
           if (xyz.length > before) break;
         }

@@ -2,19 +2,26 @@
  * Scene editor (?scene=<name>): top bar, banners, side dock and the glue
  * between the scene store and the viewer's modes.
  *
- *   store (scene.json in memory) ──> mesh preview matrix (sceneMath.ts)
+ *   store (scene.json in memory) ──> load plan per part (sceneConfig.ts / loadPlan)
+ *                                ──> Viewer.root matrix (sceneMath.ts) = the transform of ALL parts
  *                                ──> walk controller (navigation, floorY, spawn)
  *                                ──> banners / top bar
- *   Align, Navigation panel, Plan export  ──write──> store
+ *   Align, Parts, Navigation panel, Plan export  ──write──> store
  *   Save (Ctrl+S) -> POST /__scenes/save; Build -> POST /__build (+ SSE panel)
+ *
+ * Every part is its own SplatMesh under Viewer.root (paged .rad when built,
+ * the source loaded whole when not, under a size cap). The scene transform is
+ * put on the root only, so Align moves every part together.
  */
 import * as THREE from "three";
 import {
+  buildSummary,
   matricesEqual,
   navMayBeMisaligned,
   transformChangedSinceBuild,
   transformFromMatrix,
   validateScene,
+  type PartLoad,
   type SceneDoc,
   type SceneTransform,
 } from "../../../shared/scene-schema.mjs";
@@ -22,12 +29,13 @@ import { AlignMode, type AlignBinding } from "../align/alignMode";
 import { resolveNavigationConfig } from "../nav/navConfig";
 import { attachNavigation, type Navigation } from "../nav";
 import { PlanMode } from "../plan/planMode";
-import { confirmDialog, dialog, el, fmtCount, fmtTime, guardTyping, isTypingTarget, kbd, toast } from "../ui/dom";
-import type { LoadedModel, Viewer } from "../viewer";
-import { api, fetchSceneJson, urlExists, type NavFile } from "./api";
+import { confirmDialog, dialog, el, fmtBytes, fmtCount, fmtTime, guardTyping, isTypingTarget, kbd, toast } from "../ui/dom";
+import type { Viewer } from "../viewer";
+import { api, fetchSceneJson, type NavFile } from "./api";
 import { BuildPanel } from "./buildPanel";
 import { NavPanel } from "./navPanel";
-import { sceneCamera, sceneModel, sceneNavigation, type SceneModelChoice } from "./sceneConfig";
+import { PartsPanel } from "./partsPanel";
+import { previewCapBytes, sceneCamera, sceneModels, sceneNavigation, type PartFileInfo, type SceneModels } from "./sceneConfig";
 import { meshTRSFor, sceneTransformFromTRS } from "./sceneMath";
 import { SceneStore } from "./store";
 
@@ -39,16 +47,24 @@ export class SceneEditor {
   readonly plan: PlanMode;
   private nav: Navigation;
   private readonly navPanel: NavPanel;
+  private readonly partsPanel: PartsPanel;
   private readonly build: BuildPanel;
-  /** What the loaded file is: built .rad (with its baked transform) or the raw source. */
-  private choice: SceneModelChoice;
-  private loadedBuilt: number[] | null;
+  /** What each part loads (built .rad / source / nothing) and the root + part matrices. */
+  private load: SceneModels;
+  private info: PartFileInfo[] | null;
+  private readonly capBytes = previewCapBytes(window.location.search);
+  /** Parts hidden in the view (view state only, not saved). */
+  private readonly hidden = new Set<string>();
+  /** Unbuilt parts the user chose to preview although the scene is over the cap. */
+  private readonly previewParts = new Set<string>();
   /** The transform block that matches the current build (for "Revert to built"). */
   private builtTransform: SceneTransform | null;
   private navFiles: NavFile[] = [];
   private fromAlign = false;
   private navTimer = 0;
+  private partsTimer = 0;
   private saving: Promise<boolean> | null = null;
+  private syncing: Promise<void> = Promise.resolve();
 
   // DOM
   private readonly dock: HTMLDivElement;
@@ -64,11 +80,12 @@ export class SceneEditor {
     private readonly viewer: Viewer,
     private readonly ui: HTMLElement,
     doc: SceneDoc,
-    choice: SceneModelChoice,
+    load: SceneModels,
+    info: PartFileInfo[] | null,
   ) {
     this.store = new SceneStore(doc);
-    this.choice = choice;
-    this.loadedBuilt = choice.mode === "built" && doc.build ? [...doc.build.transformMatrix] : null;
+    this.load = load;
+    this.info = info;
     this.builtTransform = doc.build
       ? transformChangedSinceBuild(doc)
         ? transformFromMatrix(doc.build.transformMatrix)
@@ -78,8 +95,11 @@ export class SceneEditor {
     document.title = `${doc.name} · Splat Tour Editor`;
     guardTyping(ui);
 
-    // Every mesh shows the scene transform (delta on a built .rad) from its first frame.
-    viewer.onMeshCreated = (m) => this.applyPreviewTo(m);
+    // The scene transform lives on the root, from the first frame; hidden parts stay hidden when reloaded.
+    this.applyPreview();
+    viewer.onMeshCreated = (m) => {
+      if (m.id && this.hidden.has(m.id)) m.mesh.visible = false;
+    };
 
     // --- top bar
     this.dirtyDot = el("span", { className: "dirty-dot", title: "Unsaved changes (Ctrl+S saves)", hidden: true });
@@ -91,14 +111,15 @@ export class SceneEditor {
       return b;
     };
     this.saveButton = el("button", { title: "Save scene.json (Ctrl+S)", onclick: () => void this.save() }, ["Save", kbd("Ctrl+S")]);
-    this.buildButton = el("button", { className: "primary", title: "Rebuild the streamed .rad from the source with this transform (B shows the build panel)", onclick: () => void this.startBuild() }, ["Build"]);
+    this.buildButton = el("button", { className: "primary", title: "Build the streamed .rad of every changed part, one part at a time (B shows the build panel)", onclick: () => void this.startBuild() }, ["Build"]);
     const topbar = el("div", { className: "topbar" }, [
       el("a", { className: "home", href: "./", textContent: "← Scenes", title: "Back to the scene list" }),
       el("span", { className: "scene-name", textContent: doc.name, title: `scenes/${doc.name}/` }),
       this.dirtyDot,
       this.modeTag,
       el("span", { className: "sep" }),
-      tbBtn("align", "Align", "G", "Rotate / scale / place the model", () => this.align.toggle()),
+      tbBtn("align", "Align", "G", "Rotate / scale / place the model (all parts together)", () => this.align.toggle()),
+      tbBtn("parts", "Parts", "L", "Source parts: build state, show / hide, enable, add, remove", () => this.partsPanel.show(!this.partsPanel.visible)),
       tbBtn("plan", "Plan", "M", "Plan section view and export for drawing colliders", () => this.plan.toggle()),
       tbBtn("nav", "Navigation", "N", "Collision mesh, spawn, start camera, floor", () => this.navPanel.show(!this.navPanel.visible)),
       tbBtn("controls", "Orbit", "C", "Camera: orbit / fly / walk (C cycles)", () => {
@@ -133,6 +154,7 @@ export class SceneEditor {
           const d = this.store.doc;
           if (!d.build) return "Scene not built yet: exports use the current transform; build before drawing colliders so the streamed model matches.";
           if (transformChangedSinceBuild(d)) return "Transform changed since the last build: exports follow the NEW transform. Build first so the streamed model matches what you draw.";
+          if (this.load.plan.parts.some((p) => p.mode === "blocked" || p.mode === "missing")) return "Some parts are not loaded (not built / over the preview cap): they are missing from the export.";
           return null;
         },
       },
@@ -149,6 +171,25 @@ export class SceneEditor {
       eyeHeight: () => this.nav.config.eyeHeight,
       goToStartCamera: () => this.goToStartCamera(),
     });
+    this.partsPanel = new PartsPanel(this.store, {
+      parts: () => this.load.plan.parts as PartLoad[],
+      info: () => this.info,
+      capBytes: () => this.capBytes,
+      isVisible: (id) => !this.hidden.has(id),
+      setVisible: (id, on) => {
+        if (on) this.hidden.delete(id);
+        else this.hidden.add(id);
+        viewer.setModelVisible(id, on);
+      },
+      isPreviewed: (id) => this.previewParts.has(id),
+      setPreviewed: (id, on) => {
+        if (on) this.previewParts.add(id);
+        else this.previewParts.delete(id);
+        void this.syncParts();
+      },
+      refresh: () => this.refreshInfo(),
+      buildParts: (ids) => void this.startBuild({ parts: ids }),
+    });
     this.build = new BuildPanel(doc.name, {
       onFinished: (name, ok, error) => void this.onBuildFinished(name, ok, error),
       onState: () => {
@@ -156,7 +197,7 @@ export class SceneEditor {
         this.renderBanners();
       },
     });
-    this.dock.append(this.navPanel.panel, this.build.panel);
+    this.dock.append(this.partsPanel.panel, this.navPanel.panel, this.build.panel);
     this.nav = attachNavigation(viewer, ui);
 
     // --- store -> everything
@@ -165,9 +206,11 @@ export class SceneEditor {
         this.applyPreview();
         if (!this.fromAlign) this.align.refresh();
       }
+      if (change === "parts") this.scheduleParts();
       if (change === "navigation" || change === "floor" || change === "camera") this.scheduleNavRebuild();
       this.renderBar();
       this.renderBanners();
+      this.partsPanel.render();
       void d;
     });
 
@@ -188,6 +231,7 @@ export class SceneEditor {
       if (isTypingTarget(e.target) || e.ctrlKey || e.metaKey || e.altKey) return;
       if (document.querySelector(".modal-backdrop")) return;
       if (e.code === "KeyN" && !e.shiftKey) this.navPanel.show(!this.navPanel.visible);
+      else if (e.code === "KeyL") this.partsPanel.show(!this.partsPanel.visible);
       else if (e.code === "KeyB") this.build.show(!this.build.visible);
       else if (e.key === "?" || (e.code === "Slash" && e.shiftKey)) void this.showHelp();
     });
@@ -200,11 +244,17 @@ export class SceneEditor {
     void this.refreshNavFiles();
     void this.build.connect();
     window.setInterval(() => this.tick(), 250);
+    if (doc.parts.length > 1 || load.plan.overCap) this.partsPanel.show(true);
     this.renderBar();
     this.renderBanners();
   }
 
   // --- preview -------------------------------------------------------------------
+
+  /** Transform baked into what is loaded (the build's), or null when only raw sources are shown. */
+  private get refMatrix(): number[] | null {
+    return this.load.plan.refMatrix;
+  }
 
   private alignBinding(): AlignBinding {
     return {
@@ -220,25 +270,26 @@ export class SceneEditor {
           this.fromAlign = false;
         }
       },
-      builtMatrix: () => this.loadedBuilt,
+      builtMatrix: () => this.refMatrix,
       revertToBuilt: () => this.revertToBuilt(),
-      describe: () =>
-        this.choice.mode === "built"
-          ? "Built .rad: changes preview as T_new · T_built⁻¹ and need a Build to bake in."
-          : "Not built: previewing the source file with this transform. Save, then Build.",
+      describe: () => {
+        const n = this.store.doc.parts.length;
+        const all = n > 1 ? ` All ${n} parts move together.` : "";
+        if (this.load.mode === "built") return `Built .rad: changes preview as T_new · T_built⁻¹ and need a Build to bake in.${all}`;
+        if (this.load.mode === "mixed") return `Some parts built, some previewing their source: every part shows this transform.${all} Save, then Build.`;
+        return `Not built: previewing the source with this transform.${all} Save, then Build.`;
+      },
     };
   }
 
-  private applyPreviewTo(m: LoadedModel): void {
-    const trs = meshTRSFor(this.store.doc.transform.matrix, this.loadedBuilt);
-    m.mesh.position.set(...trs.position);
-    m.mesh.quaternion.set(...trs.quaternion);
-    m.mesh.scale.setScalar(trs.scale);
-    m.mesh.updateMatrixWorld(true);
-  }
-
+  /** Put the scene transform (delta on a built .rad) on Viewer.root: every part follows. */
   private applyPreview(): void {
-    for (const m of this.viewer.models) this.applyPreviewTo(m);
+    const trs = meshTRSFor(this.store.doc.transform.matrix, this.refMatrix);
+    const root = this.viewer.root;
+    root.position.set(...trs.position);
+    root.quaternion.set(...trs.quaternion);
+    root.scale.setScalar(trs.scale);
+    root.updateMatrixWorld(true);
   }
 
   private revertToBuilt(): void {
@@ -246,6 +297,61 @@ export class SceneEditor {
     if (!d.build) return;
     const block = this.builtTransform && matricesEqual(this.builtTransform.matrix, d.build.transformMatrix) ? this.builtTransform : transformFromMatrix(d.build.transformMatrix);
     this.store.update((x) => (x.transform = clone(block)), "transform");
+  }
+
+  // --- parts ----------------------------------------------------------------------
+
+  private scheduleParts(): void {
+    window.clearTimeout(this.partsTimer);
+    // New parts need their file sizes before the cap check.
+    this.partsTimer = window.setTimeout(() => {
+      const known = new Set((this.info ?? []).map((p) => p.id));
+      if (this.store.doc.parts.some((p) => !known.has(p.id))) void this.refreshInfo();
+      else void this.syncParts();
+    }, 150);
+  }
+
+  private async refreshInfo(): Promise<void> {
+    try {
+      // The server reads scene.json from disk: unsaved new parts are not in its answer, so merge.
+      const server = await api.info(this.store.name);
+      const byId = new Map(server.map((p) => [p.id, p]));
+      const sizes = new Map<string, number>();
+      const missing = this.store.doc.parts.filter((p) => !byId.has(p.id) || byId.get(p.id)?.source !== p.source);
+      if (missing.length) {
+        const files = (await api.sources()).files;
+        for (const f of files) sizes.set(f.path, f.bytes);
+      }
+      this.info = this.store.doc.parts.map((p) => {
+        const s = byId.get(p.id);
+        if (s && s.source === p.source) return s;
+        const bytes = sizes.get(p.source);
+        return { id: p.id, source: p.source, exists: bytes !== undefined, bytes: bytes ?? null, splats: null, builtOnDisk: false };
+      });
+    } catch (err) {
+      toast(`Could not read part info: ${(err as Error).message}`, "error");
+    }
+    await this.syncParts();
+  }
+
+  /** Recompute what every part loads and make the viewer match (only changed parts reload). */
+  private syncParts(): Promise<void> {
+    this.syncing = this.syncing.then(async () => {
+      const next = sceneModels(this.store.doc as SceneDoc, this.info, { capBytes: this.capBytes, previewParts: [...this.previewParts] });
+      const refChanged = !sameMatrix(next.plan.refMatrix, this.load.plan.refMatrix);
+      this.load = next;
+      if (refChanged) {
+        this.align.refresh();
+      }
+      this.applyPreview();
+      const errors = await this.viewer.syncModels(next.models);
+      for (const id of this.hidden) this.viewer.setModelVisible(id, false);
+      if (errors.length) toast(`Some parts failed to load: ${errors.join("; ")}`, "error");
+      this.renderBar();
+      this.renderBanners();
+      this.partsPanel.render();
+    });
+    return this.syncing;
   }
 
   // --- navigation ----------------------------------------------------------------
@@ -317,7 +423,7 @@ export class SceneEditor {
     }
   }
 
-  private async startBuild(): Promise<void> {
+  private async startBuild(o: { parts?: string[]; force?: boolean } = {}): Promise<void> {
     if (this.build.phase === "running") {
       this.build.show();
       toast(this.build.runningName === this.store.name ? "This scene is already building." : `A build of "${this.build.runningName}" is running: one build at a time.`, "warn");
@@ -336,13 +442,24 @@ export class SceneEditor {
       if (choice !== "save" || !(await this.save())) return;
     }
     const d = this.store.doc;
-    if (d.build && !transformChangedSinceBuild(d)) {
-      const again = await confirmDialog("Rebuild?", "The transform has not changed since the last build. Rebuild anyway (takes a while)?", "Rebuild");
-      if (!again) return;
+    const sum = buildSummary(d as SceneDoc);
+    if (!o.parts && !o.force && d.build && sum.complete && !transformChangedSinceBuild(d)) {
+      const again = await dialog<"incremental" | "force" | "cancel">({
+        title: "Everything is built",
+        body: [el("p", { textContent: "Every part is built with this transform. A normal build only rebuilds parts whose source file changed (it checks size and date) and finishes at once otherwise. Rebuild every part anyway (takes a while)?" })],
+        buttons: [
+          { label: "Cancel", value: "cancel" },
+          { label: "Check sources", value: "incremental" },
+          { label: "Rebuild all", value: "force", primary: true },
+        ],
+        cancelValue: "cancel",
+      });
+      if (again === "cancel") return;
+      if (again === "force") o = { ...o, force: true };
     }
     try {
-      await this.build.start();
-      toast(`Build of ${this.store.name} started`, "info");
+      await this.build.start(o);
+      toast(`Build of ${this.store.name}${o.parts ? ` (part ${o.parts.join(", ")})` : ""} started`, "info");
     } catch (err) {
       toast(`Build did not start: ${(err as Error).message}`, "error");
     }
@@ -374,31 +491,25 @@ export class SceneEditor {
       return;
     }
     if (!newBuild || !d.build) {
+      if ((d.buildAttempt as { upToDate?: boolean } | null)?.upToDate) toast("Every part was up to date: nothing rebuilt.", "info");
       this.renderBar();
       return;
     }
     this.builtTransform = server ? clone(server.transform) : null;
-    toast(`Build finished in ${Math.round(d.build.wallClockSeconds ?? 0)} s: loading the new .rad`, "ok");
+    const built = d.buildAttempt?.parts?.filter((p) => p.status === "built").length ?? 0;
+    toast(`Build finished in ${Math.round(d.build.wallClockSeconds ?? 0)} s (${built} part${built === 1 ? "" : "s"} rebuilt): loading the new .rad files`, "ok");
     await this.reloadModel();
   }
 
-  /** Load the scene's current build (or the source when there is none) in place of what is shown. */
+  /** After a build: load each part's current build (or its source) in place of what is shown. */
   private async reloadModel(): Promise<void> {
-    const d = this.store.doc;
-    const built = !!d.build && (await urlExists(`/scenes/${encodeURIComponent(d.name)}/build/${encodeURIComponent(d.build.radFile)}`));
-    const choice = sceneModel(d as SceneDoc, built);
     const wasAligning = this.align.active;
     if (wasAligning) this.align.setActive(false);
     if (this.plan.active) this.plan.setActive(false);
-    this.choice = choice;
-    this.loadedBuilt = choice.mode === "built" && d.build ? [...d.build.transformMatrix] : null;
-    await this.viewer.replaceModels([choice.model]);
-    if (this.viewer.errors.length) toast(`Reload failed: ${this.viewer.errors.join("; ")}`, "error");
-    this.applyPreview();
+    this.previewParts.clear();
+    await this.refreshInfo();
     this.align.refresh();
     if (wasAligning) this.align.setActive(true);
-    this.renderBar();
-    this.renderBanners();
   }
 
   // --- view ---------------------------------------------------------------------------
@@ -407,6 +518,7 @@ export class SceneEditor {
     this.tb.align.classList.toggle("on", this.align.active);
     this.tb.plan.classList.toggle("on", this.plan.active);
     this.tb.nav.classList.toggle("on", this.navPanel.visible);
+    this.tb.parts.classList.toggle("on", this.partsPanel.visible);
     const mode = this.viewer.rig.mode;
     const label = mode === "orbit" ? "Orbit" : mode === "fly" ? "Fly" : "Walk";
     const first = this.tb.controls.firstChild;
@@ -419,11 +531,15 @@ export class SceneEditor {
     const d = this.store.doc;
     this.dirtyDot.hidden = !this.store.dirty;
     this.saveButton.classList.toggle("primary", this.store.dirty);
-    this.modeTag.textContent = this.choice.mode === "built" ? "streamed .rad" : "source preview";
-    this.modeTag.title = this.choice.mode === "built" ? this.choice.model.url : `Unbuilt: ${d.source} loaded whole (no LoD streaming)`;
+    const n = d.parts.length;
+    const partsText = n > 1 ? ` · ${n} parts` : "";
+    const modeText = { built: "streamed .rad", source: "source preview", mixed: "built + source preview", none: "nothing loaded" }[this.load.mode];
+    this.modeTag.textContent = `${modeText}${partsText}`;
+    this.modeTag.title = this.load.plan.parts.map((p) => `${p.id}: ${p.mode}`).join("\n");
     const b = this.build;
     const pill = this.buildPill;
     pill.className = "build-pill";
+    const sum = buildSummary(d as SceneDoc);
     if (b.phase === "running") {
       pill.classList.add("running");
       pill.textContent = b.runningName === d.name ? (b.external ? "Building (command line)…" : `Building ${Math.round(b.pct)}%`) : `Busy: building ${b.runningName}`;
@@ -435,15 +551,19 @@ export class SceneEditor {
     } else if (!d.build) {
       pill.classList.add("stale");
       pill.textContent = "Not built";
-      pill.title = "Build to create the streamed .rad";
+      pill.title = "Build to create the streamed .rad files";
     } else if (transformChangedSinceBuild(d)) {
       pill.classList.add("stale");
       pill.textContent = "Build outdated";
       pill.title = "The transform changed since the last build";
+    } else if (!sum.complete) {
+      pill.classList.add("stale");
+      pill.textContent = `Built ${sum.built}/${sum.enabled} parts`;
+      pill.title = `${sum.notBuilt} part(s) not built, ${sum.outdated} outdated: Build to finish`;
     } else {
       pill.classList.add("ok");
       pill.textContent = `Built ${fmtTime(d.build.finishedAt)}`;
-      pill.title = `${fmtCount(d.build.splatCount?.final)} splats, ${d.build.chunkCount ?? "?"} chunks`;
+      pill.title = `${fmtCount(d.build.splatCount?.final)} splats, ${d.build.chunkCount ?? "?"} chunks${n > 1 ? `, ${n} parts` : ""}`;
     }
     this.buildButton.disabled = b.phase === "running";
   }
@@ -453,12 +573,28 @@ export class SceneEditor {
     const out: HTMLElement[] = [];
     const banner = (cls: string, msg: string, ...actions: HTMLElement[]) => out.push(el("div", { className: `banner ${cls}` }, [el("span", { className: "msg", textContent: msg }), ...actions]));
     const button = (label: string, onclick: () => void, primary = false) => el("button", { textContent: label, onclick, className: primary ? "primary" : "" });
+    const building = this.build.phase === "running" && this.build.runningName === d.name;
+    const parts = this.load.plan.parts;
+    const blocked = parts.filter((p) => p.mode === "blocked");
+    const sum = buildSummary(d as SceneDoc);
 
     if (d.build && transformChangedSinceBuild(d)) {
       banner("", "Transform changed since last build: Build to apply.", button("Build", () => void this.startBuild(), true), button("Revert", () => this.revertToBuilt()));
-    } else if (!d.build && !(this.build.phase === "running" && this.build.runningName === d.name)) {
-      banner("info", "Not built yet: previewing the source file (loaded whole, no LoD streaming). Align it, save, then Build.", button("Build", () => void this.startBuild(), true));
+    } else if (!building && blocked.length) {
+      const bytes = blocked.reduce((s, p) => s + (p.sourceBytes ?? 0), 0);
+      banner(
+        "info",
+        `${blocked.length === parts.filter((p) => p.mode !== "disabled").length ? "Not built" : `${blocked.length} part(s) not built`}: the unbuilt sources (${fmtBytes(this.load.plan.unbuiltBytes)}) are over the ${fmtBytes(this.capBytes)} preview cap, so ${fmtBytes(bytes)} is not loaded into the browser. Build to preview, or preview single parts in Parts (L).`,
+        button("Build", () => void this.startBuild(), true),
+        button("Parts", () => this.partsPanel.show(true)),
+      );
+    } else if (!d.build && !building) {
+      banner("info", "Not built yet: previewing the source (loaded whole, no LoD streaming). Align it, save, then Build.", button("Build", () => void this.startBuild(), true));
+    } else if (d.build && !sum.complete && !building) {
+      banner("info", `${sum.built} of ${sum.enabled} parts built${sum.outdated ? `, ${sum.outdated} outdated` : ""}${sum.notBuilt ? `, ${sum.notBuilt} not built` : ""}: Build finishes the rest (built parts are reused).`, button("Build", () => void this.startBuild(), true));
     }
+    const missing = parts.filter((p) => p.mode === "missing");
+    if (missing.length) banner("bad", `Source missing for ${missing.map((p) => p.id).join(", ")}: ${missing.map((p) => p.source).join(", ")}`);
     if (navMayBeMisaligned(d, this.navFiles.length)) {
       banner(
         "bad",
@@ -495,9 +631,10 @@ export class SceneEditor {
   private showHelp(): Promise<void> {
     const rows: [string, string][] = [
       ["Ctrl+S", "Save scene.json"],
-      ["G", "Align: gizmo, ±90°, scale, origin"],
+      ["G", "Align: gizmo, ±90°, scale, origin (all parts)"],
       ["1 / 2 / 3", "Align: move / rotate / scale gizmo"],
       ["O", "Align: set origin at the camera"],
+      ["L", "Parts: show / hide, enable, add, remove"],
       ["M", "Plan view and export (to nav/)"],
       ["N", "Navigation panel"],
       ["B", "Build panel"],
@@ -516,4 +653,9 @@ export class SceneEditor {
       cancelValue: undefined,
     });
   }
+}
+
+function sameMatrix(a: number[] | null, b: number[] | null): boolean {
+  if (!a || !b) return a === b;
+  return matricesEqual(a, b);
 }

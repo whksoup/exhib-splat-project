@@ -57,13 +57,21 @@ A scene is a save file in `../scenes/<name>/`:
 
 | Path | What | In git |
 | --- | --- | --- |
-| `scene.json` | source path, transform, floor, navigation, start camera, build record (schema: `../shared/scene-schema.mjs`) | yes |
+| `scene.json` | parts (source files), transform, floor, navigation, start camera, build record (schema: `../shared/scene-schema.mjs`) | yes |
 | `nav/` | plan exports and the collision GLB | yes |
-| `build/` | `<name>-lod.rad` + `.radc` chunks, build report and log | no (regenerated) |
+| `build/<part>/` | `<name>-<part>-lod.rad` + `.radc` chunks, build report and log, one folder per part | no (regenerated) |
 
-The source file stays in `assets/source_ply/`; scenes reference it and never
-copy or modify it. Every build starts again from that original source with the
-scene's transform and replaces `build/`, so nothing accumulates.
+A scene has one or more **parts** (`parts: [{ id, source, label?, enabled }]`),
+for example the spatial parts Spirula Studio trained a big scan in. All parts
+are in the same coordinate frame and share the one scene transform. Each part
+is built to its own `.rad` and streamed as its own paged `SplatMesh`; all of
+them hang under one parent object (`viewer.root`), so Align moves them
+together, and Spark sorts them together, so there are no seams. Source files
+stay in `assets/source_ply/` (subfolders allowed, e.g. `parts/OculusV1/`);
+scenes reference them and never copy or modify them. Every build starts from
+the original sources with the scene's transform; unchanged parts are reused
+(see `../pipeline/README.md`). Old single-source scene files (schema 1) open as
+a one-part scene and are written as schema 2 on the next save or build.
 
 Open a scene with `?scene=<name>`. The top bar shows the scene name, a yellow
 dot when there are unsaved changes, **Align (G)**, **Plan (M)**,
@@ -75,20 +83,34 @@ Esc leaves the field. The browser warns before you leave with unsaved changes.
 
 **Start to finish**
 
-1. **New scene.** On the scene list click **+ New scene**, pick a file from `assets/source_ply/` and enter a name (letters, digits, `_`, `-`; checked as you type). The editor opens it. An unbuilt scene previews the source file itself, loaded whole (no LoD streaming), so big files take a while.
-2. **Align.** Press `G`. Rotate (for a Z-up scan: X **−90°**), scale, then fly to the floor spot that should become the origin and press `O` (details under Align mode). The transform you edit is always relative to the original source.
+0. **Parts.** Put Spirula Studio's part exports in a folder such as `assets/source_ply/parts/<scan>/`. If only the merged file exists, split it with the scan's partition: `node pipeline/partition-split.mjs <merged.ply> --partition assets/partitions/<scan>/partition.json --out-dir assets/source_ply/parts/<scan>` (see `../pipeline/README.md`).
+1. **New scene.** On the scene list click **+ New scene**, tick one file or every part of the scan (files under `assets/source_ply/`, subfolders included) and enter a name (letters, digits, `_`, `-`; checked as you type; several parts in one folder suggest the folder name). Each file becomes a part. The editor opens it. An unbuilt scene previews the source files themselves, loaded whole (no LoD streaming), but only while the unbuilt sources add up to at most **1.5 GB** (`?previewCapGB=<n>` changes it). Above that nothing is auto-loaded: a banner says "Build to preview", and **Parts** (`L`) can preview single parts that fit. This applies to single-source scenes too (the 4.9 GB merged file is never pulled into the browser).
+2. **Align.** Press `G`. Rotate (for a Z-up scan: X **−90°**), scale, then fly to the floor spot that should become the origin and press `O` (details under Align mode). The transform you edit is always relative to the original sources and applies to every part; bounds, **Centre on origin** and the floor guess sample all loaded parts.
 3. **Save.** `Ctrl+S` writes `scene.json` (`POST /__scenes/save`; the server keeps the build fields, which only the pipeline writes).
-4. **Build.** Click **Build**. With unsaved changes it offers **Save and build**. The build panel (`B`) shows a progress bar and the live log, with **Cancel**. When it finishes the editor loads the new streamed `.rad` in place and the "Transform changed since last build" banner goes away. The same build runs from a terminal: `build-scene.bat <name>` (repo root) or `node pipeline/build-scene.mjs <name>`; the editor notices command-line builds (through `scenes/.build.lock`) and reloads when they finish. One build runs at a time.
+4. **Build.** Click **Build**. With unsaved changes it offers **Save and build**. Parts are built one after another (one `build-lod` at a time, so RAM follows the largest part); parts whose source, transform and flags are unchanged are reused, and a build with nothing to do finishes at once (the editor then offers **Rebuild all**). The build panel (`B`) shows the overall progress bar, one row per part (queued / building with its percentage / built with time and `build-lod` peak memory / unchanged / failed) and the live log, with **Cancel**. When it finishes the editor loads the new `.rad` files in place (unchanged parts are not reloaded) and the "Transform changed since last build" banner goes away. A failure keeps the previous build. The same build runs from a terminal: `build-scene.bat <name> [--force] [--part <id>]` (repo root) or `node pipeline/build-scene.mjs <name>`; the editor notices command-line builds (through `scenes/.build.lock`) and reloads when they finish. One build runs at a time.
 5. **Plan export.** Press `M`, set the cut and floor heights, **Export PNG + JSON + GLB**. The files go to `scenes/<name>/nav/plan-<label>.*`.
 6. **Draw colliders** in Rhino or Blender over the imported `plan-<label>.glb` (see Navigation for the naming rules) and export the collision GLB into `scenes/<name>/nav/`, e.g. `nav/collision.glb`.
 7. **Pick the collision.** Press `N`, choose the GLB in **Collision mesh** (the list is that folder; ↻ re-reads it). The status line says when it has loaded; **Show colliders** (`Shift+N`) draws the wireframe.
 8. **Spawn and start camera.** Look from where walking should start and click **Set spawn here**; set the view the scene opens with using **Set start camera**. Set **Fallback floor Y** (used when there is no collision mesh), **Allow jump**, **Allow fly**.
 9. **Walk.** Press `C` until the button says Walk (or click **Walk** in the panel). Save.
 
-**Scene list.** Each card shows the source, last build time and duration,
-the last build status, splat count, the number of nav files and flags for
-"not built", "transform changed since build", "nav may be misaligned" and a
-missing source. **Duplicate** copies `scene.json` and `nav/` (not the build).
+**Parts panel (`L`).** One row per part: id, build state (built / outdated
+/ not built / disabled), whether it is loaded (streaming `.rad`, source
+preview, not loaded over the cap, source missing), source file and size,
+splat count in the source (`.ply` header) and in the `.rad`, last build time
+and `build-lod` peak memory. Per part: the checkbox shows / hides it in the
+view (view only, not saved; hidden parts also leave Spark's LoD budget),
+**Preview** / **Unload** loads an unbuilt part's source when the scene is
+over the cap, **Build** rebuilds only that part (`--part`), **Disable** /
+**Enable** takes it out of the scene (saved; not built, not shown), **✕**
+removes it (saved; the source file is untouched). **+ Add parts…** adds files
+from `assets/source_ply/` (they must be in the same coordinate frame); save,
+then Build. The panel opens by itself for multi-part scenes.
+
+**Scene list.** Each card shows the source (or the parts), last build time,
+duration and peak memory, the last build status, splat count, the number of
+nav files and flags for "not built" / "built n/m parts", "transform changed
+since build", "nav may be misaligned" and a missing source. **Duplicate** copies `scene.json` and `nav/` (not the build).
 **Delete** asks you to type the name and removes `scenes/<name>/` only, never
 the source.
 
@@ -97,7 +119,12 @@ coordinates to scene coordinates. A built `.rad` already contains its build's
 transform T_built (`build.transformMatrix`), so the editor shows it with
 T_new · T_built⁻¹ (the identity when nothing changed). An unbuilt scene shows
 the source with T_new. Either way the preview is what the next build will
-produce. Code and tests: `src/scene/sceneMath.ts`.
+produce. With parts, that matrix goes on `viewer.root` only; each part's mesh
+gets T_ref · B_i⁻¹ (B_i: what that part was built with, identity for a raw
+source), which is the identity unless parts were built with different
+transforms (a `--part` build after a transform change) or some parts are
+built and others are previewing their source. Code and tests: `loadPlan` in
+`../shared/scene-schema.mjs`, `src/scene/sceneMath.ts`, `src/scene/sceneConfig.ts`.
 
 **Coordinates of navigation assets.** Floor Y, spawn, start camera, plan
 exports and the collision GLB are all in scene (built) coordinates. The first
@@ -107,11 +134,16 @@ no longer line up: **Revert transform**, or redraw/check them and click **They
 line up** to record the new transform.
 
 **Dev endpoints** (`dev-server/scenes.ts`, all JSON): `GET /__scenes`,
-`GET /__scenes/sources`, `POST /__scenes/create|duplicate|delete`,
-`POST /__scenes/save?name=`, `GET /__scenes/nav?name=`,
-`POST /__scenes/nav-file?name=&file=`, `GET /__scene-source/<name>/<file>`,
-`POST /__build`, `GET /__build/status`, `GET /__build/events` (SSE),
-`POST /__build/cancel`.
+`GET /__scenes/sources` (recursive under `assets/source_ply/`),
+`POST /__scenes/create {name, sources: [...]}`, `POST /__scenes/duplicate|delete`,
+`POST /__scenes/save?name=` (parts may be added only from the source list),
+`GET /__scenes/info?name=` (per part: source size, splat count, `.rad` on disk),
+`GET /__scenes/nav?name=`, `POST /__scenes/nav-file?name=&file=`,
+`GET /__scene-source/<name>/<part>/<file>`, `POST /__build {name, force?, parts?}`,
+`GET /__build/status`, `GET /__build/events` (SSE: `reset`, `log`, `progress`,
+`part`, `done`), `POST /__build/cancel`. Scene names and part ids are checked
+against the schema's patterns and every resolved path is re-checked to stay
+inside `scenes/<name>/` or `assets/source_ply/`.
 
 ## URL parameters
 
@@ -144,7 +176,7 @@ Example: `?config=configs/example.json&lodScale=0.7`.
 
 - **Orbit** (default). Mouse: left-drag rotates, right-drag pans, wheel zooms. Touch: one finger rotates, two fingers pinch and pan.
 - **Fly** (Spark's `SparkControls`). Move with WASD/arrows, Q/E or PageUp/PageDown for down/up. Drag to look. On touch, drag to look and use two fingers to slide. Gamepads also work.
-- Keys: `P` toggles the overlay, `C` cycles orbit / fly / walk, `R` resets the fps measurement window, `V` returns to the start view, `M` plan mode, `G` Align mode, `N` navigation panel, `B` build panel, `Shift+N` colliders, `Ctrl+S` save, `?` shortcut list. Shortcuts are ignored while typing in a field.
+- Keys: `P` toggles the overlay, `C` cycles orbit / fly / walk, `R` resets the fps measurement window, `V` returns to the start view, `M` plan mode, `G` Align mode, `L` parts panel, `N` navigation panel, `B` build panel, `Shift+N` colliders, `Ctrl+S` save, `?` shortcut list. Shortcuts are ignored while typing in a field.
 
 ## Plan export
 
@@ -419,8 +451,9 @@ don't block Phase 1:
 
 ```text
 index.html, src/main.ts   routing: scene list / ?scene= editor / ?model= debug viewer
-src/scene/                scene editor: store (dirty tracking), sceneMath (delta preview), sceneConfig,
-                          api client, start page, editor (top bar, banners, dock), nav panel, build panel
+src/scene/                scene editor: store (dirty tracking), sceneMath (delta preview), sceneConfig (models per part,
+                          preview cap), api client, start page, editor (top bar, banners, dock), parts panel,
+                          nav panel, build panel (per-part progress)
 src/ui/                   DOM helpers, toasts, dialogs, typing guard, editor CSS
 dev-server/scenes.ts      Vite middleware: scene list/create/duplicate/delete/save, nav files, builds (SSE)
 src/config.ts             URL params + JSON config -> ViewerConfig

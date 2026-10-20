@@ -4,8 +4,20 @@
  * not start: from another tab (same SSE stream) or from build-scene.bat
  * (`external` in /__build/status, polled).
  */
-import { api, type BuildStatus } from "./api";
-import { el } from "../ui/dom";
+import { api, type BuildPartStatus, type BuildProgress } from "./api";
+import { el, fmtBytes } from "../ui/dom";
+
+const PART_LABEL: Record<string, string> = {
+  queued: "queued",
+  reuse: "unchanged",
+  keep: "kept",
+  none: "—",
+  building: "building",
+  built: "built",
+  reused: "unchanged, reused",
+  kept: "kept as is",
+  failed: "FAILED",
+};
 
 export type BuildPhase = "idle" | "running" | "ok" | "failed";
 
@@ -30,6 +42,8 @@ export class BuildPanel {
 
   private readonly bar: HTMLDivElement;
   private readonly stage: HTMLDivElement;
+  private readonly partsBox: HTMLDivElement;
+  private readonly partRows = new Map<string, BuildPartStatus>();
   private readonly log: HTMLPreElement;
   private readonly cancelButton: HTMLButtonElement;
   private readonly title: HTMLElement;
@@ -48,6 +62,7 @@ export class BuildPanel {
   ) {
     this.bar = el("div");
     this.stage = el("div", { className: "panel-note" });
+    this.partsBox = el("div", { className: "build-parts", hidden: true });
     this.log = el("pre", { className: "build-log" });
     this.title = el("strong", { textContent: "Build" });
     this.cancelButton = el("button", { textContent: "Cancel build", className: "danger", hidden: true, onclick: () => void this.cancel() });
@@ -55,6 +70,7 @@ export class BuildPanel {
       el("div", { className: "plan-head" }, [this.title, el("button", { textContent: "Close", title: "Hide (B); the build keeps running", onclick: () => this.show(false) })]),
       el("div", { className: "build-progress" }, [this.bar]),
       this.stage,
+      this.partsBox,
       this.log,
       el("div", { className: "plan-row" }, [this.cancelButton]),
     ]);
@@ -85,7 +101,8 @@ export class BuildPanel {
     this.es = new EventSource("/__build/events");
     this.es.addEventListener("reset", (e) => this.onReset(JSON.parse((e as MessageEvent).data) as { id: number; name: string | null }));
     this.es.addEventListener("log", (e) => this.onLog(JSON.parse((e as MessageEvent).data) as string));
-    this.es.addEventListener("progress", (e) => this.onProgress(JSON.parse((e as MessageEvent).data) as NonNullable<BuildStatus["progress"]>));
+    this.es.addEventListener("progress", (e) => this.onProgress(JSON.parse((e as MessageEvent).data) as BuildProgress));
+    this.es.addEventListener("part", (e) => this.onPart(JSON.parse((e as MessageEvent).data) as BuildPartStatus));
     this.es.addEventListener("done", (e) => this.onDone(JSON.parse((e as MessageEvent).data) as { id: number; name: string; status: string; error: string | null }));
     // Command-line builds don't go through the dev server: poll for the lock.
     this.pollTimer = window.setInterval(() => void this.poll(), 4000);
@@ -97,14 +114,14 @@ export class BuildPanel {
   }
 
   /** Start a build of this scene (caller checks for unsaved changes). */
-  async start(): Promise<void> {
+  async start(o: { force?: boolean; parts?: string[] } = {}): Promise<void> {
     if (this.phase === "running") {
       this.show();
       throw new Error(this.runningName === this.sceneName ? "This scene is already building." : `A build of "${this.runningName}" is running; one build at a time.`);
     }
     this.resetView(`Starting build of ${this.sceneName}…`);
     this.show();
-    const st = await api.build(this.sceneName); // throws on 409 etc.
+    const st = await api.build(this.sceneName, o); // throws on 409 etc.
     this.ignoreId = -1;
     this.currentId = st.id;
     this.setRunning(this.sceneName, false);
@@ -153,12 +170,52 @@ export class BuildPanel {
     this.appendLine(line, /^(error|fatal)\b|failed|cancel/i.test(line));
   }
 
-  private onProgress(p: NonNullable<BuildStatus["progress"]>): void {
+  private onProgress(p: BuildProgress): void {
     if (this.stale) return;
     this.pct = Math.max(0, Math.min(100, p.pct));
     this.bar.style.width = `${this.pct}%`;
     this.stage.textContent = `${p.stage}${p.message ? `: ${p.message}` : ""} (${Math.round(this.pct)}%)`;
+    if (p.part) {
+      const row = this.partRows.get(p.part.id);
+      if (row) {
+        row.pct = p.part.pct;
+        this.renderParts();
+      }
+    }
     this.events.onState();
+  }
+
+  private onPart(row: BuildPartStatus): void {
+    if (this.stale) return;
+    this.partRows.set(row.id, { ...this.partRows.get(row.id), ...row });
+    this.renderParts();
+  }
+
+  /** One line per part: index, id, what happens to it, its progress, time and build-lod peak memory. */
+  private renderParts(): void {
+    const rows = [...this.partRows.values()].sort((a, b) => a.index - b.index);
+    this.partsBox.hidden = rows.length === 0;
+    this.partsBox.replaceChildren(
+      ...rows.map((r) => {
+        const done = ["built", "reused", "kept"].includes(r.status);
+        const pct = done ? 100 : r.status === "building" ? (r.pct ?? 0) : 0;
+        const fill = el("div");
+        fill.style.width = `${pct}%`;
+        const bar = el("div", { className: "build-progress small" }, [fill]);
+        const extra = [
+          r.status === "building" ? `${Math.round(pct)}%` : "",
+          r.seconds !== undefined ? `${r.seconds} s` : "",
+          r.peakMemoryBytes ? `peak ${fmtBytes(r.peakMemoryBytes)}` : "",
+        ].filter(Boolean).join(" · ");
+        return el("div", { className: `build-part ${r.status}`, title: r.error ?? r.reason ?? "" }, [
+          el("span", { className: "idx", textContent: `${r.index + 1}/${r.count}` }),
+          el("span", { className: "pid", textContent: r.id }),
+          el("span", { className: "st", textContent: PART_LABEL[r.status] ?? r.status }),
+          bar,
+          el("span", { className: "ex", textContent: extra }),
+        ]);
+      }),
+    );
   }
 
   private onDone(d: { id: number; name: string; status: string; error: string | null }): void {
@@ -197,7 +254,7 @@ export class BuildPanel {
     }
   }
 
-  private applyStatus(st: BuildStatus, initial: boolean): void {
+  private applyStatus(st: Awaited<ReturnType<typeof api.buildStatus>>, initial: boolean): void {
     if (st.external) {
       if (this.externalName !== st.external.scene) {
         this.externalName = st.external.scene;
@@ -247,6 +304,8 @@ export class BuildPanel {
     this.stage.textContent = title;
     this.log.replaceChildren();
     this.lineCount = 0;
+    this.partRows.clear();
+    this.renderParts();
   }
 
   private appendLine(line: string, bad: boolean): void {

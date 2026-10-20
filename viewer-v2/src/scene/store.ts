@@ -13,7 +13,7 @@
  */
 import type { SceneDoc } from "../../../shared/scene-schema.mjs";
 
-export type SceneChange = "transform" | "navigation" | "camera" | "floor" | "build" | "saved" | "other";
+export type SceneChange = "transform" | "parts" | "navigation" | "camera" | "floor" | "build" | "saved" | "other";
 export type SceneListener = (doc: SceneDoc, change: SceneChange) => void;
 
 const SERVER_OWNED = new Set(["build", "buildAttempt", "updatedAt"]);

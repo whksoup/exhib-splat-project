@@ -3,14 +3,20 @@
  * Every call throws an Error with the server's message on failure.
  */
 import type { SceneDoc } from "../../../shared/scene-schema.mjs";
+import type { PartFileInfo } from "./sceneConfig";
 
 export interface SceneListEntry {
   name: string;
   error?: string;
+  /** Source of the first part (cards show it; `parts` has them all). */
   source?: string;
+  parts?: { id: string; source: string; enabled: boolean; sourceExists: boolean; state: string }[];
+  /** Every enabled part's source exists. */
   sourceExists?: boolean;
+  /** At least one part's .rad is on disk. */
   built?: boolean;
-  build?: { finishedAt: string; radFile: string; splatCount: { input: number | null; final: number | null } | null; wallClockSeconds: number | null } | null;
+  summary?: { total: number; enabled: number; built: number; outdated: number; notBuilt: number; complete: boolean };
+  build?: { finishedAt: string; status: string; splatCount: { input: number | null; final: number | null } | null; wallClockSeconds: number | null; peakMemoryBytes: number | null } | null;
   buildAttempt?: { status: "ok" | "failed"; startedAt: string; finishedAt: string; error: string | null } | null;
   transformChanged?: boolean;
   navWarning?: boolean;
@@ -24,13 +30,34 @@ export interface NavFile {
   bytes: number;
 }
 
+/** One part's state in the running build (from build-scene.mjs @part / @progress lines). */
+export interface BuildPartStatus {
+  id: string;
+  index: number;
+  count: number;
+  status: string;
+  pct?: number;
+  seconds?: number;
+  peakMemoryBytes?: number | null;
+  error?: string;
+  reason?: string;
+}
+
+export interface BuildProgress {
+  stage: string;
+  pct: number;
+  message: string;
+  part?: { id: string; index: number; count: number; pct: number };
+}
+
 export interface BuildStatus {
   running: boolean;
   id: number;
   name: string | null;
   startedAt: string | null;
   finishedAt: string | null;
-  progress: { stage: string; pct: number; message: string } | null;
+  progress: BuildProgress | null;
+  parts: BuildPartStatus[];
   result: { status: string; error: string | null } | null;
   exitCode: number | null;
   lines: string[];
@@ -60,7 +87,9 @@ const q = (o: Record<string, string>) => new URLSearchParams(o).toString();
 export const api = {
   list: () => call<{ scenes: SceneListEntry[] }>("/__scenes").then((r) => r.scenes),
   sources: () => call<{ files: { path: string; bytes: number }[]; dir: string }>("/__scenes/sources"),
-  create: (name: string, source: string) => post<{ scene: SceneDoc }>("/__scenes/create", { name, source }),
+  create: (name: string, sources: string[]) => post<{ scene: SceneDoc }>("/__scenes/create", { name, sources }),
+  /** Per-part source sizes / splat counts and whether each part's .rad is on disk. */
+  info: (name: string) => call<{ parts: PartFileInfo[] }>(`/__scenes/info?${q({ name })}`).then((r) => r.parts),
   duplicate: (from: string, name: string) => post<{ scene: SceneDoc }>("/__scenes/duplicate", { from, name }),
   remove: (name: string, confirm: string) => post<{ deleted: string }>("/__scenes/delete", { name, confirm }),
   save: (scene: SceneDoc) =>
@@ -72,7 +101,7 @@ export const api = {
   navFiles: (name: string) => call<{ files: NavFile[] }>(`/__scenes/nav?${q({ name })}`).then((r) => r.files),
   uploadNavFile: (name: string, file: string, blob: Blob) =>
     call<{ file: string; bytes: number }>(`/__scenes/nav-file?${q({ name, file })}`, { method: "POST", body: blob }),
-  build: (name: string) => post<BuildStatus>("/__build", { name }),
+  build: (name: string, o: { force?: boolean; parts?: string[] } = {}) => post<BuildStatus>("/__build", { name, ...o }),
   buildStatus: () => call<BuildStatus>("/__build/status"),
   cancelBuild: () => post<{ ok: boolean }>("/__build/cancel", {}),
 };

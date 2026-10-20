@@ -112,6 +112,113 @@ node pipeline/build.mjs assets/source_ply/scan-aligned.ply --name scan
 - the band-1 SH vectors;
 - SH radiance for random view directions.
 
+## Scenes (`build-scene.mjs`)
+
+A scene (`scenes/<name>/scene.json`, schema in `../shared/scene-schema.mjs`)
+has one or more **parts**, `parts: [{ id, source, label?, enabled }]`, all in
+the same source coordinate frame, and one scene `transform` that applies to
+every part identically. Schema-1 files (a single `source`) are migrated on
+read: the source becomes part `main` and the v1 build record becomes that
+part's build (its flat `build/<name>-lod.rad` keeps working and is reused by
+incremental builds). The file is written as schema 2 on the next save or build.
+
+```sh
+node pipeline/new-scene.mjs <name> --source assets/source_ply/parts/OculusV1            # folder: every splat file in it
+node pipeline/new-scene.mjs <name> --source "assets/source_ply/parts/OculusV1/part*.ply" # glob (file-name part only)
+node pipeline/new-scene.mjs <name> --source a.ply --source b.ply [--transform t.json ... | --transform-from <scene>]
+node pipeline/build-scene.mjs <name> [--force] [--part <id>]... [--dry-run] [--keep-temp] [--no-verify]
+```
+
+Part ids come from the file names (`part0.ply` -> `part0`); `--transform-from`
+copies another scene's transform (used for `oculus_parts`, which has exactly
+the `oculus` transform).
+
+**Build flow.** Parts are built **one after another**, never two `build-lod`
+processes at once, so peak RAM is that of the largest part:
+
+1. For each part, in scene order: if the transform is not identity, bake it into `.build-tmp/_baked-<part>.ply` (transform.mjs, verified); run `build-lod` into `.build-tmp/<part>/` (outputs `<scene>-<part>-lod.rad` + `.radc`, `build-report.json`, `build-lod.log`); delete the baked `.ply` before the next part, so temporary disk use is about one part.
+2. When every part succeeded, `.build-tmp/` replaces `build/` in one rename; the previous build is removed only after that. Any failure leaves the last good `build/` and the `build` record in scene.json untouched (the attempt, with each part's status, goes to `buildAttempt`).
+3. `scene.json` gets `build`: `{ status: "ok"|"partial", transformMatrix, parts: [{ id, radFile, transformMatrix, source, sourceBytes, sourceModified, buildLodFlags, sparkTag, wallClockSeconds, buildLodSeconds, peakMemoryBytes, splatCount, bounds, chunkCount, totalBytes, transformStep, reusedFrom? }], splatCount, bounds (union), chunkCount, totalBytes, peakMemoryBytes (max) }`.
+
+**Incremental rules.** A part is **reused** (its previous files hard-linked
+into the new build, nothing rebuilt) when its source path, size and mtime,
+the transform matrix, the build-lod flags and the Spark tag all equal what
+its last good build recorded and its `.rad` + all chunks are still in
+`build/`. If nothing at all changed, the run finishes at once without
+touching `build/` (0.1 s on `oculus_parts`). `--force` rebuilds every part.
+`--part <id>` (repeatable) rebuilds that part even if unchanged and carries
+the other parts over as they are, even when their transform is outdated: the
+build is then `partial`, and the viewer shows each part with its own
+correction matrix until the rest is rebuilt. Disabled parts are not built;
+their previous output is kept. Removed parts disappear from `build/`.
+
+**Progress lines** (for the editor's build panel): `@progress {stage, pct, message, part: {id, index, count, pct}}`
+(overall `pct` weighs each part by source size), `@part {id, index, count, status, seconds, peakMemoryBytes}`
+(`queued`, `reuse`, `keep`, `building`, `built`, `reused`, `kept`, `failed`), `@result {status, error, build}`.
+
+**Measured** (OculusV1, 2,811,571 splats, same transform):
+
+| Build | build-lod peak (working set) | transform step peak | wall clock |
+| --- | --- | --- | --- |
+| merged `oculus` (1 part) | 1.11 GB | ~0.6 GB | 50.8 s |
+| `oculus_parts`, per part (935K–940K splats) | 0.355–0.358 GB | 0.56 GB | 18–22 s |
+| `oculus_parts`, 3 parts sequential | 0.358 GB (max) | 0.56 GB | 59.2 s |
+
+(Decimal GB; the console prints binary MB, e.g. 0.358 GB = 341 MB.) The union
+of the part bounds equals the merged build's bounds exactly; final splat
+counts 3,939,331 vs 3,939,655. The transform bake (splat-transform, a Node
+process) now has the higher peak, about 0.56 GB almost regardless of part size.
+
+## Splitting a merged file (`partition-split.mjs`)
+
+Fallback for when only Spirula's merged `.ply` exists. It needs the scan's
+partition (`partition.json` + `partition.bin`, copied to
+`assets/partitions/<scan>/`; the `.bin` is gitignored):
+
+```sh
+node pipeline/partition-split.mjs assets/source_ply/OculusMerged_1.ply \
+  --partition assets/partitions/OculusV1/partition.json --out-dir assets/source_ply/parts/OculusV1 [--prefix part] [--overwrite]
+```
+
+Every splat goes to the part of its **nearest partition point** (k-d tree over
+the labelled points). Two streaming passes over the `.ply` (label, then write)
+keep RAM at the partition data + 1 byte/splat of labels + 32 MB read / 8 MB
+write buffers, never the file itself. Each output keeps the input header byte
+for byte except the vertex count, and the records unchanged in file order.
+It writes `<prefix><k>.ply` plus `<prefix>-split-report.json`: per-part
+counts, the share of splats labelled differently from their back-to-back
+block in the file (Spirula writes the parts in order), the label mix per
+tenth of the file and nearest-point distance percentiles.
+
+On `OculusMerged_1.ply` (665 MB): part0 935,155, part1 936,798, part2
+939,618 = 2,811,571 splats; 0.36 % disagree with file order (ring overlap at
+the block ends); nearest-point distance p50 0.9 mm, p99 4 cm; 10 s, 127 MB RSS.
+Inputs must be binary little-endian with a single `vertex` element (standard
+training output); ASCII and PlayCanvas compressed `.ply` are refused.
+
+**`partition.bin` layout.** There is no published spec; this was
+reverse-engineered from one file (OculusV1, 28,496,397 bytes), so
+`lib/partition.mjs` checks every field and fails with a clear message
+otherwise. Little-endian:
+
+| Offset | Type | Meaning |
+| --- | --- | --- |
+| 0 | char[4], u32 | `"SSPT"`, version 2 |
+| 8 | char[4], u32 | `"SSLF"`, version 1 |
+| 16 | u64 | N, point count (733,309) |
+| 24 | u32 | M, node count of the tree below (262,143) |
+| 28 | u32 | unknown (0) |
+| 32 | N × 16 B | f32 x, y, z; u8 part label (0..num_parts-1); 3 bytes, probably RGB |
+| 32 + 16N | M × 32 B | BVH over the points: f32 min[3], i32 a, f32 max[3], i32 c (leaf: c = count ≤ 6, a = first point; inner: c = 0, a = child) |
+| after | rest (~8.4 MB) | starts with u64 frame count (1240), then floats; unknown, not read |
+
+Points are in the training frame of the merged `.ply` (bbox (-5.81, -7.54,
+-3.26) .. (2.61, 3.17, 10.94) for OculusV1). `partition.json` (`format:
+"spirula-scene-partition"`, `version: 1`) holds `num_parts`, `num_points`,
+`frame_names[]`, `frame_parts[]`, `parts[{core, points, ring}]` and `binary`.
+The splitter uses only the point records; the BVH is ignored (we build our
+own k-d tree).
+
 ## Output layout
 
 ```
@@ -135,11 +242,11 @@ reports/build-log.jsonl   one JSON line per run (same report without the file li
 npm test
 ```
 
-The tests use synthetic files written to the OS temp directory and never touch the repo. They cover argument parsing, the dependency check, the `.ply` reader (binary 3DGS layout, CRLF headers, buffer-boundary reads, a 200k-splat file, NaN positions, truncated files, ASCII, PlayCanvas compressed), the `.sog` meta reader, and dry runs. An end-to-end run uses a stand-in `build-lod` script that follows the real tool's CLI contract (outputs written beside the input, `Comment:` stats block, exit 0 on decode failure), so staging, output collection, reports, version handling and failure detection are all exercised without Rust. `transform.test.mjs` checks the Align bake against three.js (see above); it uses `three` 0.186.1 as a dev dependency.
+The tests use synthetic files written to the OS temp directory and never touch the repo. They cover argument parsing, the dependency check, the `.ply` reader (binary 3DGS layout, CRLF headers, buffer-boundary reads, a 200k-splat file, NaN positions, truncated files, ASCII, PlayCanvas compressed), the `.sog` meta reader, and dry runs. An end-to-end run uses a stand-in `build-lod` script that follows the real tool's CLI contract (outputs written beside the input, `Comment:` stats block, exit 0 on decode failure), so staging, output collection, reports, version handling and failure detection are all exercised without Rust. `transform.test.mjs` checks the Align bake against three.js (see above); it uses `three` 0.186.1 as a dev dependency. `scene.test.mjs` covers the scene schema (schema 1 -> 2 migration, the multi-part load plan, the preview cap) and `build-scene.mjs` end to end: single and multi-part builds, sequential order, incremental reuse, `--part`, `--force`, a failure in part 2 of 3 keeping the previous build, disabled/removed parts and a schema-1 flat build. `partition.test.mjs` writes a synthetic partition (same binary layout) and merged `.ply` and checks the reader's validation, the k-d tree against brute force, and that the split keeps headers and records byte for byte.
 
 ## Known caveats
 
-- **Memory.** `build-lod` decodes the whole input into memory before building the tree. This happens in `process_file_lod_tsplat`, and there is no streaming or out-of-core mode. Peak memory at 50M splats is the main week-1 unknown. If it does not fit, use a high-memory machine or split the model into zones (for example with `--min-box`/`--max-box`, one build per zone).
+- **Memory.** `build-lod` decodes the whole input into memory before building the tree. This happens in `process_file_lod_tsplat`, and there is no streaming or out-of-core mode (about 400 B/splat at peak: 2.8M splats peaked at 1.1 GB; the 19.7M-splat `mergedOpenSiliconLab.ply` crashed). Use multi-part scenes (above): each part is built on its own, so peak memory follows the largest part.
 - **Peak memory is best-effort.** On Windows a PowerShell loop samples the kernel's `PeakWorkingSet64` and `PeakPagedMemorySize64` once a second. On Linux the pipeline reads `VmHWM`; on macOS it polls `ps` RSS. Because the Windows counters are peaks kept by the OS, only growth in the final second can be missed. A process that exits in under about 1 second, before PowerShell starts, records `null`.
 - **Recentring** is not automatic. `build-lod` can crop but has no translate option. Use Align mode + `transform.mjs` (above) before the build. In v2.3.1 the RAD file stores centres as f32, but Spark's default paged pool stores them at half precision at runtime, so far-off coordinates stripe. The pipeline only warns about this for now (using the f16 step at the farthest coordinate). The Phase 2 cleanup step must recentre the model before the build.
 - **`--max-sh=1`** drops SH degrees 2 and 3. Whether that is acceptable is still an open visual-check question in the scope.

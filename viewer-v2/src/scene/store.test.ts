@@ -51,6 +51,18 @@ describe("SceneStore", () => {
     expect(editableFingerprint(a)).toBe(editableFingerprint(b));
   });
 
+  it("adding, disabling and removing parts are unsaved edits", () => {
+    const store = new SceneStore(createScene({ name: "m", sources: ["a/p0.ply", "a/p1.ply"], now: "2026-01-01T00:00:00.000Z" }));
+    store.update((d) => (d.parts[1].enabled = false), "parts");
+    expect(store.dirty).toBe(true);
+    store.update((d) => (d.parts[1].enabled = true), "parts");
+    expect(store.dirty).toBe(false);
+    store.update((d) => d.parts.push({ id: "p2", source: "a/p2.ply", enabled: true }), "parts");
+    expect(store.dirty).toBe(true);
+    store.update((d) => (d.parts = d.parts.filter((p) => p.id !== "p2")), "parts");
+    expect(store.dirty).toBe(false);
+  });
+
   it("update never mutates the previous document object", () => {
     const store = new SceneStore(doc());
     const before = store.doc;

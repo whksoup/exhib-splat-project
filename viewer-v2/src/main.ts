@@ -13,25 +13,30 @@ import { resolveDevice } from "./device";
 import { attachNavigation } from "./nav";
 import { appendModelPicker, Overlay, showMessage } from "./overlay";
 import { PlanMode } from "./plan/planMode";
-import { fetchSceneJson, urlExists } from "./scene/api";
+import { api, fetchSceneJson } from "./scene/api";
 import { SceneEditor } from "./scene/editor";
-import { sceneCamera, sceneModel, sceneNavigation, type SceneModelChoice } from "./scene/sceneConfig";
+import { previewCapBytes, sceneCamera, sceneModels, sceneNavigation, type PartFileInfo, type SceneModels } from "./scene/sceneConfig";
 import { StartPage } from "./scene/startPage";
-import { el, guardTyping } from "./ui/dom";
+import { el, fmtBytes, guardTyping } from "./ui/dom";
 import { Viewer } from "./viewer";
 
 const backLink = () => el("p", {}, [el("a", { href: "./", textContent: "← Back to the scene list" })]);
 
-/** scenes/<name>/scene.json -> scene doc + what to load. */
-async function openScene(name: string): Promise<{ scene: SceneDoc; choice: SceneModelChoice; base: ViewerConfigFile }> {
+/** scenes/<name>/scene.json -> scene doc + what to load for each part. */
+async function openScene(name: string): Promise<{ scene: SceneDoc; load: SceneModels; info: PartFileInfo[] | null; base: ViewerConfigFile }> {
   const { scene, errors } = validateScene(await fetchSceneJson(name));
   if (!scene) throw new Error(`scenes/${name}/scene.json is invalid: ${errors.join("; ")}`);
   if (scene.name !== name) throw new Error(`scenes/${name}/scene.json says name "${scene.name}"`);
-  // A build recorded in scene.json but missing on disk (build/ is gitignored) falls back to the source.
-  const built = !!scene.build && (await urlExists(`/scenes/${encodeURIComponent(name)}/build/${encodeURIComponent(scene.build.radFile)}`));
-  const choice = sceneModel(scene, built);
+  // Which .rad files are really on disk (build/ is gitignored) and how big the sources are (preview cap).
+  let info: PartFileInfo[] | null = null;
+  try {
+    info = await api.info(name);
+  } catch (err) {
+    console.warn("scene info unavailable; assuming recorded builds exist", err);
+  }
+  const load = sceneModels(scene, info, { capBytes: previewCapBytes(window.location.search) });
   let camera = sceneCamera(scene);
-  if (!camera && choice.mode === "built" && scene.build?.bounds) {
+  if (!camera && load.plan.refMatrix && scene.build?.bounds) {
     // Paged models can't be auto-framed (no CPU-side splats yet): frame the build bounds.
     const { bboxMin: a, bboxMax: b } = scene.build.bounds;
     const c: [number, number, number] = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2];
@@ -40,8 +45,9 @@ async function openScene(name: string): Promise<{ scene: SceneDoc; choice: Scene
   }
   return {
     scene,
-    choice,
-    base: { models: [choice.model], camera, navigation: sceneNavigation(scene), controls: "orbit" },
+    load,
+    info,
+    base: { models: load.models, camera, navigation: sceneNavigation(scene), controls: "orbit" },
   };
 }
 
@@ -97,7 +103,7 @@ async function main(): Promise<void> {
   new Overlay(ui, viewer);
 
   if (opened) {
-    const editor = new SceneEditor(viewer, ui, opened.scene, opened.choice);
+    const editor = new SceneEditor(viewer, ui, opened.scene, opened.load, opened.info);
     Object.assign(w, { editor, store: editor.store, align: editor.align, plan: editor.plan });
   } else {
     // Debug viewer (?model= / ?config=): v1 behaviour, previews only.
@@ -113,6 +119,21 @@ async function main(): Promise<void> {
 
   // No model is fine when starting in first-person (navigation testing, e.g. configs/nav-test.json).
   if (config.models.length === 0 && config.controls === "walk") return;
+  if (opened && config.models.length === 0) {
+    // Unbuilt and over the preview cap (or every part disabled / missing): the editor's banner explains.
+    const p = opened.load.plan;
+    const card = showMessage(ui, {
+      title: p.overCap ? "Build to preview" : "Nothing to show",
+      lines: p.overCap
+        ? [
+          `The scene is not built and its sources add up to ${fmtBytes(p.unbuiltBytes)}, more than the ${fmtBytes(previewCapBytes(window.location.search))} that is loaded whole into the browser.`,
+          "Build it (streams with LoD), or preview single parts from Parts (L). ?previewCapGB=<n> raises the cap.",
+        ]
+        : ["Every part is disabled or its source is missing: see Parts (L)."],
+    });
+    window.setTimeout(() => card.remove(), 15000);
+    return;
+  }
   if (config.models.length === 0) {
     const card = showMessage(ui, {
       title: "No model specified",
@@ -129,7 +150,7 @@ async function main(): Promise<void> {
   }
 
   const loading = showMessage(ui, {
-    title: opened?.choice.mode === "source" ? "Loading the source file (whole, not streamed)…" : "Loading…",
+    title: opened?.load.mode === "source" ? "Loading the source (whole, not streamed)…" : opened?.load.mode === "mixed" ? "Loading (unbuilt parts load whole)…" : "Loading…",
     lines: config.models.map((m) => decodeURIComponent(m.url.split("?")[0])),
   });
   loading.classList.add("loading");

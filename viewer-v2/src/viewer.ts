@@ -10,6 +10,7 @@
  */
 import * as THREE from "three";
 import { SparkRenderer, SplatMesh, type SplatFileType } from "@sparkjsdev/spark";
+import { decomposeTRS, isIdentityMatrix } from "../../shared/scene-schema.mjs";
 import type { ModelSpec, ViewerConfig } from "./config";
 import { isRadUrl } from "./config";
 import { CameraRig } from "./controls";
@@ -21,6 +22,8 @@ export type FrameHook = (ctx: { dtMs: number; now: number; viewer: Viewer }) => 
 
 export interface LoadedModel {
   spec: ModelSpec;
+  /** Scene part id (scene editor), null for ?model= debug models. */
+  id: string | null;
   mesh: SplatMesh;
   paged: boolean;
   preflight: PreflightResult;
@@ -37,6 +40,14 @@ export interface LoadedModel {
 export class Viewer {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
+  /**
+   * Parent of every SplatMesh. The scene editor puts the scene transform (or the
+   * delta on a built .rad) on this one object, so all parts of a multi-part scene
+   * move together; a part's own mesh matrix is ModelSpec.matrix (normally identity).
+   * Spark collects SplatMeshes by traversing the scene, so nesting is fine, and it
+   * sorts all of them together (no seams between parts).
+   */
+  readonly root = new THREE.Group();
   readonly camera: THREE.PerspectiveCamera;
   readonly spark: SparkRenderer;
   readonly rig: CameraRig;
@@ -91,6 +102,8 @@ export class Viewer {
       ...(config.extSplats !== undefined && { pagedExtSplats: config.extSplats }),
     });
     this.scene.add(this.spark);
+    this.root.name = "splat-root";
+    this.scene.add(this.root);
 
     this.rig = new CameraRig(this.camera, this.renderer.domElement, config.controls);
     const cam = config.camera;
@@ -133,13 +146,49 @@ export class Viewer {
    */
   async replaceModels(specs: ModelSpec[], frame = false): Promise<void> {
     for (const m of this.models.splice(0)) {
-      this.scene.remove(m.mesh);
+      this.root.remove(m.mesh);
       m.mesh.dispose();
     }
     this.errors.length = 0;
     this.config.models = specs;
     this.modelsVersion++;
     await this.loadModels(frame);
+  }
+
+  /**
+   * Make the loaded models match `specs` without reloading the ones that stay
+   * (same id, URL and matrix): e.g. one part enabled or previewed in a
+   * multi-part scene. Returns the errors of the models that were added.
+   */
+  async syncModels(specs: ModelSpec[]): Promise<string[]> {
+    const key = (s: ModelSpec) => `${s.id ?? ""}|${s.url}|${s.paged ?? ""}|${(s.matrix ?? []).join(",")}`;
+    const want = new Map(specs.map((s) => [key(s), s]));
+    for (const m of [...this.models]) {
+      if (want.has(key(m.spec))) {
+        want.delete(key(m.spec));
+        continue;
+      }
+      this.models.splice(this.models.indexOf(m), 1);
+      this.root.remove(m.mesh);
+      m.mesh.dispose();
+    }
+    this.config.models = specs;
+    this.modelsVersion++;
+    const results = await Promise.allSettled([...want.values()].map((spec) => this.loadModel(spec)));
+    const errors = (results.filter((r) => r.status === "rejected") as PromiseRejectedResult[]).map((f) =>
+      f.reason instanceof Error ? f.reason.message : String(f.reason),
+    );
+    this.errors.splice(0, this.errors.length, ...errors);
+    // Keep the scene order (part order) for anything that lists models.
+    const order = new Map(specs.map((s, i) => [key(s), i]));
+    this.models.sort((a, b) => (order.get(key(a.spec)) ?? 0) - (order.get(key(b.spec)) ?? 0));
+    this.modelsVersion++;
+    return errors;
+  }
+
+  /** Show / hide one part (hidden parts are skipped by Spark's sort and LoD budget). */
+  setModelVisible(id: string, visible: boolean): void {
+    for (const m of this.models) if (m.id === id) m.mesh.visible = visible;
   }
 
   async loadModels(frame = !this.config.camera): Promise<void> {
@@ -166,7 +215,7 @@ export class Viewer {
     const preflight = await checkModelUrl(spec.url);
     if (!preflight.ok) throw new Error(`"${spec.url}": ${preflight.error}`);
 
-    const entry: LoadedModel = { spec, mesh: undefined as unknown as SplatMesh, paged, preflight, ready: false, bytesLoaded: 0, loadEndMs: null };
+    const entry: LoadedModel = { spec, id: spec.id ?? null, mesh: undefined as unknown as SplatMesh, paged, preflight, ready: false, bytesLoaded: 0, loadEndMs: null };
     const mesh = new SplatMesh({
       url: spec.url,
       ...(!paged && {
@@ -181,15 +230,23 @@ export class Viewer {
       ...(spec.lodScale !== undefined && { lodScale: spec.lodScale }),
     });
     entry.mesh = mesh;
+    // The part's place inside the root (identity unless it was built with another transform).
+    if (spec.matrix && !isIdentityMatrix(spec.matrix, 1e-12)) {
+      const t = decomposeTRS(spec.matrix, 1e-5);
+      mesh.position.set(...t.position);
+      mesh.quaternion.set(...t.quaternion);
+      mesh.scale.setScalar(t.scale);
+    }
     this.onMeshCreated?.(entry);
     this.models.push(entry);
-    this.scene.add(mesh);
+    this.root.add(mesh);
+    mesh.updateMatrixWorld(true);
     try {
       await mesh.initialized;
       entry.ready = true;
       if (!paged) entry.loadEndMs = performance.now();
     } catch (err) {
-      this.scene.remove(mesh);
+      this.root.remove(mesh);
       this.models.splice(this.models.indexOf(entry), 1);
       mesh.dispose();
       throw new Error(`"${spec.url}": ${err instanceof Error ? err.message : String(err)}`);
@@ -198,6 +255,7 @@ export class Viewer {
 
   private frameLoadedModels(): void {
     const box = new THREE.Box3();
+    this.scene.updateMatrixWorld(true);
     for (const m of this.models) {
       if (m.paged || !m.ready) continue; // paged meshes have no CPU-side splats to measure
       m.mesh.updateMatrixWorld(true);

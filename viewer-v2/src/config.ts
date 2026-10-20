@@ -26,6 +26,10 @@ export interface ModelSpec {
   fileType?: string;
   /** Per-mesh LoD detail multiplier (SplatMesh.lodScale). */
   lodScale?: number;
+  /** Scene part id (scene editor only). */
+  id?: string;
+  /** Column-major 4x4 of the mesh inside Viewer.root (scene editor; identity when omitted). */
+  matrix?: number[];
 }
 
 export interface CameraSpec {

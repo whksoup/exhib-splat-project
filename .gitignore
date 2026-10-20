@@ -16,5 +16,12 @@ assets/rad_output/*
 *.rad
 *.radc
 
-# Scene builds are regenerated from source
+# Spirula partition binaries (tens of MB); the partition.json next to them is committed.
+# Split part .ply files go to assets/source_ply/parts/ (ignored by the rule above).
+assets/partitions/**/*.bin
+
+# Scene builds are regenerated from source (.build-tmp / .build-old-*: interrupted builds)
 scenes/*/build/
+scenes/*/.build-tmp/
+scenes/*/.build-old-*/
+scenes/.build.lock
