@@ -1,0 +1,42 @@
+{
+  "source": "assets/source_ply/OculusMerged_1-aligned.ply",
+  "position": [
+    0.8361895813316569,
+    -0.44364187745769335,
+    -1.4957548639379472
+  ],
+  "rotationDeg": [
+    0,
+    0,
+    0
+  ],
+  "eulerOrder": "XYZ",
+  "quaternion": [
+    0,
+    0,
+    0,
+    1
+  ],
+  "scale": 1,
+  "matrix": [
+    1,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0.8361895813316569,
+    -0.44364187745769335,
+    -1.4957548639379472,
+    1
+  ],
+  "appliedOrder": "scale, then rotate, then translate, about the world origin (three.js Object3D: M = T * R * S, column vectors)",
+  "createdAt": "2026-10-20T12:14:25.324Z",
+  "tool": "viewer-align"
+}

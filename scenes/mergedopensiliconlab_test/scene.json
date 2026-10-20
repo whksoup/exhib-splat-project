@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "name": "mergedopensiliconlab_test",
+  "source": "assets/source_ply/mergedOpenSiliconLab.ply",
+  "transform": {
+    "position": [
+      0,
+      0,
+      0
+    ],
+    "rotationDeg": [
+      0,
+      0,
+      0
+    ],
+    "eulerOrder": "XYZ",
+    "quaternion": [
+      0,
+      0,
+      0,
+      1
+    ],
+    "scale": 1,
+    "matrix": [
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1
+    ],
+    "appliedOrder": "scale, then rotate, then translate, about the world origin (three.js Object3D: M = T * R * S, column vectors)"
+  },
+  "floorY": null,
+  "navigation": {},
+  "camera": null,
+  "navTransformMatrix": null,
+  "buildOptions": {},
+  "build": null,
+  "buildAttempt": {
+    "status": "failed",
+    "startedAt": "2026-10-20T13:38:38.090Z",
+    "finishedAt": "2026-10-20T13:39:37.338Z",
+    "error": "build-lod exited with code 3221226505"
+  },
+  "hotspots": [],
+  "createdAt": "2026-10-20T13:38:34.654Z",
+  "updatedAt": "2026-10-20T13:38:34.654Z"
+}
