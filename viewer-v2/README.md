@@ -1,9 +1,10 @@
-# Viewer
+# Viewer v2 (scene editor)
 
-Web viewer for the Gaussian splat tour: Vite + TypeScript + three.js + Spark.
-Phase 1 is the week-1 go/no-go performance spike. It has a paged .rad
-streaming viewer, per-device splat budgets and a performance overlay. Tour
-features (Phase 3) and WebXR (Phase 4) come later.
+Web viewer and editor for the Gaussian splat tour: Vite + TypeScript + three.js + Spark.
+v2 adds **scenes**: save files that hold a model's source, alignment,
+navigation setup and build, edited in the browser and built with one button.
+The frozen v1 prototype lives in `../viewer/` (git tag `v0.1-prototype`) and
+runs on port 5173; v2 runs on **5174** so both can run side by side.
 
 Pinned versions (exact, no ranges): `@sparkjsdev/spark` 2.3.1 (matches the
 `build-lod` tag used by `pipeline/`), `three` 0.186.1, `vite` 8.3.2,
@@ -12,18 +13,20 @@ Pinned versions (exact, no ranges): `@sparkjsdev/spark` 2.3.1 (matches the
 ## Install and run
 
 ```sh
-cd viewer
+cd viewer-v2
 npm install
-npm run dev          # http://localhost:5173  (also printed: http://<LAN-IP>:5173)
+npm run dev          # http://localhost:5174  (also printed: http://<LAN-IP>:5174)
 npm run typecheck
 npm run build        # -> dist/ (static files, relative base, deployable to any CDN path)
-npm run preview      # serve dist/ on :4173 with the same /models and /source mounts
+npm test             # vitest: scene maths, store, collision/movement
+npm run preview      # serve dist/ on :4174 with the same /models and /source mounts
 ```
 
 The dev and preview servers mount these directories:
 
 | URL prefix | Directory | Contents |
 | --- | --- | --- |
+| `/scenes/` | `../scenes/` | scene folders: `<name>/scene.json`, `<name>/nav/*`, `<name>/build/*.rad` + `.radc` |
 | `/models/` | `../assets/rad_output/` | `build-lod` output: `<stem>-lod.rad` and `<stem>-lod-N.radc` |
 | `/source/` | `../assets/source_ply/` | plain `.ply` / `.spz` / `.sog` files for quick comparison |
 | `/nav/` | `../assets/nav/` | collision meshes (`.glb`) and plan exports for navigation |
@@ -39,12 +42,76 @@ hosting rules live in `../hosting/`.
 You can check the Range support by hand:
 
 ```sh
-curl -s -o /dev/null -D - -H "Range: bytes=0-65535" http://localhost:5173/models/<name>/<ver>/<stem>-lod.rad
+curl -s -o /dev/null -D - -H "Range: bytes=0-65535" http://localhost:5174/models/<name>/<ver>/<stem>-lod.rad
 # expect: HTTP/1.1 206 Partial Content, Content-Range: bytes 0-65535/<size>
 ```
 
-If you open the viewer with no `?model=`, it lists every model file the dev
-server can find. Tap a file to open it, which saves typing URLs on a phone.
+With no parameters the viewer opens the **scene list** (see Scenes below).
+`?model=<url>` still opens a single file directly, as a debug path with no
+save or build; the scene list has a "Debug: open a model file directly" list
+of every model file the dev server can find.
+
+## Scenes: the editing workflow
+
+A scene is a save file in `../scenes/<name>/`:
+
+| Path | What | In git |
+| --- | --- | --- |
+| `scene.json` | source path, transform, floor, navigation, start camera, build record (schema: `../shared/scene-schema.mjs`) | yes |
+| `nav/` | plan exports and the collision GLB | yes |
+| `build/` | `<name>-lod.rad` + `.radc` chunks, build report and log | no (regenerated) |
+
+The source file stays in `assets/source_ply/`; scenes reference it and never
+copy or modify it. Every build starts again from that original source with the
+scene's transform and replaces `build/`, so nothing accumulates.
+
+Open a scene with `?scene=<name>`. The top bar shows the scene name, a yellow
+dot when there are unsaved changes, **Align (G)**, **Plan (M)**,
+**Navigation (N)**, the camera mode (**C**), the build status, **Save
+(Ctrl+S)**, **Build** and **?** (all shortcuts). Panels open in a column on
+the right (a bottom sheet on narrow screens) and collapse by clicking their
+title. Keys typed into a panel field never reach the shortcuts or the camera;
+Esc leaves the field. The browser warns before you leave with unsaved changes.
+
+**Start to finish**
+
+1. **New scene.** On the scene list click **+ New scene**, pick a file from `assets/source_ply/` and enter a name (letters, digits, `_`, `-`; checked as you type). The editor opens it. An unbuilt scene previews the source file itself, loaded whole (no LoD streaming), so big files take a while.
+2. **Align.** Press `G`. Rotate (for a Z-up scan: X **−90°**), scale, then fly to the floor spot that should become the origin and press `O` (details under Align mode). The transform you edit is always relative to the original source.
+3. **Save.** `Ctrl+S` writes `scene.json` (`POST /__scenes/save`; the server keeps the build fields, which only the pipeline writes).
+4. **Build.** Click **Build**. With unsaved changes it offers **Save and build**. The build panel (`B`) shows a progress bar and the live log, with **Cancel**. When it finishes the editor loads the new streamed `.rad` in place and the "Transform changed since last build" banner goes away. The same build runs from a terminal: `build-scene.bat <name>` (repo root) or `node pipeline/build-scene.mjs <name>`; the editor notices command-line builds (through `scenes/.build.lock`) and reloads when they finish. One build runs at a time.
+5. **Plan export.** Press `M`, set the cut and floor heights, **Export PNG + JSON + GLB**. The files go to `scenes/<name>/nav/plan-<label>.*`.
+6. **Draw colliders** in Rhino or Blender over the imported `plan-<label>.glb` (see Navigation for the naming rules) and export the collision GLB into `scenes/<name>/nav/`, e.g. `nav/collision.glb`.
+7. **Pick the collision.** Press `N`, choose the GLB in **Collision mesh** (the list is that folder; ↻ re-reads it). The status line says when it has loaded; **Show colliders** (`Shift+N`) draws the wireframe.
+8. **Spawn and start camera.** Look from where walking should start and click **Set spawn here**; set the view the scene opens with using **Set start camera**. Set **Fallback floor Y** (used when there is no collision mesh), **Allow jump**, **Allow fly**.
+9. **Walk.** Press `C` until the button says Walk (or click **Walk** in the panel). Save.
+
+**Scene list.** Each card shows the source, last build time and duration,
+the last build status, splat count, the number of nav files and flags for
+"not built", "transform changed since build", "nav may be misaligned" and a
+missing source. **Duplicate** copies `scene.json` and `nav/` (not the build).
+**Delete** asks you to type the name and removes `scenes/<name>/` only, never
+the source.
+
+**Transforms and the delta preview.** `scene.transform` (T_new) maps source
+coordinates to scene coordinates. A built `.rad` already contains its build's
+transform T_built (`build.transformMatrix`), so the editor shows it with
+T_new · T_built⁻¹ (the identity when nothing changed). An unbuilt scene shows
+the source with T_new. Either way the preview is what the next build will
+produce. Code and tests: `src/scene/sceneMath.ts`.
+
+**Coordinates of navigation assets.** Floor Y, spawn, start camera, plan
+exports and the collision GLB are all in scene (built) coordinates. The first
+time one is authored, `navTransformMatrix` records the transform they belong
+to. If the transform changes afterwards, a red banner warns that colliders may
+no longer line up: **Revert transform**, or redraw/check them and click **They
+line up** to record the new transform.
+
+**Dev endpoints** (`dev-server/scenes.ts`, all JSON): `GET /__scenes`,
+`GET /__scenes/sources`, `POST /__scenes/create|duplicate|delete`,
+`POST /__scenes/save?name=`, `GET /__scenes/nav?name=`,
+`POST /__scenes/nav-file?name=&file=`, `GET /__scene-source/<name>/<file>`,
+`POST /__build`, `GET /__build/status`, `GET /__build/events` (SSE),
+`POST /__build/cancel`.
 
 ## URL parameters
 
@@ -77,7 +144,7 @@ Example: `?config=configs/example.json&lodScale=0.7`.
 
 - **Orbit** (default). Mouse: left-drag rotates, right-drag pans, wheel zooms. Touch: one finger rotates, two fingers pinch and pan.
 - **Fly** (Spark's `SparkControls`). Move with WASD/arrows, Q/E or PageUp/PageDown for down/up. Drag to look. On touch, drag to look and use two fingers to slide. Gamepads also work.
-- Keys: `P` toggles the overlay, `C` cycles orbit / fly / walk, `R` resets the fps measurement window, `V` returns to the start view, `M` plan mode, `G` Align mode.
+- Keys: `P` toggles the overlay, `C` cycles orbit / fly / walk, `R` resets the fps measurement window, `V` returns to the start view, `M` plan mode, `G` Align mode, `N` navigation panel, `B` build panel, `Shift+N` colliders, `Ctrl+S` save, `?` shortcut list. Shortcuts are ignored while typing in a field.
 
 ## Plan export
 
@@ -87,7 +154,7 @@ into those tools already lined up with the splats. Code: `src/plan/`.
 
 **Workflow**
 
-1. Open the model and press `M`, or click **Plan (M)** at the bottom right. The view switches to an orthographic camera looking straight down −Y, framed on the model. Drag to pan; use the wheel or pinch to zoom.
+1. Open the scene and press `M`, or click **Plan** in the top bar. The view switches to an orthographic camera looking straight down −Y, framed on the model. Drag to pan; use the wheel or pinch to zoom.
 2. Set the section:
    - **Cut height** hides splats above it. The default is the floor guess + 1.2 m.
    - **Floor height** hides splats below it, but only when its box is ticked. The GLB plane is always placed at this height.
@@ -95,7 +162,7 @@ into those tools already lined up with the splats. Code: `src/plan/`.
    - Heights are world Y in metres.
    - For a ceiling section later (for flying), tick the floor box and set it just below the ceiling. Then only the ceiling remains, seen from above.
 3. Check the **export region**. **Fit model** uses the splat bounds (0.5–99.5 percentile of centres, + 0.25 m), which ignores stray floaters. **Use view** uses what is on screen. You can also type the values.
-4. Pick **px/m** (default 100, so 1 px = 1 cm), a transparent or solid background, and a label. Then click **Export PNG + JSON + GLB**. The files are written to `assets/nav/<model>/plan-<label>.png|json|glb`. `<model>` is the model file stem without `-lod`.
+4. Pick **px/m** (default 100, so 1 px = 1 cm), a transparent or solid background, and a label. Then click **Export PNG + JSON + GLB**. In a scene the files are written to `scenes/<name>/nav/plan-<label>.png|json|glb` (`POST /__scenes/nav-file`). With `?model=` (debug) they go to `assets/nav/<model>/` as in v1. If the transform changed since the last build, the panel warns that the export follows the new transform: build first.
 5. In **Blender** (File → Import → glTF 2.0) or **Rhino 8** (Import, `.glb`), import `plan-<label>.glb`. It is a single textured plane that already sits at the right world position. Don't move or scale it.
 6. Trace floors, walls and ceilings over it, then export the collision GLB using the object-name conventions under [Navigation](#navigation-first-person-walking).
 
@@ -118,8 +185,8 @@ with an orthographic camera. The plan camera therefore sits 0.25 m above the
 cut, and `lodRenderScale` is divided by the farthest distance in the tile.
 Outside the dev server, the files are downloaded instead of written to disk.
 
-**Axis mapping (plan).** These are raw splat-file coordinates in three.js:
-right-handed, Y-up, metres, with no model transform.
+**Axis mapping (plan).** These are scene (built) coordinates in three.js:
+right-handed, Y-up, metres.
 
 | Image | World (three.js / glTF) | Blender / Rhino after import |
 | --- | --- | --- |
@@ -169,40 +236,25 @@ are copied into the node's `extras.planExport`.
 
 ## Align mode (rotation, scale, origin)
 
-Align mode sets a model's rotation, uniform scale and origin inside the viewer
-and saves them as a transform JSON. `pipeline/transform.mjs` then bakes that
-transform into the splat file, and the baked file becomes the new identity
-(normal viewing never applies a transform). Code: `src/align/`.
+Align mode sets the scene's rotation, uniform scale and origin. It writes
+`scene.transform` in the scene store; **Save** and **Build** bake it into the
+streamed `.rad` (there is no separate transform JSON or bake command any more).
+The transform is always relative to the original source file. Code: `src/align/`.
 
-1. Open the model (plain `.ply`/`.sog` or paged `.rad`) and press `G`, or click **Align (G)** at the bottom right. A 1 m grid on Y = 0 and axes at the origin appear (X red, Y green, Z blue).
+1. Press `G`, or click **Align** in the top bar. A 1 m grid on Y = 0 and axes at the origin appear (X red, Y green, Z blue).
 2. Drag the gizmo. `1` / `2` / `3` switch move / rotate / scale. Scale is **uniform only** (non-uniform scale has no exact mapping onto Gaussian covariances and SH). Rotation snaps to 15° while **15° snap** is ticked. Camera input pauses while you drag.
-3. Or type values: position (m, relative to 0,0,0), rotation (degrees, Euler order XYZ), scale. **±90°** rotates about a world axis around the model's pivot. For a Z-up scan, press X **−90°**.
+3. Or type values: position (where the source origin lands, m), rotation (degrees, Euler order XYZ), scale. **±90°** rotates about a world axis around the model's pivot. For a Z-up scan, press X **−90°**.
 4. **Set origin at camera (O)**: do this after rotation and scale. Fly (`C`) to the spot that should become 0,0,0, with the camera at floor level, and press `O`. The camera's world position is subtracted from the translation (M' = T(−o)·M), so that point becomes the origin and its height becomes Y = 0. The camera moves with the model, so the view doesn't jump. Alternatively, **Centre on origin** moves the XZ centre of the robust bounds (0.5–99.5 % of sampled splat centres) to 0,0. For the floor, type its current world height into **Floor Y** (or press **Guess**: the 2nd percentile of heights), then **Floor → Y=0**.
 5. The bounds readout updates live: min/max, size and robust box of up to 300k sampled splat centres. Paged models only have the splats streamed so far, so press **Resample** after streaming.
-6. **Save transform JSON** writes `assets/transforms/<stem>.json` (tracked in git). The bake command below it, with **Copy command**, is run from the repo root:
+6. **Reset** goes back to identity (the source's own coordinates). **Revert to built** (also in the yellow banner) goes back to the transform in the current build.
 
-   ```sh
-   node pipeline/transform.mjs assets/source_ply/<stem>.ply --transform assets/transforms/<stem>.json --out assets/source_ply/<stem>-aligned.ply
-   ```
+On a built scene the change is previewed as a delta on the existing `.rad`
+(T_new · T_built⁻¹); a yellow banner, "Transform changed since last build:
+Build to apply", stays until you build or revert. The preview stays on after
+closing Align, because it is the scene's transform. `M` (plan) and `G` close
+each other.
 
-   For a paged `.rad`, the source defaults to the original input named in its `build-report.json`. The **Source** field can be edited.
-
-Closing Align mode restores the identity transform, unless **Keep preview after closing** is ticked (this session only). `M` (plan) and `G` close each other.
-
-**Transform JSON** (`tool: "viewer-align"`):
-
-| Field | Meaning |
-| --- | --- |
-| `source` | Repo-relative path of the file to bake. |
-| `position` | `[x, y, z]` translation in metres. |
-| `rotationDeg`, `eulerOrder` | Euler angles in degrees, order `"XYZ"` (three.js default: q = qx·qy·qz). For people; not used by the bake. |
-| `quaternion` | `[x, y, z, w]`. Authoritative rotation. |
-| `scale` | Uniform scale (number). |
-| `matrix` | Column-major 4×4 (three.js `Matrix4.elements`) = T·R·S. The bake refuses a file whose matrix disagrees with position/quaternion/scale. |
-| `appliedOrder` | `scale, then rotate, then translate, about the world origin` (three.js Object3D order). |
-| `createdAt` | ISO time. |
-
-**Dev endpoint.** `POST /__align-transform?file=<stem>.json` takes the JSON body (1 MB max; it must have `tool: "viewer-align"`). `GET` is a probe. The name rules match `/__plan-export`, and the resolved path must stay inside `assets/transforms/`. Without the dev server, the JSON is downloaded instead.
+`?model=` debug pages keep Align as a preview only (nothing is saved).
 
 ## Navigation (first-person walking)
 
@@ -229,7 +281,7 @@ and movement unit tests (vitest).
 - **Touch.** Drag on the left half for a virtual joystick (push it to the edge to run). Drag on the right half to look.
 - **Space** jumps, only when `allowJump` is set.
 - **F** switches between walk and fly, only when `allowFly` is set. When flying, Space/E/PageUp go up and Ctrl/Q/PageDown go down. Ctrl+W still closes the browser tab, so use Q to descend while moving forward.
-- **N** toggles the debug view: a wireframe of every collider, coloured by kind, plus the player capsule (visible from orbit/fly mode).
+- **Shift+N** toggles the debug view: a wireframe of every collider, coloured by kind, plus the player capsule (visible from orbit/fly mode).
 - **V** sends the player back to the spawn point.
 
 Collision rules:
@@ -241,7 +293,13 @@ Collision rules:
 - Falling below `killY` respawns the player.
 - If no collision GLB is configured, or it fails to load, the player walks on a flat floor at `fallbackFloorY`. A red on-screen warning says so.
 
-**Config.** Add a `navigation` block to the JSON config. Every field is optional. URL overrides are listed in brackets.
+**In a scene** these settings live in `scene.json`: `navigation` (the block
+below; `collision` is a path inside the scene folder such as
+`nav/collision.glb`), `floorY` (feeds `fallbackFloorY`) and `camera`. The
+Navigation panel (`N`) edits the common ones; others can be added to
+`scene.json` by hand.
+
+**Config.** For `?config=` debug pages, add a `navigation` block to the JSON config. Every field is optional. URL overrides are listed in brackets.
 
 | Field | Default | Meaning |
 | --- | --- | --- |
@@ -289,7 +347,7 @@ Lines, curves and points are ignored.
 - **Close the floors**: no gaps between floor pieces, and floors should run under the walls. A gap wider than about 0.15 m is a hole the player falls through, and then respawns.
 - Give walls some thickness (at least 0.1 m), so face normals don't matter. Faces are treated as double-sided anyway.
 - Don't use Draco or meshopt compression. GLTFLoader isn't configured with those decoders.
-- Put collision files in `../assets/nav/<model>/`. The dev server serves them at `/nav/<model>/<file>.glb` with the same safety rules as `/models/`. Deploy them next to the model on the CDN.
+- Put collision files in `../scenes/<name>/nav/` and pick them in the Navigation panel. (Debug pages: `../assets/nav/<model>/`, served at `/nav/`.) Deploy them next to the model on the CDN.
 
 **Enabling flying later.** Set `"allowFly": true`, and optionally
 `"mode": "fly"` and `"maxHeight": <y>`. Nothing else changes: ceiling, floor,
@@ -343,8 +401,8 @@ LoD is "settled" once this has held for `settleMs`.
 
 ## Testing on a phone or Quest over the LAN
 
-1. Put the PC and the device on the same Wi-Fi or LAN. Run `npm run dev` and note the `Network:` URL, e.g. `http://192.168.1.20:5173`.
-2. On Windows, allow Node.js through the firewall for private networks. Windows normally prompts the first time. If not, add an inbound rule for TCP 5173.
+1. Put the PC and the device on the same Wi-Fi or LAN. Run `npm run dev` and note the `Network:` URL, e.g. `http://192.168.1.20:5174`.
+2. On Windows, allow Node.js through the firewall for private networks. Windows normally prompts the first time. If not, add an inbound rule for TCP 5174.
 3. Open the URL on the device and pick a model from the list, or add `?model=...`.
 4. On Quest, open the URL in the Meta Quest Browser. `isOculus()` detects it and the 500K profile applies.
 
@@ -352,7 +410,7 @@ LoD is "settled" once this has held for `settleMs`.
 context. `localhost` counts as secure, but a LAN IP does not. These options
 don't block Phase 1:
 
-- **USB port-forward.** Use `adb reverse tcp:5173 tcp:5173` for Quest and Android, then open `http://localhost:5173` on the device. It counts as secure with no certificates.
+- **USB port-forward.** Use `adb reverse tcp:5174 tcp:5174` for Quest and Android, then open `http://localhost:5174` on the device. It counts as secure with no certificates.
 - **Self-signed certificate.** Add `@vitejs/plugin-basic-ssl` and `server.https`. The device shows a certificate warning you must accept once.
 - **mkcert.** Install a local CA on each device and pass the certs to `server.https`.
 - **Tunnel.** Use Cloudflare Tunnel or ngrok to get a public HTTPS URL. This also exercises CDN-like latency.
@@ -360,7 +418,11 @@ don't block Phase 1:
 ## Code layout
 
 ```text
-index.html, src/main.ts   bootstrap, no-model / error states
+index.html, src/main.ts   routing: scene list / ?scene= editor / ?model= debug viewer
+src/scene/                scene editor: store (dirty tracking), sceneMath (delta preview), sceneConfig,
+                          api client, start page, editor (top bar, banners, dock), nav panel, build panel
+src/ui/                   DOM helpers, toasts, dialogs, typing guard, editor CSS
+dev-server/scenes.ts      Vite middleware: scene list/create/duplicate/delete/save, nav files, builds (SSE)
 src/config.ts             URL params + JSON config -> ViewerConfig
 src/device.ts             device detection (Spark's isOculus/isAndroid/isIos helpers) -> budget profile
 src/viewer.ts             WebGLRenderer(antialias:false) + SparkRenderer + SplatMesh(es), render loop, settle signal
@@ -372,8 +434,8 @@ src/results.ts            results JSON schema
 dev-server/modelFiles.ts  Vite middleware: Range file serving, /__models, /__results
 src/plan/                 plan mode: ortho section view (dyno world-modifier cut), tiled capture, PNG/JSON/GLB export (see Plan export)
 dev-server/planExport.ts  Vite middleware: POST /__plan-export -> assets/nav/<model>/plan-<label>.*
-src/align/                Align mode: TransformControls gizmo, numeric panel, transform JSON + bake command (see Align mode)
-dev-server/alignTransform.ts  Vite middleware: POST /__align-transform -> assets/transforms/<stem>.json
+src/align/                Align mode: TransformControls gizmo, numeric panel, bounds (see Align mode)
+dev-server/alignTransform.ts  v1 endpoint POST /__align-transform (no longer used by the UI)
 src/nav/                  collision world (three-mesh-bvh), player controller, input, debug view (see Navigation)
 scripts/                  make-nav-test-room.ts -> public/examples/nav-test-room.glb
 public/configs/           example JSON configs (nav-test.json: walking with no model)

@@ -15,13 +15,7 @@
   width: 64px;
 }
 
-.align-panel input.align-source {
-  flex: 1;
-  min-width: 120px;
-}
-
-.align-bounds,
-.align-command {
+.align-bounds {
   margin: 2px 0;
   padding: 4px 6px;
   background: #0f1013;

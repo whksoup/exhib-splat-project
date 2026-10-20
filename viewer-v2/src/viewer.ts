@@ -50,6 +50,10 @@ export class Viewer {
   renderCamera: THREE.Camera | null = null;
   /** Effective pixel ratio after caps/overrides. */
   readonly pixelRatio: number;
+  /** Bumped whenever the loaded meshes are replaced (cached samples/bounds become stale). */
+  modelsVersion = 0;
+  /** Called for each mesh right after it is created, before it renders (e.g. to apply a scene transform). */
+  onMeshCreated: ((entry: LoadedModel) => void) | null = null;
 
   private lastFrameTime: number | null = null;
   private lastCameraMatrix = new THREE.Matrix4();
@@ -123,7 +127,22 @@ export class Viewer {
     if (this.startPose) this.rig.setPose(this.startPose.position, this.startPose.target);
   }
 
-  async loadModels(): Promise<void> {
+  /**
+   * Swap the loaded models for `specs` (e.g. the freshly built .rad after a
+   * scene build). The camera stays where it is unless `frame` is set.
+   */
+  async replaceModels(specs: ModelSpec[], frame = false): Promise<void> {
+    for (const m of this.models.splice(0)) {
+      this.scene.remove(m.mesh);
+      m.mesh.dispose();
+    }
+    this.errors.length = 0;
+    this.config.models = specs;
+    this.modelsVersion++;
+    await this.loadModels(frame);
+  }
+
+  async loadModels(frame = !this.config.camera): Promise<void> {
     if (this.config.models.length === 0) return;
     this.timeline.modelRequestMs = performance.now();
     this.network.start(this.config.models.map((m) => m.url));
@@ -132,7 +151,8 @@ export class Viewer {
     for (const f of failed) this.errors.push(f.reason instanceof Error ? f.reason.message : String(f.reason));
     if (failed.length === results.length) this.timeline.status = "error";
     // Auto-frame plain (non-paged) models when no start viewpoint was given.
-    if (!this.config.camera) this.frameLoadedModels();
+    if (frame) this.frameLoadedModels();
+    this.modelsVersion++;
   }
 
   private async loadModel(spec: ModelSpec): Promise<void> {
@@ -161,6 +181,7 @@ export class Viewer {
       ...(spec.lodScale !== undefined && { lodScale: spec.lodScale }),
     });
     entry.mesh = mesh;
+    this.onMeshCreated?.(entry);
     this.models.push(entry);
     this.scene.add(mesh);
     try {

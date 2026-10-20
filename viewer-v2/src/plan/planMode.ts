@@ -27,6 +27,7 @@ import {
   type PlanExportInfo,
 } from "./exporters";
 import { SectionCut } from "./section";
+import { isTypingTarget } from "../ui/dom";
 import {
   axisOf,
   frameRangeToWorld,
@@ -38,6 +39,21 @@ import {
   type ViewRegion,
 } from "./views";
 import "./plan.css";
+
+/**
+ * Where exports go in the scene editor: the scene's nav/ folder
+ * (POST /__scenes/nav-file). Without one, exports use the v1 /__plan-export
+ * endpoint (assets/nav/<model>/) for ?model= debugging.
+ */
+export interface PlanSaveTarget {
+  /** Shown in the panel, e.g. "scenes/oculus/nav/". */
+  label: string;
+  save(file: string, blob: Blob): Promise<string>;
+  /** Called after all files of one export were saved. */
+  onExported?(files: string[]): void;
+  /** A warning to show while the panel is open (e.g. transform changed since the build), or null. */
+  warning?(): string | null;
+}
 
 interface SectionState {
   cut: number;
@@ -72,10 +88,12 @@ function percentile(sorted: Float32Array, p: number): number {
 
 export class PlanMode {
   active = false;
+  private readonly target: PlanSaveTarget | null;
   private view: PlanViewDef = VIEWS.plan;
   private readonly sections = new Map<PlanViewId, SectionState>();
   private readonly regions = new Map<PlanViewId, ViewRegion>();
   private bounds: Bounds | null = null;
+  private boundsVersion = -1;
   private readonly section = new SectionCut();
   private readonly cam = new THREE.OrthographicCamera();
   /** Interactive view: centre in frame coords and half height in metres. */
@@ -98,11 +116,14 @@ export class PlanMode {
   private readonly labels: Record<string, HTMLElement> = {};
   private readonly sizeLine: HTMLDivElement;
   private readonly exportButton: HTMLButtonElement;
+  private readonly warnLine: HTMLDivElement;
 
   constructor(
     root: HTMLElement,
     private readonly viewer: Viewer,
+    opts: { dock?: HTMLElement; target?: PlanSaveTarget } = {},
   ) {
+    this.target = opts.target ?? null;
     this.toggleButton = el("button", {
       className: "plan-toggle",
       textContent: "Plan (M)",
@@ -157,11 +178,13 @@ export class PlanMode {
     });
 
     const row = (...children: (Node | string)[]) => el("div", { className: "plan-row" }, children);
+    this.warnLine = el("div", { className: "panel-note warn", hidden: true });
     this.panel = el("div", { className: "plan-panel", hidden: true }, [
       el("div", { className: "plan-head" }, [
         el("strong", { textContent: "Plan export" }),
         el("button", { textContent: "Close", title: "Back to 3D view (M)", onclick: () => this.setActive(false) }),
       ]),
+      this.warnLine,
       row(this.viewSelect),
       el("div", { className: "plan-sub" }, [label("cutTitle")]),
       row(
@@ -191,8 +214,8 @@ export class PlanMode {
       row(num("ppm", "10", "Pixels per metre"), "px/m", this.bgSelect, (this.inputs.bg = el("input", { type: "color", value: "#ffffff" }))),
       row("Budget", num("budget", "500000", "Splat budget while capturing"), "Settle", num("settle", "0.5", "Seconds LoD must stay idle"), "s"),
       this.sizeLine,
-      el("div", { className: "plan-sub" }, ["Output: assets/nav/<model>/plan-<label>.*"]),
-      row("Model", text("model", "model"), "Label", text("label", "label")),
+      el("div", { className: "plan-sub" }, [this.target ? `Output: ${this.target.label}plan-<label>.*` : "Output: assets/nav/<model>/plan-<label>.*"]),
+      this.target ? row("Label", text("label", "label")) : row("Model", text("model", "model"), "Label", text("label", "label")),
       row(this.exportButton),
       this.status,
     ]);
@@ -202,24 +225,26 @@ export class PlanMode {
 
     // Surface first so the rest of the UI (perf overlay, cards) stays clickable above it.
     root.prepend(this.surface);
-    root.append(this.toggleButton, this.panel, this.hint);
+    root.append(this.toggleButton, this.hint);
+    (opts.dock ?? root).append(this.panel);
+    this.panel.querySelector(".plan-head strong")?.addEventListener("click", () => this.panel.classList.toggle("collapsed"));
 
     // Defaults.
     this.inputs.ppm.value = "100";
     this.inputs.settle.value = "1.5";
     this.inputs.budget.value = String(Math.max(4_000_000, Math.round(viewer.budget * 2)));
-    this.inputs.model.value = viewer.config.models[0] ? modelNameFromUrl(viewer.config.models[0].url) : "model";
+    if (this.inputs.model) this.inputs.model.value = viewer.config.models[0] ? modelNameFromUrl(viewer.config.models[0].url) : "model";
     this.inputs.label.value = "";
 
     window.addEventListener("keydown", (e) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return;
+      if (isTypingTarget(e.target)) return;
       if (e.code === "KeyM" && !e.ctrlKey && !e.metaKey && !e.altKey) this.toggle();
       else if (e.code === "Escape" && this.picking) this.endPick(null);
     });
     viewer.renderer.domElement.addEventListener("pointerdown", (e) => this.onPickPointerDown(e));
     viewer.renderer.domElement.addEventListener("pointerup", (e) => this.onPickPointerUp(e));
 
-    void hasSaveEndpoint().then((ok) => {
+    if (!this.target) void hasSaveEndpoint().then((ok) => {
       if (!ok) this.setStatus("No dev server: files will be downloaded instead of written to assets/nav/.");
     });
   }
@@ -242,11 +267,18 @@ export class PlanMode {
     }
     this.active = on;
     this.panel.hidden = !on;
+    this.panel.classList.remove("collapsed");
     this.surface.hidden = !on;
+    const warn = on ? (this.target?.warning?.() ?? null) : null;
+    this.warnLine.hidden = !warn;
+    this.warnLine.textContent = warn ?? "";
     this.toggleButton.classList.toggle("on", on);
     const spark = this.viewer.spark;
     if (on) {
-      if (!this.bounds) this.bounds = this.computeBounds();
+      if (!this.bounds || this.boundsVersion !== this.viewer.modelsVersion) {
+        this.bounds = this.computeBounds();
+        this.boundsVersion = this.viewer.modelsVersion;
+      }
       this.section.install(this.meshes);
       // Orthographic view: no foveation (large off-axis angles), Z-depth sort.
       this.savedSpark = {
@@ -674,7 +706,7 @@ export class PlanMode {
     const s = this.state;
     const transparent = this.bgSelect.value !== "solid";
     const bgColor = new THREE.Color(this.inputs.bg.value);
-    const model = sanitizeName(this.inputs.model.value, 100) || "model";
+    const model = this.target ? "" : sanitizeName(this.inputs.model.value, 100) || "model";
     const label = sanitizeName(this.inputs.label.value) || this.defaultLabel() || "plan";
     const files = { png: `plan-${label}.png`, json: `plan-${label}.json`, glb: `plan-${label}.glb` };
     const { camDepth, farDepth } = this.depths();
@@ -711,7 +743,7 @@ export class PlanMode {
         floor: s.floor,
         floorEnabled: s.floorOn,
         modelUrls: this.viewer.config.models.map((m) => m.url),
-        modelName: model,
+        modelName: model || modelNameFromUrl(this.viewer.config.models[0]?.url ?? "model"),
         label,
         background: transparent ? "transparent" : `#${bgColor.getHexString()}`,
         capture: {
@@ -730,9 +762,11 @@ export class PlanMode {
       const png = await canvasToPng(cap.canvas, ppm);
       const glb = await buildPlaneGlb(cap.canvas, info, { planExport: { schema: sidecar.schema, sidecar: files.json, world: sidecar.world, section: sidecar.section } });
       const saved: string[] = [];
-      saved.push(await saveFile(model, files.png, png));
-      saved.push(await saveFile(model, files.json, new Blob([JSON.stringify(sidecar, null, 2)], { type: "application/json" })));
-      saved.push(await saveFile(model, files.glb, new Blob([glb], { type: "model/gltf-binary" })));
+      const put = (file: string, blob: Blob) => (this.target ? this.target.save(file, blob) : saveFile(model, file, blob));
+      saved.push(await put(files.png, png));
+      saved.push(await put(files.json, new Blob([JSON.stringify(sidecar, null, 2)], { type: "application/json" })));
+      saved.push(await put(files.glb, new Blob([glb], { type: "model/gltf-binary" })));
+      this.target?.onExported?.(saved);
       const warn = cap.unsettledTiles > 0 ? ` (${cap.unsettledTiles} tile(s) timed out before LoD settled)` : "";
       this.setStatus(`Saved ${width}×${height} px in ${(cap.durationMs / 1000).toFixed(1)} s${warn}:\n${saved.join("\n")}`, cap.unsettledTiles > 0);
       (window as unknown as { lastPlanExport?: unknown }).lastPlanExport = { sidecar, saved };

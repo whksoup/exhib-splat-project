@@ -116,10 +116,14 @@ function normalizeModel(m: ModelSpec | string): ModelSpec {
   return typeof m === "string" ? { url: m } : { ...m };
 }
 
-export async function loadConfig(search = window.location.search): Promise<ViewerConfig> {
+/**
+ * @param base  config to start from instead of a ?config= file (the scene editor
+ *              passes the scene's model, camera and navigation here). URL params still win.
+ */
+export async function loadConfig(search = window.location.search, base?: ViewerConfigFile): Promise<ViewerConfig> {
   const q = new URLSearchParams(search);
-  let file: ViewerConfigFile = {};
-  const configUrl = q.get("config") ?? undefined;
+  let file: ViewerConfigFile = base ? { ...base } : {};
+  const configUrl = base ? undefined : (q.get("config") ?? undefined);
   if (configUrl) {
     const res = await fetch(configUrl, { cache: "no-store" });
     if (!res.ok) throw new Error(`Config "${configUrl}" failed to load: HTTP ${res.status}`);

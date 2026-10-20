@@ -1,30 +1,68 @@
 /**
- * Align mode: preview a rotation / uniform scale / origin for the loaded model(s)
- * and save it as assets/transforms/<stem>.json, to be baked into the splat file
- * with `node pipeline/transform.mjs` (see transformJson.ts for the exact format).
+ * Align mode: author the scene transform (rotation, uniform scale, origin) of
+ * the loaded model with a gizmo and number fields.
  *
- * Toggle with the "Align (G)" button or the G key. While active:
- *  - a three.js TransformControls gizmo drives a proxy Object3D; its TRS is
- *    copied onto every loaded SplatMesh (plain-file and paged alike);
+ * The transform being edited is always ABSOLUTE, relative to the original
+ * source file (scene.transform). Where it goes and how the mesh shows it is
+ * decided by an AlignBinding:
+ *   - scene editor: the transform lives in the scene store; the mesh shows
+ *     T_new * T_built^-1 on a built .rad, or T_new on the source preview
+ *     (src/scene/sceneMath.ts);
+ *   - ?model= debug: a local transform applied straight to the file.
+ * Build (scene editor) bakes it into the .rad; there is no separate JSON.
+ *
+ * Toggle with the Align button or G. While active:
+ *  - a three.js TransformControls gizmo drives a proxy Object3D (`target`);
  *  - 1 / 2 / 3 switch translate / rotate / scale; scale is forced uniform
  *    (non-uniform scale has no exact mapping onto Gaussian covariances and SH);
  *  - camera input is suspended while the gizmo is dragged;
  *  - a grid on Y = 0, axes at the origin and a live bounds readout are shown.
- *
- * Normal viewing renders models with an identity transform. Align only changes
- * the meshes' matrices while it is open, or after closing when "Keep preview"
- * is ticked (for this session only). The baked file becomes the new identity.
  */
 import * as THREE from "three";
 import { TransformControls } from "three/addons/controls/TransformControls.js";
 import type { SplatMesh } from "@sparkjsdev/spark";
-import { copyText, showTextDialog } from "../overlay";
+import { composeTRS } from "../../../shared/scene-schema.mjs";
+import { meshMatrixFor, meshTRSFor, type TRS } from "../scene/sceneMath";
+import { el, isTypingTarget, kbd } from "../ui/dom";
 import type { FrameHook, Viewer } from "../viewer";
-import { bakeCommand, buildTransformJson, sourceFromModelUrl, stemFromSource } from "./transformJson";
 import "../plan/plan.css";
 import "./align.css";
 
 type GizmoMode = "translate" | "rotate" | "scale";
+
+/** Where the authored transform lives and what the loaded file already contains. */
+export interface AlignBinding {
+  /** Current absolute transform (relative to the original source). */
+  get(): TRS;
+  /** Store a new absolute transform; the binding also updates the mesh preview. */
+  set(t: TRS): void;
+  /** Transform baked into the loaded file (built .rad), or null when it is in raw source coordinates. */
+  builtMatrix(): number[] | null;
+  /** Optional "back to the built transform" action (shown when the transform differs from the build). */
+  revertToBuilt?: () => void;
+  /** One-line description of what is shown (e.g. "built .rad + delta preview"). */
+  describe?: () => string;
+}
+
+/** Local binding for ?model= debugging: the transform is applied straight to the file. */
+export function localAlignBinding(viewer: Viewer): AlignBinding {
+  let t: TRS = { position: [0, 0, 0], quaternion: [0, 0, 0, 1], scale: 1 };
+  return {
+    get: () => t,
+    set: (n) => {
+      t = n;
+      const m = meshTRSFor(composeTRS(t.position, t.quaternion, t.scale), null);
+      for (const { mesh } of viewer.models) {
+        mesh.position.set(...m.position);
+        mesh.quaternion.set(...m.quaternion);
+        mesh.scale.setScalar(m.scale);
+        mesh.updateMatrixWorld(true);
+      }
+    },
+    builtMatrix: () => null,
+    describe: () => "Debug (?model=): preview only, not saved. Open a scene to save and build.",
+  };
+}
 
 interface BoundsInfo {
   min: THREE.Vector3;
@@ -43,16 +81,6 @@ interface ExclusiveMode {
   setActive(on: boolean): void;
 }
 
-function el<K extends keyof HTMLElementTagNameMap>(
-  tag: K,
-  props: Partial<HTMLElementTagNameMap[K]> = {},
-  children: (Node | string)[] = [],
-): HTMLElementTagNameMap[K] {
-  const node = Object.assign(document.createElement(tag), props);
-  for (const c of children) node.append(c);
-  return node;
-}
-
 const fmt = (v: number, d = 3): string => (Number.isFinite(v) ? v.toFixed(d) : "—");
 const vec = (v: THREE.Vector3, d = 3) => `${fmt(v.x, d)}, ${fmt(v.y, d)}, ${fmt(v.z, d)}`;
 const MAX_SAMPLES = 300_000;
@@ -63,35 +91,36 @@ function percentile(sorted: Float32Array, p: number): number {
 
 export class AlignMode {
   active = false;
-  /** Holds the transform being authored; the gizmo is attached to it. */
+  /** Holds the absolute transform being authored; the gizmo is attached to it. */
   readonly target = new THREE.Object3D();
   private readonly gizmo: TransformControls;
   private readonly helpers = new THREE.Group();
   private gizmoMode: GizmoMode = "rotate";
   private snap = true;
-  private keepPreview = false;
-  /** Splat centres in file coordinates, sampled with a fixed stride (x, y, z, ...). */
+  /** Splat centres in the loaded file's coordinates, sampled with a fixed stride (x, y, z, ...). */
   private samples: Float32Array | null = null;
+  private samplesVersion = -1;
   private boundsDirty = true;
   private lastBoundsMs = 0;
   private bounds: BoundsInfo | null = null;
-  private source = "";
-  private sourceEdited = false;
   private readonly frameHook: FrameHook = ({ now }) => this.onFrame(now);
 
   // DOM
-  private readonly toggleButton: HTMLButtonElement;
-  private readonly panel: HTMLDivElement;
+  readonly toggleButton: HTMLButtonElement;
+  readonly panel: HTMLDivElement;
   private readonly inputs: Record<string, HTMLInputElement> = {};
   private readonly modeButtons: Record<GizmoMode, HTMLButtonElement>;
   private readonly boundsLine: HTMLPreElement;
-  private readonly commandBox: HTMLPreElement;
   private readonly status: HTMLDivElement;
+  private readonly note: HTMLDivElement;
+  private readonly revertButton: HTMLButtonElement;
 
   constructor(
     root: HTMLElement,
     private readonly viewer: Viewer,
+    private readonly binding: AlignBinding,
     private readonly exclusive: ExclusiveMode[] = [],
+    dock?: HTMLElement,
   ) {
     // Gizmo
     this.gizmo = new TransformControls(viewer.camera, viewer.renderer.domElement);
@@ -115,7 +144,7 @@ export class AlignMode {
     this.toggleButton = el("button", {
       className: "align-toggle",
       textContent: "Align (G)",
-      title: "Preview rotation / scale / origin and save a transform JSON for baking (G)",
+      title: "Rotate / scale / place the model (G)",
       onclick: () => this.toggle(),
     });
     const num = (key: string, step: string, title = ""): HTMLInputElement => {
@@ -130,7 +159,12 @@ export class AlignMode {
       this.inputs[key] = input;
       return input;
     };
-    const btn = (textContent: string, onclick: () => void, title = "") => el("button", { textContent, onclick, title });
+    const btn = (textContent: string | (Node | string)[], onclick: () => void, title = "") => {
+      const b = el("button", { onclick, title });
+      if (typeof textContent === "string") b.textContent = textContent;
+      else b.append(...textContent);
+      return b;
+    };
     const row = (...children: (Node | string)[]) => el("div", { className: "plan-row" }, children);
     const sub = (text: string) => el("div", { className: "plan-sub" }, [text]);
     const rot90 = (axis: "x" | "y" | "z") =>
@@ -141,29 +175,26 @@ export class AlignMode {
       );
 
     this.modeButtons = {
-      translate: btn("Move (1)", () => this.setGizmoMode("translate")),
-      rotate: btn("Rotate (2)", () => this.setGizmoMode("rotate")),
-      scale: btn("Scale (3)", () => this.setGizmoMode("scale"), "Uniform scale only"),
+      translate: btn(["Move", kbd("1")], () => this.setGizmoMode("translate")),
+      rotate: btn(["Rotate", kbd("2")], () => this.setGizmoMode("rotate")),
+      scale: btn(["Scale", kbd("3")], () => this.setGizmoMode("scale"), "Uniform scale only"),
     };
     this.boundsLine = el("pre", { className: "plan-status align-bounds" });
-    this.commandBox = el("pre", { className: "plan-status align-command" });
     this.status = el("div", { className: "plan-status" });
-    const sourceInput = el("input", { type: "text", spellcheck: false, className: "align-source", title: "Repo-relative path of the file to bake" });
-    sourceInput.addEventListener("change", () => {
-      this.source = sourceInput.value.trim();
-      this.sourceEdited = true;
-      this.updateCommand();
-    });
-    this.inputs.source = sourceInput;
+    this.note = el("div", { className: "panel-note" });
+    this.revertButton = btn("Revert to built", () => {
+      this.binding.revertToBuilt?.();
+      this.refresh();
+      this.setStatus("Transform reverted to the one in the current build.");
+    }, "Back to the transform baked into the current build");
 
+    const close = el("button", { textContent: "Close", title: "Close Align (G)", onclick: () => this.setActive(false) });
     this.panel = el("div", { className: "plan-panel align-panel", hidden: true }, [
-      el("div", { className: "plan-head" }, [
-        el("strong", { textContent: "Align model" }),
-        btn("Close", () => this.setActive(false), "Close Align mode (G)"),
-      ]),
+      el("div", { className: "plan-head" }, [el("strong", { textContent: "Align" }), close]),
+      this.note,
       row(this.modeButtons.translate, this.modeButtons.rotate, this.modeButtons.scale),
       row(el("label", {}, [check("snap", "Snap rotation to 15°", () => this.setSnap(this.inputs.snap.checked)), " 15° snap"])),
-      sub("Position (m, relative to 0,0,0)"),
+      sub("Position (m, where the source origin lands)"),
       row("X", num("px", "0.01"), "Y", num("py", "0.01"), "Z", num("pz", "0.01")),
       sub("Rotation (degrees, Euler order XYZ)"),
       row("X", num("rx", "1"), "Y", num("ry", "1"), "Z", num("rz", "1")),
@@ -175,7 +206,7 @@ export class AlignMode {
       row(num("s", "0.01", "Uniform scale factor"), "×"),
       sub("Origin"),
       row(
-        btn("Set origin at camera (O)", () => this.originAtCamera(), "Fly to the spot (camera height = floor level), then press: that point becomes 0,0,0"),
+        btn(["Set origin at camera", kbd("O")], () => this.originAtCamera(), "Fly to the spot (camera height = floor level), then press: that point becomes 0,0,0"),
         btn("Centre on origin", () => this.centreXZ(), "Move the XZ centre of the (robust) bounds to 0,0"),
       ),
       row(
@@ -187,28 +218,24 @@ export class AlignMode {
       ),
       sub("Bounds (world, m; sampled splat centres)"),
       this.boundsLine,
-      row(btn("Resample", () => this.resample(), "Re-read splat centres (paged models stream in over time)")),
       row(
-        btn("Reset", () => this.reset(), "Back to the identity transform"),
-        el("label", {}, [check("keep", "Keep this transform on the model after closing (this session only)", () => (this.keepPreview = this.inputs.keep.checked)), " Keep preview after closing"]),
+        btn("Resample", () => this.resample(), "Re-read splat centres (paged models stream in over time)"),
+        btn("Reset", () => this.reset(), "Identity: the source file's own coordinates"),
+        this.revertButton,
       ),
-      sub("Save"),
-      row("Source", sourceInput),
-      row(el("button", { className: "plan-primary", textContent: "Save transform JSON", onclick: () => void this.save() })),
-      sub("Bake command (run from the repo root)"),
-      this.commandBox,
-      row(btn("Copy command", () => void this.copyCommand())),
       this.status,
     ]);
-    root.append(this.toggleButton, this.panel);
+    // Clicking the title collapses the panel (keeps the gizmo active).
+    this.panel.querySelector(".plan-head strong")?.addEventListener("click", () => this.panel.classList.toggle("collapsed"));
+    root.append(this.toggleButton);
+    (dock ?? root).append(this.panel);
 
     this.inputs.snap.checked = this.snap;
     this.syncModeButtons();
-    this.syncInputs();
+    this.refresh();
 
     window.addEventListener("keydown", (e) => {
-      const t = e.target;
-      if (t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || t instanceof HTMLSelectElement) return;
+      if (isTypingTarget(e.target)) return;
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       if (e.code === "KeyG") this.toggle();
       else if (this.active && e.code === "Digit1") this.setGizmoMode("translate");
@@ -235,6 +262,7 @@ export class AlignMode {
     }
     this.active = on;
     this.panel.hidden = !on;
+    this.panel.classList.remove("collapsed");
     this.toggleButton.classList.toggle("on", on);
     this.helpers.visible = on;
     const helper = this.gizmo.getHelper();
@@ -242,11 +270,10 @@ export class AlignMode {
       for (const m of this.exclusive) if (m.active) m.setActive(false);
       // First-person mode captures the mouse; the gizmo needs it.
       if (this.viewer.rig.mode === "walk") this.viewer.rig.setMode("orbit");
+      this.refresh();
       this.gizmo.attach(this.target);
       helper.visible = true;
-      if (!this.samples) this.resample();
-      if (!this.sourceEdited) void this.detectSource();
-      this.applyToMeshes();
+      if (!this.samples || this.samplesVersion !== this.viewer.modelsVersion) this.resample();
       this.viewer.onFrame.push(this.frameHook);
     } else {
       this.gizmo.detach();
@@ -254,32 +281,48 @@ export class AlignMode {
       this.viewer.rig.setSuspended(false);
       const i = this.viewer.onFrame.indexOf(this.frameHook);
       if (i >= 0) this.viewer.onFrame.splice(i, 1);
-      if (!this.keepPreview) this.applyToMeshes(true);
     }
+  }
+
+  /** Re-read the transform from the binding (it changed elsewhere: revert, reload, build). */
+  refresh(): void {
+    const t = this.binding.get();
+    this.target.position.set(...t.position);
+    this.target.quaternion.set(...t.quaternion).normalize();
+    this.target.scale.setScalar(t.scale);
+    this.target.updateMatrixWorld(true);
+    this.syncInputs();
+    this.boundsDirty = true;
+    this.note.textContent = this.binding.describe?.() ?? "";
+    this.syncRevert();
   }
 
   // --- transform ------------------------------------------------------------
 
-  private applyToMeshes(identity = false): void {
-    for (const mesh of this.meshes) {
-      if (identity) {
-        mesh.position.set(0, 0, 0);
-        mesh.quaternion.identity();
-        mesh.scale.set(1, 1, 1);
-      } else {
-        mesh.position.copy(this.target.position);
-        mesh.quaternion.copy(this.target.quaternion);
-        mesh.scale.copy(this.target.scale);
-      }
-      mesh.updateMatrixWorld(true);
-    }
-    this.boundsDirty = true;
+  private syncRevert(): void {
+    const built = this.binding.builtMatrix();
+    const m = this.target.matrix.elements;
+    const same = !!built && built.every((v, i) => Math.abs(v - m[i]) < 1e-9 * Math.max(1, Math.abs(m[12]), Math.abs(m[13]), Math.abs(m[14])));
+    this.revertButton.hidden = !this.binding.revertToBuilt || !built || same;
+  }
+
+  private currentTRS(): TRS {
+    const t = this.target;
+    return { position: t.position.toArray() as TRS["position"], quaternion: t.quaternion.toArray() as TRS["quaternion"], scale: t.scale.x };
+  }
+
+  /** Matrix on the mesh for the authored transform (delta on a built .rad). */
+  private meshMatrix(): number[] {
+    this.target.updateMatrix();
+    return meshMatrixFor(this.target.matrix.toArray(), this.binding.builtMatrix());
   }
 
   private changed(skipInput?: string): void {
     this.target.updateMatrixWorld(true);
-    this.applyToMeshes();
+    this.binding.set(this.currentTRS());
     this.syncInputs(skipInput);
+    this.boundsDirty = true;
+    this.syncRevert();
   }
 
   private onGizmoChange(): void {
@@ -304,6 +347,7 @@ export class AlignMode {
     this.target.quaternion.identity();
     this.target.scale.set(1, 1, 1);
     this.changed();
+    this.setStatus("Reset to identity (the source file's own coordinates).");
   }
 
   private setGizmoMode(mode: GizmoMode): void {
@@ -341,7 +385,7 @@ export class AlignMode {
 
   private centreXZ(): void {
     const b = this.computeBounds(true);
-    if (!b) return;
+    if (!b) return this.setStatus("No splat samples yet: press Resample.", true);
     const cx = (b.robustMin.x + b.robustMax.x) / 2;
     const cz = (b.robustMin.z + b.robustMax.z) / 2;
     this.target.position.x -= cx;
@@ -364,11 +408,12 @@ export class AlignMode {
   private guessFloor(): void {
     const b = this.computeBounds(true);
     if (b) this.inputs.floor.value = fmt(b.lowY);
+    else this.setStatus("No splat samples yet: press Resample.", true);
   }
 
   private floorToZero(): void {
     const y = Number(this.inputs.floor.value);
-    if (!Number.isFinite(y)) return this.setStatus("Enter the current floor height (or press Guess) first.", true);
+    if (this.inputs.floor.value.trim() === "" || !Number.isFinite(y)) return this.setStatus("Enter the current floor height (or press Guess) first.", true);
     this.target.position.y -= y;
     this.inputs.floor.value = "0";
     this.changed();
@@ -377,7 +422,7 @@ export class AlignMode {
 
   // --- bounds ---------------------------------------------------------------
 
-  /** Sample splat centres in file coordinates (for paged meshes: what is loaded now). */
+  /** Sample splat centres in the loaded file's coordinates (for paged meshes: what is loaded now). */
   private resample(): void {
     const xyz: number[] = [];
     for (const mesh of this.meshes) {
@@ -398,14 +443,14 @@ export class AlignMode {
       }
     }
     this.samples = xyz.length ? Float32Array.from(xyz) : null;
+    this.samplesVersion = this.viewer.modelsVersion;
     this.boundsDirty = true;
   }
 
   private computeBounds(robust: boolean): BoundsInfo | null {
     const s = this.samples;
     if (!s) return null;
-    this.target.updateMatrixWorld(true);
-    const e = this.target.matrixWorld.elements;
+    const e = this.meshMatrix();
     const n = s.length / 3;
     const min = new THREE.Vector3(Infinity, Infinity, Infinity);
     const max = new THREE.Vector3(-Infinity, -Infinity, -Infinity);
@@ -441,6 +486,7 @@ export class AlignMode {
       this.setActive(false); // another mode (plan) took over
       return;
     }
+    if (this.samplesVersion !== this.viewer.modelsVersion) this.resample(); // model was rebuilt / reloaded
     // Live bounds: min/max while dragging, full percentiles when idle; throttled.
     const dragging = this.gizmo.dragging;
     if (this.boundsDirty && now - this.lastBoundsMs > (dragging ? 120 : 250)) {
@@ -469,81 +515,6 @@ export class AlignMode {
       `robust ${vec(b.robustMin, 2)} .. ${vec(b.robustMax, 2)}  (size ${vec(rsize, 2)})`,
       `floor guess (2% Y) ${fmt(b.lowY)}   ${b.samples.toLocaleString("en-US")} samples`,
     ].join("\n");
-  }
-
-  // --- save / command -------------------------------------------------------
-
-  private async detectSource(): Promise<void> {
-    const url = this.viewer.config.models[0]?.url ?? "";
-    this.source = sourceFromModelUrl(url);
-    // A .rad from build.mjs: bake the original input listed in its build report instead.
-    if (/\.rad(?:$|[?#])/i.test(url)) {
-      try {
-        const reportUrl = url.split(/[?#]/)[0].replace(/[^/]*$/, "build-report.json");
-        const res = await fetch(reportUrl, { cache: "no-store" });
-        if (res.ok) {
-          const rep = (await res.json()) as { input?: { relativePath?: string } };
-          if (rep.input?.relativePath && !this.sourceEdited) this.source = rep.input.relativePath;
-        }
-      } catch {
-        /* no report: keep the .rad path, the user can edit it */
-      }
-    }
-    if (!this.sourceEdited) this.inputs.source.value = this.source;
-    this.updateCommand();
-  }
-
-  private get stem(): string {
-    return stemFromSource(this.source || "model");
-  }
-
-  private updateCommand(): void {
-    const warn = /\.rad$/i.test(this.source) ? "\n(.rad cannot be baked: set Source to the original .ply/.sog)" : "";
-    this.commandBox.textContent = bakeCommand(this.source || "<source.ply>", this.stem) + warn;
-  }
-
-  private transformJson() {
-    return buildTransformJson(
-      { position: this.target.position, quaternion: this.target.quaternion, scale: this.target.scale.x },
-      this.source,
-    );
-  }
-
-  private async save(): Promise<void> {
-    const json = this.transformJson();
-    const text = JSON.stringify(json, null, 2);
-    const file = `${this.stem}.json`;
-    (window as unknown as { lastAlignTransform?: unknown }).lastAlignTransform = json;
-    try {
-      const probe = await fetch("/__align-transform", { cache: "no-store" }).catch(() => null);
-      if (probe?.ok && (probe.headers.get("content-type") ?? "").includes("json")) {
-        const res = await fetch(`/__align-transform?${new URLSearchParams({ file })}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: text,
-        });
-        const out = (await res.json().catch(() => ({}))) as { ok?: boolean; file?: string; error?: string };
-        if (!res.ok || !out.ok) throw new Error(out.error ?? `HTTP ${res.status}`);
-        this.setStatus(`Saved ${out.file}`);
-      } else {
-        const url = URL.createObjectURL(new Blob([text], { type: "application/json" }));
-        const a = el("a", { href: url, download: file });
-        document.body.append(a);
-        a.click();
-        a.remove();
-        window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
-        this.setStatus(`No dev server: downloaded ${file}. Put it in assets/transforms/.`);
-      }
-    } catch (err) {
-      this.setStatus(`Save failed: ${(err as Error).message}`, true);
-    }
-    this.updateCommand();
-  }
-
-  private async copyCommand(): Promise<void> {
-    const cmd = bakeCommand(this.source || "<source.ply>", this.stem);
-    if (await copyText(cmd)) this.setStatus("Command copied. Save the JSON first, then run it from the repo root.");
-    else showTextDialog(document.getElementById("ui") ?? document.body, "Bake command", cmd);
   }
 
   // --- UI sync ----------------------------------------------------------------

@@ -20,6 +20,7 @@ import { NavDebugView } from "./debug";
 import { NavInputDevice } from "./input";
 import type { NavigationConfig, NavMode, NavPose } from "./navConfig";
 import { PlayerController } from "./player";
+import { isTypingTarget } from "../ui/dom";
 
 export type CollisionStatus = "none" | "loading" | "loaded" | "failed";
 
@@ -133,6 +134,10 @@ export class Navigation {
   respawn(): void {
     this.player.respawn();
     this.syncDebug();
+  }
+
+  get config(): NavigationConfig {
+    return this.opts.config;
   }
 
   get collisionWorld(): CollisionWorld {
@@ -259,9 +264,8 @@ export class Navigation {
   }
 
   private onKey(e: KeyboardEvent): void {
-    const t = e.target;
-    if (t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement) return;
-    if (e.code === "KeyN" && !e.repeat) {
+    if (isTypingTarget(e.target)) return;
+    if (e.code === "KeyN" && e.shiftKey && !e.repeat) {
       this.debugVisible = !this.debugVisible;
     } else if (e.code === "KeyF" && this.active && !e.repeat) {
       const want: NavMode = this.player.mode === "walk" ? "fly" : "walk";
@@ -304,7 +308,7 @@ export class Navigation {
     else if (!this.input.pointerLocked) info = `${mode} · click to look around · WASD move · Shift run`;
     else {
       const extra = this.player.mode === "fly" ? " · Space/E up · Ctrl/Q down" : this.opts.config.allowJump ? " · Space jump" : "";
-      info = `${mode} · WASD move · Shift run${extra}${this.player.canFly ? " · F walk/fly" : ""} · N colliders · Esc release mouse`;
+      info = `${mode} · WASD move · Shift run${extra}${this.player.canFly ? " · F walk/fly" : ""} · Shift+N colliders · Esc release mouse`;
     }
     this.hudInfo.textContent = info;
   }

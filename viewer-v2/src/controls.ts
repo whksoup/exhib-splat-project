@@ -118,6 +118,14 @@ export class CameraRig {
     this.orbit.update();
   }
 
+  /** Point the camera looks at: the orbit target in orbit mode, else 2 m (or the orbit distance) ahead. */
+  getTarget(): THREE.Vector3 {
+    if (this._mode === "orbit") return this.orbit.target.clone();
+    const dist = Math.max(1, Math.min(20, this.orbit.target.distanceTo(this.camera.position)));
+    const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(this.camera.quaternion);
+    return this.camera.position.clone().addScaledVector(fwd, dist);
+  }
+
   /** Translate the camera and orbit target together (view direction unchanged). */
   shift(offset: THREE.Vector3): void {
     this.camera.position.add(offset);

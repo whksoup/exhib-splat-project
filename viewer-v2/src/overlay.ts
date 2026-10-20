@@ -4,6 +4,7 @@
  * this one as a debug/test tool toggled with ?overlay=0/1 or the P key.
  */
 import { buildResults, SPARK_VERSION } from "./results";
+import { isTypingTarget } from "./ui/dom";
 import type { Viewer } from "./viewer";
 
 const fmtCount = (n: number): string =>
@@ -82,7 +83,7 @@ export class Overlay {
     this.updateControlsLabel();
 
     window.addEventListener("keydown", (e) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (isTypingTarget(e.target) || e.ctrlKey || e.metaKey || e.altKey) return;
       if (e.code === "KeyP") this.setVisible(!this.visible);
       else if (e.code === "KeyC") this.toggleControls();
       else if (e.code === "KeyR") this.resetStats();

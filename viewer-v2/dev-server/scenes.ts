@@ -14,7 +14,9 @@
  *   POST /__scenes/nav-file?name=<n>&file=<f>  raw body -> scenes/<n>/nav/<f> (plan exports)
  *   GET  /__scene-source/<n>/<file>         the scene's source file, Range-served (unbuilt preview)
  *   POST /__build             {name}         run pipeline/build-scene.mjs (one at a time)
- *   GET  /__build/status                    {running, name, progress, result, ...}
+ *   GET  /__build/status                    {running, name, progress, result, external, ...}
+ *                                           external = a build started elsewhere (build-scene.bat),
+ *                                           seen through the pipeline's scenes/.build.lock
  *   GET  /__build/events                    Server-Sent Events: reset, log, progress, done
  *   POST /__build/cancel
  *
@@ -47,6 +49,8 @@ const NAV_FILE_RE = /^[A-Za-z0-9_-][A-Za-z0-9._-]{0,99}\.(png|json|glb)$/;
 const MAX_SCENE_BYTES = 2 * 1024 * 1024;
 const MAX_NAV_BYTES = 512 * 1024 * 1024;
 const MAX_LOG_LINES = 4000;
+/** Global build lock written by pipeline/lib/scene-files.mjs acquireBuildLock (keep in sync). */
+const BUILD_LOCK_FILE = ".build.lock";
 
 function reply(res: ServerResponse, status: number, body: unknown): void {
   res.statusCode = status;
@@ -185,6 +189,7 @@ export function scenesPlugin(options: ScenesPluginOptions): Plugin {
   function listScenes() {
     if (!fs.existsSync(scenesRoot)) return [];
     const out: Json[] = [];
+    const ext = externalBuild();
     for (const e of fs.readdirSync(scenesRoot, { withFileTypes: true })) {
       if (!e.isDirectory() || !isValidSceneName(e.name)) continue;
       const dir = path.join(scenesRoot, e.name);
@@ -206,7 +211,7 @@ export function scenesPlugin(options: ScenesPluginOptions): Plugin {
           navWarning: navMayBeMisaligned(s, nav.length),
           navFiles: nav.length,
           updatedAt: s.updatedAt ?? null,
-          building: build.child !== null && build.name === e.name,
+          building: (build.child !== null && build.name === e.name) || ext?.scene === e.name,
         });
       } catch (err) {
         out.push({ name: e.name, error: (err as Error).message });
@@ -260,6 +265,8 @@ export function scenesPlugin(options: ScenesPluginOptions): Plugin {
     const dir = sceneDir(name);
     if (!fs.existsSync(path.join(dir, SCENE_FILE))) throw httpError(404, `scene not found: ${name}`);
     if (build.child) throw httpError(409, `a build is already running (scene "${build.name}")`);
+    const ext = externalBuild();
+    if (ext) throw httpError(409, `a build of scene "${ext.scene}" is already running from the command line (pid ${ext.pid})`);
     build.id++;
     Object.assign(build, { name, startedAt: new Date().toISOString(), finishedAt: null, lines: [], progress: { stage: "start", pct: 0, message: "starting" }, result: null, exitCode: null });
     const child = spawn(process.execPath, [buildScript, name], { cwd: repoRoot, windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
@@ -291,8 +298,26 @@ export function scenesPlugin(options: ScenesPluginOptions): Plugin {
     return true;
   }
 
+  /** A live build that this server did not start (build-scene.bat / another dev server). */
+  function externalBuild(): { scene: string; pid: number; startedAt: string } | null {
+    try {
+      const cur = JSON.parse(fs.readFileSync(path.join(scenesRoot, BUILD_LOCK_FILE), "utf8")) as { scene: string; pid: number; startedAt: string };
+      if (build.child && cur.pid === build.child.pid) return null;
+      if (!Number.isInteger(cur.pid) || cur.pid <= 0) return null;
+      try {
+        process.kill(cur.pid, 0);
+      } catch (e) {
+        if ((e as NodeJS.ErrnoException).code !== "EPERM") return null; // stale lock
+      }
+      return { scene: String(cur.scene), pid: cur.pid, startedAt: String(cur.startedAt) };
+    } catch {
+      return null;
+    }
+  }
+
   function buildStatus(): Json {
     return {
+      external: externalBuild(),
       ok: true,
       running: build.child !== null,
       id: build.id,
