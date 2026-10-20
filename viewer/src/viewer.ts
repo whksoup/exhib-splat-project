@@ -157,14 +157,6 @@ export class Viewer {
       ...(spec.fileType && { fileType: spec.fileType as SplatFileType }),
       ...(spec.lodScale !== undefined && { lodScale: spec.lodScale }),
     });
-    if (spec.flip ?? true) mesh.quaternion.set(1, 0, 0, 0);
-    if (spec.rotation) {
-      const r = spec.rotation.map((d) => THREE.MathUtils.degToRad(d)) as [number, number, number];
-      mesh.quaternion.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(...r)));
-    }
-    if (spec.position) mesh.position.set(...spec.position);
-    if (spec.scale !== undefined) mesh.scale.setScalar(spec.scale);
-
     entry.mesh = mesh;
     this.models.push(entry);
     this.scene.add(mesh);

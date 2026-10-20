@@ -9,6 +9,15 @@ Each phase ends with a human review checkpoint. Work is committed per phase so i
 
 **Checkpoint 1 (go/no-go):** run the test model through the pipeline, then open it on desktop, phone and Quest 3. Record build time and memory, first frame, time to full detail, and fps in `reports/`. Decide whether to continue with Spark or compare against PlayCanvas Streamed SOG.
 
+## Navigation track (runs alongside Phases 1–3)
+Models are oriented and placed at the origin in LichtFeld before export. The viewer applies no transforms, so every navigation asset shares the splat file's coordinates.
+
+1. **Plan export (viewer):** a top-down orthographic view with a horizontal section cut through the splats. It exports a PNG, a JSON sidecar (world bounds, metres per pixel, cut heights) and a GLB textured plane placed at the exact world position.
+2. **Draw the colliders (manual, Rhino or Blender):** import the GLB plane, which arrives already aligned, and trace floors, walls and ceilings. Export them as a collision GLB using the object-name conventions in `viewer/README.md`.
+3. **Collision and controller (viewer):** load the collision GLB, then walk with WASD, gravity, step-up and wall sliding. Flying is built in, with ceiling collision, but turned off by config. Hotspot moves (Phase 3) and Quest locomotion (Phase 4) reuse the same controller and colliders.
+
+**Navigation checkpoint:** export a plan of the test model, draw a collision GLB, and walk the space.
+
 ## Phase 2: Pipeline hardening and hosting
 - Cleanup step: crop, remove floaters, recentre near the origin
 - Optional split into one .rad per zone

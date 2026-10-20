@@ -1,8 +1,7 @@
 {
   "models": [
     {
-      "url": "/models/example/v1/example-lod.rad",
-      "flip": true
+      "url": "/models/example/v1/example-lod.rad"
     }
   ],
   "camera": {

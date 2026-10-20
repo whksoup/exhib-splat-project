@@ -18,15 +18,6 @@ export interface ModelSpec {
   lod?: boolean | "quality";
   /** Force a file type when it can't be inferred (e.g. "ply", "spz", "pcsogszip", "rad"). */
   fileType?: string;
-  position?: Vec3;
-  /** Euler angles in degrees (XYZ order), applied after `flip`. */
-  rotation?: Vec3;
-  scale?: number;
-  /**
-   * Rotate 180° about X. Most 3DGS trainers output OpenCV-style (Y-down)
-   * coordinates; Spark's own examples apply this same flip. Default true.
-   */
-  flip?: boolean;
   /** Per-mesh LoD detail multiplier (SplatMesh.lodScale). */
   lodScale?: number;
 }
@@ -135,14 +126,12 @@ export async function loadConfig(search = window.location.search): Promise<Viewe
   const paged = bool(q.get("paged"));
   const lodParam = q.get("lod");
   const lod = lodParam === "quality" ? "quality" : bool(lodParam);
-  const flip = bool(q.get("flip"));
   const fileType = q.get("type") ?? undefined;
   const meshLodScale = num(q.get("meshLodScale"));
   models = models.map((m) => ({
     ...m,
     ...(paged !== undefined && { paged }),
     ...(lod !== undefined && { lod }),
-    ...(flip !== undefined && { flip }),
     ...(fileType && { fileType }),
     ...(meshLodScale !== undefined && { lodScale: meshLodScale }),
   }));

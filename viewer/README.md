@@ -53,7 +53,6 @@ server can find. Tap a file to open it, which saves typing URLs on a phone.
 | `paged` | `0` / `1` | Paged streaming. On by default for `.rad`. `0` loads the whole `.rad` at once. |
 | `lod` | `1` / `quality` | Plain files only. Builds an LoD tree in the browser so budgets apply. Rough cost: 1–3 s per 1M splats. |
 | `type` | `ply`, `spz`, `pcsogszip`, `rad` | Forces the file type when the extension is misleading. |
-| `flip` | `0` | Turns off the default 180° X rotation. That rotation corrects the usual Y-down 3DGS convention. |
 | `budget` | `1500000`, `1.5M`, `500k` | Base splat budget, sent to `SparkRenderer.lodSplatCount`. Leave it unset to get Spark's platform default. |
 | `lodScale` | `0.8` | Budget multiplier, sent to `SparkRenderer.lodSplatScale`. This is the main tuning knob. |
 | `device` | `desktop`, `iphone`, `android`, `quest`, `visionpro` | Forces a profile: that profile's budget and pixel-ratio cap. |
@@ -66,7 +65,9 @@ server can find. Tap a file to open it, which saves typing URLs on a phone.
 | `controls` | `orbit` / `fly` | Starting camera mode. Press `C` to switch. |
 | `overlay` | `0` | Hides the performance overlay at start. Press `P` to toggle it. |
 | `settleMs` | `1500` | How long Spark must stay idle before LoD counts as "settled". |
-| `config` | `configs/example.json` | JSON file holding any of the above, plus `models: [{url, position, rotation, scale, flip, lodScale}]`. URL params override it. |
+| `config` | `configs/example.json` | JSON file holding any of the above, plus `models: [{url, paged, lod, fileType, lodScale}]`. URL params override it. |
+
+Models are rendered exactly in their file coordinates: no flip, rotation, offset or scale. Orientation and origin are set in LichtFeld before export, so collision meshes and plan exports line up 1:1 with the splats.
 
 Example: `?config=configs/example.json&lodScale=0.7`.
 
