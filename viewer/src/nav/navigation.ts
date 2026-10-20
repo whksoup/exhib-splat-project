@@ -158,6 +158,14 @@ export class Navigation {
     this.renderHud();
   }
 
+  enterFrom(camera: THREE.PerspectiveCamera): void {
+    const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+    const yaw = THREE.MathUtils.radToDeg(Math.atan2(-fwd.x, -fwd.z));
+    const pitch = THREE.MathUtils.radToDeg(Math.asin(THREE.MathUtils.clamp(fwd.y, -1, 1)));
+    const p = camera.position;
+    this.teleport({ position: [p.x, p.y, p.z], yaw, pitch: THREE.MathUtils.clamp(pitch, -30, 30) });
+  }
+
   /** Called every frame by CameraRig while first-person controls are active. */
   update(camera: THREE.PerspectiveCamera): void {
     const now = performance.now();

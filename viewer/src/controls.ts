@@ -23,6 +23,8 @@ export interface WalkModeController {
   update(camera: THREE.PerspectiveCamera): void;
   /** Back to the spawn point ("Reset view" / V). */
   reset(): void;
+  /** Start walking from the current camera view (dropped onto the floor below it). */
+  enterFrom(camera: THREE.PerspectiveCamera): void;
 }
 
 export class CameraRig {
@@ -62,6 +64,7 @@ export class CameraRig {
       const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(this.camera.quaternion);
       this.orbit.target.copy(this.camera.position).addScaledVector(fwd, dist);
     }
+    if (mode === "walk") this.walk?.enterFrom(this.camera);
     this._mode = mode;
     this.applyMode();
   }
