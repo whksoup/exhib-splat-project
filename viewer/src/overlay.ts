@@ -21,7 +21,7 @@ function el<K extends keyof HTMLElementTagNameMap>(
 }
 
 /** Clipboard API needs a secure context (not plain-http LAN); fall back to execCommand. */
-async function copyText(text: string): Promise<boolean> {
+export async function copyText(text: string): Promise<boolean> {
   try {
     if (navigator.clipboard && window.isSecureContext) {
       await navigator.clipboard.writeText(text);

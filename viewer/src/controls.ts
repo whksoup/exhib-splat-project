@@ -30,6 +30,8 @@ export class CameraRig {
   private readonly fly: SparkControls;
   private _mode: ControlsMode;
   private walk: WalkModeController | null = null;
+  /** While true, no camera mode takes input (e.g. Align mode is dragging its gizmo). */
+  private suspended = false;
 
   constructor(
     private readonly camera: THREE.PerspectiveCamera,
@@ -84,14 +86,22 @@ export class CameraRig {
     return true;
   }
 
+  /** Stop (or resume) all camera input without changing the mode, e.g. while a gizmo is dragged. */
+  setSuspended(suspended: boolean): void {
+    if (suspended === this.suspended) return;
+    this.suspended = suspended;
+    this.applyMode();
+  }
+
   private applyMode(): void {
+    const on = !this.suspended;
     const orbit = this._mode === "orbit";
     const fly = this._mode === "fly";
-    this.orbit.enabled = orbit;
-    this.fly.fpsMovement.enable = fly;
-    this.fly.pointerControls.enable = fly;
-    this.walk?.setActive(this._mode === "walk");
-    if (orbit) this.orbit.update();
+    this.orbit.enabled = orbit && on;
+    this.fly.fpsMovement.enable = fly && on;
+    this.fly.pointerControls.enable = fly && on;
+    this.walk?.setActive(this._mode === "walk" && on);
+    if (orbit && on) this.orbit.update();
   }
 
   /** Place the camera and point it at `target`. */

@@ -75,6 +75,43 @@ What a run does:
 | `SPARK_TAG` | `v2.3.1` |
 | `SPARK_BUILD_LOD` | `pipeline/tools/spark/rust/target/release/build-lod(.exe)` |
 
+## Align transform bake (`transform.mjs`)
+
+The viewer's Align mode (`viewer/README.md`) saves a rotation / uniform scale /
+origin as `assets/transforms/<stem>.json`. `transform.mjs` bakes it into the
+splat file with PlayCanvas **`@playcanvas/splat-transform` 3.10.0** (installed
+in `pipeline/`, pinned exactly with `playcanvas` 2.23.0; `npm install` in `pipeline/`).
+
+```sh
+node pipeline/transform.mjs <input.ply|.sog|...> --transform assets/transforms/<stem>.json --out <output.ply> [--overwrite] [--no-verify] [--dry-run]
+```
+
+Run it **before** `build.mjs`, then build from the baked file:
+
+```sh
+node pipeline/transform.mjs assets/source_ply/scan.ply --transform assets/transforms/scan.json --out assets/source_ply/scan-aligned.ply
+node pipeline/build.mjs assets/source_ply/scan-aligned.ply --name scan
+```
+
+- **Output keeps full SH** (every degree in the input, rotated with the splats). Dropping to SH 1 stays a separate `build-lod --max-sh=1` decision. Write `.ply` for the bake. `.compressed.ply`, `.sog` and `.spz` outputs also work but are quantised.
+- **Match with the viewer.** The viewer previews `p' = T + R(q)·(s·p)` (three.js Object3D: scale, then rotate, then translate, about the world origin). `transform.mjs` writes exactly that. The quaternion and position are authoritative, and a JSON whose `matrix` disagrees with them is refused.
+- **splat-transform conventions** (read from its source in `node_modules`, `dist/index.mjs`):
+  - Actions `-s/--scale <f>`, `-r/--rotate <x,y,z>` (degrees) and `-t/--translate <x,y,z>` left-multiply a pending transform, so they apply in CLI order.
+  - `-r` is PlayCanvas `Quat.setFromEulerAngles`, which equals three.js Euler order `'ZYX'`.
+  - Readers tag PLY/SOG/SPZ data with `Transform.PLY`, a 180° rotation about Z, and actions act in engine space. On write, `delta = PLY⁻¹ · U · PLY` is baked into the file.
+  - `transform.mjs` therefore passes U = Rz(180)·M·Rz(180)⁻¹: quaternion (x, y, z, w) becomes (−x, −y, z, w) and translation (x, y, z) becomes (−x, −y, z). It converts to Euler from the quaternion and checks the round trip. The arguments are passed as `--scale=… --rotate=… --translate=…`, so negative numbers are never read as flags.
+  - Baking moves positions with the full TRS, pre-multiplies `rot_*` by the rotation, adds ln(s) to `scale_*`, and rotates `f_rest_*` (SH bands 1–3, sh-lib `RotateSH`). DC and opacity are unchanged.
+- **Self-check.** For `.ply` → `.ply`, 2000 sampled splats are read back and compared with M·input; the run fails if the relative error exceeds 1e-5. It also fails if the SH degree changed. Use `--no-verify` to skip this.
+- splat-transform streams the file, so memory stays well below the file size. On the 665 MB / 2.81M-splat test file, peak memory was about 590 MB and a run took 4–46 s depending on disk.
+
+`npm test` includes `test/transform.test.mjs`. It writes a synthetic SH-3 `.ply` with asymmetric positions, random rotations and anisotropic scales, applies −90° X, then 30° Y, scale 1.7 and translate (2, −1, 3) once with three.js matrices and once with `transform.mjs`, and compares:
+
+- positions (relative error below 1e-6);
+- quaternions;
+- scales;
+- the band-1 SH vectors;
+- SH radiance for random view directions.
+
 ## Output layout
 
 ```
@@ -98,13 +135,13 @@ reports/build-log.jsonl   one JSON line per run (same report without the file li
 npm test
 ```
 
-The tests use synthetic files written to the OS temp directory and never touch the repo. They cover argument parsing, the dependency check, the `.ply` reader (binary 3DGS layout, CRLF headers, buffer-boundary reads, a 200k-splat file, NaN positions, truncated files, ASCII, PlayCanvas compressed), the `.sog` meta reader, and dry runs. An end-to-end run uses a stand-in `build-lod` script that follows the real tool's CLI contract (outputs written beside the input, `Comment:` stats block, exit 0 on decode failure), so staging, output collection, reports, version handling and failure detection are all exercised without Rust.
+The tests use synthetic files written to the OS temp directory and never touch the repo. They cover argument parsing, the dependency check, the `.ply` reader (binary 3DGS layout, CRLF headers, buffer-boundary reads, a 200k-splat file, NaN positions, truncated files, ASCII, PlayCanvas compressed), the `.sog` meta reader, and dry runs. An end-to-end run uses a stand-in `build-lod` script that follows the real tool's CLI contract (outputs written beside the input, `Comment:` stats block, exit 0 on decode failure), so staging, output collection, reports, version handling and failure detection are all exercised without Rust. `transform.test.mjs` checks the Align bake against three.js (see above); it uses `three` 0.186.1 as a dev dependency.
 
 ## Known caveats
 
 - **Memory.** `build-lod` decodes the whole input into memory before building the tree. This happens in `process_file_lod_tsplat`, and there is no streaming or out-of-core mode. Peak memory at 50M splats is the main week-1 unknown. If it does not fit, use a high-memory machine or split the model into zones (for example with `--min-box`/`--max-box`, one build per zone).
 - **Peak memory is best-effort.** On Windows a PowerShell loop samples the kernel's `PeakWorkingSet64` and `PeakPagedMemorySize64` once a second. On Linux the pipeline reads `VmHWM`; on macOS it polls `ps` RSS. Because the Windows counters are peaks kept by the OS, only growth in the final second can be missed. A process that exits in under about 1 second, before PowerShell starts, records `null`.
-- **Recentring is not done yet.** `build-lod` can crop but has no translate option. In v2.3.1 the RAD file stores centres as f32, but Spark's default paged pool stores them at half precision at runtime, so far-off coordinates stripe. The pipeline only warns about this for now (using the f16 step at the farthest coordinate). The Phase 2 cleanup step must recentre the model before the build.
+- **Recentring** is not automatic. `build-lod` can crop but has no translate option. Use Align mode + `transform.mjs` (above) before the build. In v2.3.1 the RAD file stores centres as f32, but Spark's default paged pool stores them at half precision at runtime, so far-off coordinates stripe. The pipeline only warns about this for now (using the f16 step at the farthest coordinate). The Phase 2 cleanup step must recentre the model before the build.
 - **`--max-sh=1`** drops SH degrees 2 and 3. Whether that is acceptable is still an open visual-check question in the scope.
 - **SOG input** works directly, but its quality is capped by PlayCanvas's quantisation. If the source `.ply` is lost and conversion is needed, PlayCanvas `splat-transform` can turn SOG back into `.ply`, but nothing is gained compared with feeding the `.sog` directly.
 - **Windows long paths.** `setup` clones with `core.longpaths=true`. Keep the project path short.

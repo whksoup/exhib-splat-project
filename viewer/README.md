@@ -69,7 +69,7 @@ server can find. Tap a file to open it, which saves typing URLs on a phone.
 | `settleMs` | `1500` | How long Spark must stay idle before LoD counts as "settled". |
 | `config` | `configs/example.json` | JSON file holding any of the above, plus `models: [{url, paged, lod, fileType, lodScale}]`. URL params override it. |
 
-Models are rendered exactly in their file coordinates: no flip, rotation, offset or scale. Orientation and origin are set in LichtFeld before export, so collision meshes and plan exports line up 1:1 with the splats.
+Models are rendered exactly in their file coordinates: no flip, rotation, offset or scale. Orientation and origin are set in LichtFeld before export, or with [Align mode](#align-mode-rotation-scale-origin) and a bake, so collision meshes and plan exports line up 1:1 with the splats.
 
 Example: `?config=configs/example.json&lodScale=0.7`.
 
@@ -77,7 +77,7 @@ Example: `?config=configs/example.json&lodScale=0.7`.
 
 - **Orbit** (default). Mouse: left-drag rotates, right-drag pans, wheel zooms. Touch: one finger rotates, two fingers pinch and pan.
 - **Fly** (Spark's `SparkControls`). Move with WASD/arrows, Q/E or PageUp/PageDown for down/up. Drag to look. On touch, drag to look and use two fingers to slide. Gamepads also work.
-- Keys: `P` toggles the overlay, `C` cycles orbit / fly / walk, `R` resets the fps measurement window, `V` returns to the start view.
+- Keys: `P` toggles the overlay, `C` cycles orbit / fly / walk, `R` resets the fps measurement window, `V` returns to the start view, `M` plan mode, `G` Align mode.
 
 ## Plan export
 
@@ -166,6 +166,43 @@ are copied into the node's `extras.planExport`.
 - For paged `.rad` models, the bounds come from the splats loaded at the moment you enter plan mode. Use **Fit model** again after streaming, or type the region.
 - Captures blend in linear space (sRGB render target), so colours can differ slightly from the canvas.
 - The browser canvas limits the image to about 268M px (for example 16k × 16k).
+
+## Align mode (rotation, scale, origin)
+
+Align mode sets a model's rotation, uniform scale and origin inside the viewer
+and saves them as a transform JSON. `pipeline/transform.mjs` then bakes that
+transform into the splat file, and the baked file becomes the new identity
+(normal viewing never applies a transform). Code: `src/align/`.
+
+1. Open the model (plain `.ply`/`.sog` or paged `.rad`) and press `G`, or click **Align (G)** at the bottom right. A 1 m grid on Y = 0 and axes at the origin appear (X red, Y green, Z blue).
+2. Drag the gizmo. `1` / `2` / `3` switch move / rotate / scale. Scale is **uniform only** (non-uniform scale has no exact mapping onto Gaussian covariances and SH). Rotation snaps to 15° while **15° snap** is ticked. Camera input pauses while you drag.
+3. Or type values: position (m, relative to 0,0,0), rotation (degrees, Euler order XYZ), scale. **±90°** rotates about a world axis around the model's pivot. For a Z-up scan, press X **−90°**.
+4. **Centre on origin** moves the XZ centre of the robust bounds (0.5–99.5 % of sampled splat centres) to 0,0. For the floor, type its current world height into **Floor Y** (or press **Guess**: the 2nd percentile of heights), then **Floor → Y=0**.
+5. The bounds readout updates live: min/max, size and robust box of up to 300k sampled splat centres. Paged models only have the splats streamed so far, so press **Resample** after streaming.
+6. **Save transform JSON** writes `assets/transforms/<stem>.json` (tracked in git). The bake command below it, with **Copy command**, is run from the repo root:
+
+   ```sh
+   node pipeline/transform.mjs assets/source_ply/<stem>.ply --transform assets/transforms/<stem>.json --out assets/source_ply/<stem>-aligned.ply
+   ```
+
+   For a paged `.rad`, the source defaults to the original input named in its `build-report.json`. The **Source** field can be edited.
+
+Closing Align mode restores the identity transform, unless **Keep preview after closing** is ticked (this session only). `M` (plan) and `G` close each other.
+
+**Transform JSON** (`tool: "viewer-align"`):
+
+| Field | Meaning |
+| --- | --- |
+| `source` | Repo-relative path of the file to bake. |
+| `position` | `[x, y, z]` translation in metres. |
+| `rotationDeg`, `eulerOrder` | Euler angles in degrees, order `"XYZ"` (three.js default: q = qx·qy·qz). For people; not used by the bake. |
+| `quaternion` | `[x, y, z, w]`. Authoritative rotation. |
+| `scale` | Uniform scale (number). |
+| `matrix` | Column-major 4×4 (three.js `Matrix4.elements`) = T·R·S. The bake refuses a file whose matrix disagrees with position/quaternion/scale. |
+| `appliedOrder` | `scale, then rotate, then translate, about the world origin` (three.js Object3D order). |
+| `createdAt` | ISO time. |
+
+**Dev endpoint.** `POST /__align-transform?file=<stem>.json` takes the JSON body (1 MB max; it must have `tool: "viewer-align"`). `GET` is a probe. The name rules match `/__plan-export`, and the resolved path must stay inside `assets/transforms/`. Without the dev server, the JSON is downloaded instead.
 
 ## Navigation (first-person walking)
 
@@ -335,6 +372,8 @@ src/results.ts            results JSON schema
 dev-server/modelFiles.ts  Vite middleware: Range file serving, /__models, /__results
 src/plan/                 plan mode: ortho section view (dyno world-modifier cut), tiled capture, PNG/JSON/GLB export (see Plan export)
 dev-server/planExport.ts  Vite middleware: POST /__plan-export -> assets/nav/<model>/plan-<label>.*
+src/align/                Align mode: TransformControls gizmo, numeric panel, transform JSON + bake command (see Align mode)
+dev-server/alignTransform.ts  Vite middleware: POST /__align-transform -> assets/transforms/<stem>.json
 src/nav/                  collision world (three-mesh-bvh), player controller, input, debug view (see Navigation)
 scripts/                  make-nav-test-room.ts -> public/examples/nav-test-room.glb
 public/configs/           example JSON configs (nav-test.json: walking with no model)

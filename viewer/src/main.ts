@@ -1,4 +1,5 @@
 import "./style.css";
+import { AlignMode } from "./align/alignMode";
 import { loadConfig } from "./config";
 import { resolveDevice } from "./device";
 import { attachNavigation } from "./nav";
@@ -35,7 +36,10 @@ async function main(): Promise<void> {
   new Overlay(ui, viewer);
   attachNavigation(viewer, ui);
   // Plan mode + plan export (M key / "Plan" button); exposed for console use.
-  (window as unknown as { plan: PlanMode }).plan = new PlanMode(ui, viewer);
+  const plan = new PlanMode(ui, viewer);
+  (window as unknown as { plan: PlanMode }).plan = plan;
+  // Align mode (G key / "Align" button): preview + save a transform JSON for pipeline/transform.mjs.
+  (window as unknown as { align: AlignMode }).align = new AlignMode(ui, viewer, [plan]);
 
   // No model is fine when starting in first-person (navigation testing, e.g. configs/nav-test.json).
   if (config.models.length === 0 && config.controls === "walk") return;

@@ -12,5 +12,12 @@
     "setup": "node setup-build-lod.mjs",
     "build": "node build.mjs",
     "test": "node --test \"test/*.test.mjs\""
+  },
+  "dependencies": {
+    "@playcanvas/splat-transform": "3.10.0",
+    "playcanvas": "2.23.0"
+  },
+  "devDependencies": {
+    "three": "0.186.1"
   }
 }
