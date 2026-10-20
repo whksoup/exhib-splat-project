@@ -1,0 +1,31 @@
+/* Align mode UI (src/align/alignMode.ts). Panel layout reuses plan.css classes. */
+
+.align-toggle {
+  position: absolute;
+  right: calc(88px + env(safe-area-inset-right, 0px));
+  bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+}
+
+.align-toggle.on {
+  background: #3b5bdb;
+  border-color: #5c7cfa;
+}
+
+.align-panel .plan-row input[type="number"] {
+  width: 64px;
+}
+
+.align-panel input.align-source {
+  flex: 1;
+  min-width: 120px;
+}
+
+.align-bounds,
+.align-command {
+  margin: 2px 0;
+  padding: 4px 6px;
+  background: #0f1013;
+  border: 1px solid #33363d;
+  border-radius: 3px;
+  user-select: text;
+}

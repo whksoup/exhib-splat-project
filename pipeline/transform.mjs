@@ -131,17 +131,18 @@ export function verifyBake(input, output, matrix, { samples = 2000, relTol = 1e-
 
 /**
  * Run the bake. Returns a report object (also used by build.mjs).
- * @param {{ input: string, transform: string, out: string, overwrite?: boolean, verify?: boolean, dryRun?: boolean, log?: Function, quiet?: boolean }} o
+ * `transform` is a JSON file path; build-scene.mjs passes `transformJson` (an object) instead.
+ * @param {{ input: string, transform?: string, transformJson?: object, out: string, overwrite?: boolean, verify?: boolean, dryRun?: boolean, log?: Function, quiet?: boolean }} o
  */
 export async function runTransform(o) {
   const log = o.log ?? console.log;
   const input = path.resolve(o.input);
   const out = path.resolve(o.out);
-  const transformPath = path.resolve(o.transform);
+  const transformPath = o.transformJson ? null : path.resolve(o.transform);
   if (!fs.existsSync(input) || !fs.statSync(input).isFile()) throw new Error(`input file not found: ${input}`);
   if (input === out) throw new Error('--out must differ from the input file');
-  if (!fs.existsSync(transformPath)) throw new Error(`transform JSON not found: ${transformPath}`);
-  const json = JSON.parse(fs.readFileSync(transformPath, 'utf8'));
+  if (transformPath && !fs.existsSync(transformPath)) throw new Error(`transform JSON not found: ${transformPath}`);
+  const json = o.transformJson ?? JSON.parse(fs.readFileSync(transformPath, 'utf8'));
   const t = parseTransformJson(json);
   for (const w of t.warnings) log(`WARNING: ${w}`);
   const { args: actionArgs, engine } = toSplatTransformActions(t);
@@ -149,7 +150,7 @@ export async function runTransform(o) {
   const cliArgs = [input, ...actionArgs, out, ...(o.overwrite ? ['-w'] : [])];
   const display = `node ${path.relative(process.cwd(), st.cli) || st.cli} ${cliArgs.map((a) => (/\s/.test(a) ? `"${a}"` : a)).join(' ')}`;
   const base = {
-    transformFile: path.relative(PROJECT_ROOT, transformPath).split(path.sep).join('/'),
+    transformFile: transformPath ? path.relative(PROJECT_ROOT, transformPath).split(path.sep).join('/') : null,
     transform: { position: t.position, quaternion: t.quaternion, scale: t.scale, matrix: t.matrix, source: json.source ?? null, createdAt: json.createdAt ?? null },
     splatTransform: { version: st.version, args: cliArgs, engineSpace: engine },
     command: display,
@@ -252,6 +253,6 @@ async function main() {
   return r.status === 'ok' ? 0 : 1;
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().then((code) => process.exit(code), (e) => { console.error(e); process.exit(1); });
 }

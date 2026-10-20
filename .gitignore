@@ -15,3 +15,6 @@ assets/rad_output/*
 *.spz
 *.rad
 *.radc
+
+# Scene builds are regenerated from source
+scenes/*/build/

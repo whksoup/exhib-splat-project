@@ -34,3 +34,6 @@ export const SCOPE_FLAGS = ['--quality', '--rad-chunked', '--max-sh=1'];
 export function resolveBuildLodBin(override) {
   return override || process.env.SPARK_BUILD_LOD || BUILD_LOD_BIN;
 }
+
+// Scene folders (scenes/<name>/scene.json, nav/, build/). Overridable for tests.
+export const SCENES_ROOT = path.resolve(process.env.PIPELINE_SCENES_ROOT || path.join(PROJECT_ROOT, 'scenes'));

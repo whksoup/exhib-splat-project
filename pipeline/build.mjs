@@ -153,26 +153,75 @@ async function main() {
   }
 
   const inputPath = path.resolve(opts.input);
-  if (!fs.existsSync(inputPath) || !fs.statSync(inputPath).isFile()) {
-    console.error(`error: input file not found: ${inputPath}`);
-    return 2;
-  }
+  const err = checkInputFile(inputPath);
+  if (err) { console.error(`error: ${err}`); return 2; }
+
+  const modelDir = path.join(OUTPUT_ROOT, opts.name);
+  const version = opts.version || nextVersion(modelDir);
+  const outDir = path.join(modelDir, version);
+  const { code } = await buildModel({
+    inputPath,
+    name: opts.name,
+    outDir,
+    version,
+    extra: opts.extra,
+    buildLodBin: resolveBuildLodBin(opts.buildLod),
+    scan: opts.scan,
+    recentreThreshold: opts.recentreThreshold,
+    cleanup: opts.cleanup,
+    dryRun: opts.dryRun,
+    // A folder left by a failed run (log/report only) may be reused; one holding
+    // .rad/.radc output may not (versioned outputs are immutable).
+    refuseExistingOutput: true,
+  });
+  return code;
+}
+
+/** Returns an error message when the file can't be fed to build-lod, else null. */
+export function checkInputFile(inputPath) {
+  if (!fs.existsSync(inputPath) || !fs.statSync(inputPath).isFile()) return `input file not found: ${inputPath}`;
   const ext = path.extname(inputPath).toLowerCase();
-  if (!BUILD_LOD_INPUT_EXTS.includes(ext)) {
-    console.error(`error: build-lod does not accept "${ext}" files. Supported: ${BUILD_LOD_INPUT_EXTS.join(' ')}`);
-    return 2;
-  }
+  if (!BUILD_LOD_INPUT_EXTS.includes(ext)) return `build-lod does not accept "${ext}" files. Supported: ${BUILD_LOD_INPUT_EXTS.join(' ')}`;
+  return null;
+}
+
+/**
+ * Inspect the input, run build-lod into `outDir` and write build-report.json + build-lod.log there.
+ * Used by the build.mjs CLI and by build-scene.mjs (which passes a temporary outDir).
+ *
+ * @param {object} o
+ * @param {string} o.inputPath     file fed to build-lod (absolute)
+ * @param {string} o.name          output stem: files are <name>-lod.rad / <name>-lod-<N>.radc
+ * @param {string} o.outDir        output folder (created)
+ * @param {string} [o.version]     recorded in the report
+ * @param {string[]} [o.extra]     extra build-lod flags
+ * @param {string} o.buildLodBin
+ * @param {boolean} [o.scan]
+ * @param {number} [o.recentreThreshold]
+ * @param {boolean} [o.cleanup]
+ * @param {boolean} [o.dryRun]
+ * @param {boolean} [o.refuseExistingOutput]  exit 2 when outDir already holds .rad/.radc output
+ * @param {(chunk: string) => void} [o.onOutput]  every build-lod stdout/stderr chunk (for progress parsing)
+ * @param {object} [o.inputExtra]  merged into report.input (e.g. the scene source)
+ * @returns {Promise<{ code: number, report: object|null }>}
+ */
+export async function buildModel(o) {
+  const {
+    inputPath, name, outDir, version = null, extra = [], buildLodBin,
+    scan = true, recentreThreshold = 10, dryRun = false,
+  } = o;
+  const ext = path.extname(inputPath).toLowerCase();
 
   // 1. Inspect input -------------------------------------------------------
   console.log(`Input: ${inputPath} (${formatBytes(fs.statSync(inputPath).size)})`);
   let summary;
   try {
-    summary = await inspectInput(inputPath, { scan: opts.scan });
+    summary = await inspectInput(inputPath, { scan });
   } catch (e) {
     console.error(`error: could not read input: ${e.message}`);
-    return 1;
+    return { code: 1, report: null };
   }
-  const warnings = analyseSummary(summary, { recentreThreshold: opts.recentreThreshold });
+  const warnings = analyseSummary(summary, { recentreThreshold });
   console.log(`  format:       ${summary.format}`);
   console.log(`  splats:       ${summary.splatCount?.toLocaleString('en-US') ?? 'unknown'}`);
   console.log(`  SH degree:    ${summary.shDegree ?? 'unknown'}`);
@@ -189,39 +238,33 @@ async function main() {
   for (const w of warnings) console.warn(`WARNING: ${w}`);
 
   // 2. Cleanup hook (Phase 2) ----------------------------------------------
-  const cleaned = await cleanup(inputPath, { header: summary, bounds: summary.bounds, enabled: opts.cleanup });
+  const cleaned = await cleanup(inputPath, { header: summary, bounds: summary.bounds, enabled: !!o.cleanup });
   const buildInput = cleaned.path;
 
   // 3. Output location ------------------------------------------------------
-  const modelDir = path.join(OUTPUT_ROOT, opts.name);
-  const version = opts.version || nextVersion(modelDir);
-  const outDir = path.join(modelDir, version);
-  // A folder left by a failed run (log/report only) may be reused; one holding
-  // .rad/.radc output may not.
   const existing = fs.existsSync(outDir) ? fs.readdirSync(outDir) : [];
-  if (existing.some((f) => /\.radc?$/.test(f) || f === '_input')) {
+  if (o.refuseExistingOutput && existing.some((f) => /\.radc?$/.test(f) || f === '_input')) {
     console.error(`error: ${rel(outDir)} already contains build output. Versioned outputs are immutable (CDN caches them forever); choose a new --version.`);
-    return 2;
+    return { code: 2, report: null };
   }
 
-  const buildLodBin = resolveBuildLodBin(opts.buildLod);
   const buildExt = ext === '.zip' ? '.zip' : ext;
-  const stagedName = `${opts.name}${buildExt}`;
-  const args = [...SCOPE_FLAGS, ...opts.extra];
+  const stagedName = `${name}${buildExt}`;
+  const args = [...SCOPE_FLAGS, ...extra];
 
-  if (opts.dryRun) {
+  if (dryRun) {
     console.log('\nDry run, nothing written. Would run:');
     console.log(`  ${buildLodBin} ${args.join(' ')} ${path.join(outDir, '_input', stagedName)}`);
-    console.log(`  output -> ${rel(outDir)}/${opts.name}-lod.rad + ${opts.name}-lod-<N>.radc`);
+    console.log(`  output -> ${rel(outDir)}/${name}-lod.rad + ${name}-lod-<N>.radc`);
     if (!fs.existsSync(buildLodBin)) console.log('  (build-lod binary not present yet: run `npm run check-deps`)');
-    return 0;
+    return { code: 0, report: null };
   }
 
   // 4. Dependencies ---------------------------------------------------------
   if (!fs.existsSync(buildLodBin)) {
     console.error('\nbuild-lod is not available. Dependency check:\n');
     printReport(checkDeps());
-    return 1;
+    return { code: 1, report: null };
   }
 
   // 5. Stage input -----------------------------------------------------------
@@ -249,7 +292,7 @@ async function main() {
     const clash = findLodOutputs(runDir, stem);
     if (clash.length) {
       console.error(`error: ${runDir} already contains ${clash[0]} (and ${clash.length - 1} more); move them away first.`);
-      return 1;
+      return { code: 1, report: null };
     }
   }
 
@@ -274,8 +317,15 @@ async function main() {
     stdout = (stdout + s).slice(-2_000_000); // keep the tail; the stats "Comment:" block is printed last
     process.stdout.write(s);
     logStream.write(s);
+    o.onOutput?.(s);
   });
-  child.stderr.on('data', (d) => { const s = d.toString(); stderrTail = (stderrTail + s).slice(-20000); process.stderr.write(s); logStream.write(s); });
+  child.stderr.on('data', (d) => {
+    const s = d.toString();
+    stderrTail = (stderrTail + s).slice(-20000);
+    process.stderr.write(s);
+    logStream.write(s);
+    o.onOutput?.(s);
+  });
   const exitCode = await new Promise((resolve) => {
     child.on('error', (e) => { stderrTail += String(e); resolve(-1); });
     child.on('close', (code) => resolve(code));
@@ -309,7 +359,7 @@ async function main() {
   const report = {
     status: failure ? 'failed' : 'ok',
     error: failure,
-    name: opts.name,
+    name,
     version,
     startedAt: startedAt.toISOString(),
     finishedAt: new Date().toISOString(),
@@ -322,6 +372,7 @@ async function main() {
       shDegree: summary.shDegree,
       bounds: summary.bounds,
       cleanupApplied: cleaned.applied,
+      ...(o.inputExtra ?? {}),
     },
     warnings,
     buildLod: {
@@ -370,9 +421,9 @@ async function main() {
   console.log(`peak memory:  ${formatBytes(mem.peakRssBytes)} working set, ${formatBytes(mem.peakPrivateBytes)} private (${mem.method})`);
   console.log(`output:       ${rel(outDir)}/ (${header?.file ?? 'no header'} + ${chunks.length} chunks, ${formatBytes(report.output.totalBytes)})`);
   console.log(`report:       ${rel(path.join(outDir, 'build-report.json'))}, appended to ${rel(BUILD_LOG)}`);
-  return failure ? 1 : 0;
+  return { code: failure ? 1 : 0, report };
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().then((code) => process.exit(code), (e) => { console.error(e); process.exit(1); });
 }

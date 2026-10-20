@@ -1,0 +1,14 @@
+{
+  "models": [
+    {
+      "url": "/models/example/v1/example-lod.rad"
+    }
+  ],
+  "camera": {
+    "position": [0, 1.6, 4],
+    "target": [0, 1.2, 0],
+    "fov": 60
+  },
+  "controls": "orbit",
+  "overlay": true
+}

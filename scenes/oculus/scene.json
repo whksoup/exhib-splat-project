@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "name": "oculus",
+  "source": "assets/source_ply/OculusMerged_1.ply",
+  "transform": {
+    "position": [
+      0.7995684725019578,
+      -0.2476744170031172,
+      -3.368313447842285
+    ],
+    "rotationDeg": [
+      -90,
+      0,
+      0
+    ],
+    "eulerOrder": "XYZ",
+    "quaternion": [
+      -0.7071067811865475,
+      0,
+      0,
+      0.7071067811865476
+    ],
+    "scale": 5,
+    "matrix": [
+      5,
+      0,
+      0,
+      0,
+      0,
+      1.1102230246251565e-15,
+      -5,
+      0,
+      0,
+      5,
+      1.1102230246251565e-15,
+      0,
+      0.7995684725019578,
+      -0.2476744170031172,
+      -3.368313447842285,
+      1
+    ],
+    "appliedOrder": "scale, then rotate, then translate, about the world origin (three.js Object3D: M = T * R * S, column vectors)"
+  },
+  "floorY": null,
+  "navigation": {},
+  "camera": null,
+  "navTransformMatrix": null,
+  "buildOptions": {},
+  "build": {
+    "status": "ok",
+    "transformMatrix": [
+      5,
+      0,
+      0,
+      0,
+      0,
+      1.1102230246251565e-15,
+      -5,
+      0,
+      0,
+      5,
+      1.1102230246251565e-15,
+      0,
+      0.7995684725019578,
+      -0.2476744170031172,
+      -3.368313447842285,
+      1
+    ],
+    "radFile": "oculus-lod.rad",
+    "source": "assets/source_ply/OculusMerged_1.ply",
+    "sourceBytes": 697271140,
+    "sourceModified": "2026-10-20T09:18:03.536Z",
+    "startedAt": "2026-10-20T12:35:05.092Z",
+    "finishedAt": "2026-10-20T12:35:54.592Z",
+    "wallClockSeconds": 49.5,
+    "splatCount": {
+      "input": 2811571,
+      "final": 3931054
+    },
+    "bounds": {
+      "bboxMin": [
+        -20.610437393188477,
+        -3.279100179672241,
+        -9.609217643737793
+      ],
+      "bboxMax": [
+        8.959677696228027,
+        14.297901153564453,
+        14.416285514831543
+      ]
+    },
+    "buildLodFlags": [
+      "--quality",
+      "--rad-chunked",
+      "--max-sh=1"
+    ],
+    "sparkTag": "v2.3.1",
+    "chunkCount": 60,
+    "totalBytes": 99985696,
+    "peakMemoryBytes": 1110417408,
+    "transformStep": {
+      "splatTransform": "3.10.0",
+      "seconds": 6.583,
+      "maxRelError": 5.549358298593862e-8
+    }
+  },
+  "buildAttempt": {
+    "status": "ok",
+    "startedAt": "2026-10-20T12:35:05.092Z",
+    "finishedAt": "2026-10-20T12:35:54.592Z",
+    "error": null
+  },
+  "hotspots": [],
+  "createdAt": "2026-10-20T12:34:57.394Z",
+  "updatedAt": "2026-10-20T12:34:57.394Z",
+  "migratedFrom": [
+    "assets/transforms/OculusMerged_1.json",
+    "assets/transforms/OculusMerged_1-aligned.json"
+  ]
+}

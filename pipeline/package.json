@@ -11,7 +11,9 @@
     "check-deps": "node check-deps.mjs",
     "setup": "node setup-build-lod.mjs",
     "build": "node build.mjs",
-    "test": "node --test \"test/*.test.mjs\""
+    "test": "node --test \"test/*.test.mjs\"",
+    "build-scene": "node build-scene.mjs",
+    "new-scene": "node new-scene.mjs"
   },
   "dependencies": {
     "@playcanvas/splat-transform": "3.10.0",
