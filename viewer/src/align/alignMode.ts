@@ -174,7 +174,10 @@ export class AlignMode {
       sub("Uniform scale"),
       row(num("s", "0.01", "Uniform scale factor"), "×"),
       sub("Origin"),
-      row(btn("Centre on origin", () => this.centreXZ(), "Move the XZ centre of the (robust) bounds to 0,0")),
+      row(
+        btn("Set origin at camera (O)", () => this.originAtCamera(), "Fly to the spot (camera height = floor level), then press: that point becomes 0,0,0"),
+        btn("Centre on origin", () => this.centreXZ(), "Move the XZ centre of the (robust) bounds to 0,0"),
+      ),
       row(
         "Floor Y",
         num("floor", "0.01", "Current world height of the floor"),
@@ -211,6 +214,7 @@ export class AlignMode {
       else if (this.active && e.code === "Digit1") this.setGizmoMode("translate");
       else if (this.active && e.code === "Digit2") this.setGizmoMode("rotate");
       else if (this.active && e.code === "Digit3") this.setGizmoMode("scale");
+      else if (this.active && e.code === "KeyO") this.originAtCamera();
     });
   }
 
@@ -344,6 +348,17 @@ export class AlignMode {
     this.target.position.z -= cz;
     this.changed();
     this.setStatus(`Centred: moved by (${fmt(-cx)}, 0, ${fmt(-cz)}) m`);
+  }
+
+  /** M' = T(-o) * M: the camera's world position (its height taken as floor level) becomes 0,0,0. */
+  private originAtCamera(): void {
+    const o = this.viewer.camera.getWorldPosition(new THREE.Vector3());
+    this.target.position.sub(o);
+    // Keep the camera at the same spot relative to the model.
+    this.viewer.rig.shift(o.clone().negate());
+    this.inputs.floor.value = "0";
+    this.changed();
+    this.setStatus(`Origin set at camera (${fmt(o.x)}, ${fmt(o.y)}, ${fmt(o.z)}): that point is now 0,0,0`);
   }
 
   private guessFloor(): void {

@@ -115,6 +115,13 @@ export class CameraRig {
     this.orbit.update();
   }
 
+  /** Translate the camera and orbit target together (view direction unchanged). */
+  shift(offset: THREE.Vector3): void {
+    this.camera.position.add(offset);
+    this.orbit.target.add(offset);
+    this.orbit.update();
+  }
+
   update(): void {
     if (this._mode === "orbit") this.orbit.update();
     else if (this._mode === "walk") this.walk?.update(this.camera);
