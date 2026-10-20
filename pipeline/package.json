@@ -1,0 +1,16 @@
+{
+  "name": "gsplat-tour-pipeline",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Trained Gaussian splat file -> Spark 2.x chunked LoD (.rad + .radc) via Spark's build-lod",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "check-deps": "node check-deps.mjs",
+    "setup": "node setup-build-lod.mjs",
+    "build": "node build.mjs",
+    "test": "node --test \"test/*.test.mjs\""
+  }
+}

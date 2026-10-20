@@ -1,0 +1,17 @@
+{
+  "Name": "splat-tour-cors",
+  "Comment": "CORS for Spark LoD streaming. Set at the edge so CORS does not depend on the cache key or S3 CORS.",
+  "CorsConfig": {
+    "AccessControlAllowOrigins": { "Quantity": 1, "Items": ["*"] },
+    "AccessControlAllowHeaders": { "Quantity": 3, "Items": ["range", "if-range", "if-none-match"] },
+    "AccessControlAllowMethods": { "Quantity": 3, "Items": ["GET", "HEAD", "OPTIONS"] },
+    "AccessControlAllowCredentials": false,
+    "AccessControlExposeHeaders": { "Quantity": 4, "Items": ["Content-Range", "Content-Length", "Accept-Ranges", "ETag"] },
+    "AccessControlMaxAgeSec": 86400,
+    "OriginOverride": true
+  },
+  "CustomHeadersConfig": {
+    "Quantity": 1,
+    "Items": [{ "Header": "Timing-Allow-Origin", "Value": "*", "Override": true }]
+  }
+}
