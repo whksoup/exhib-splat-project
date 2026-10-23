@@ -272,6 +272,24 @@ Points are in the training frame of the merged `.ply` (bbox (-5.81, -7.54,
 The splitter uses only the point records; the BVH is ignored (we build our
 own k-d tree).
 
+## Down-res miniature (`miniature.mjs`)
+
+```sh
+node pipeline/miniature.mjs <scene> [--target 1500000] [--sh 0-3] [--out <file.ply>] [--overwrite]
+```
+
+Merges every enabled part of a scene into one small standard 3DGS `.ply`
+(default `assets/source_ply/<scene>-mini-<n>k.ply`) for cleanup in LichtFeld or
+display as a small object. Parts are cropped to their ROI like
+`build-scene.mjs`, and the output stays in the parts' **source frame** (the
+scene transform is not baked). Splats are merged, not dropped: an adaptive grid
+groups each splat only with splats of about its size or smaller, each cell
+becomes one moment-matched Gaussian (mean, covariance, opacity-and-area
+weighted colour/SH), and the base cell size is binary-searched to hit
+`--target`. HighRezOculus (44.5M splats) takes about 60-75 s. For a fixed file
+size, more splats at `--sh 1` look sharper than fewer at SH 3: 3M at SH 1 is
+311 MB, and 1.5M at SH 3 is 370 MB.
+
 ## Output layout
 
 ```
