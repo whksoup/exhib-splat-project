@@ -5,11 +5,17 @@
  * from assets/source_ply, remove parts, preview an unbuilt part when the scene
  * is over the preview size cap, and rebuild a single part.
  *
+ * Regions: drop a Spirula ROI region .json on the panel (or "Load regions…");
+ * it is copied to assets/roi/<scene>/ and becomes the scene's `roi`. Each part
+ * then ticks the areas (outlines saved in that file) it was trained on; the
+ * build keeps only that part's splats inside the union of its areas. A part
+ * with no area ticked is built whole.
+ *
  * All parts share the scene transform (Align moves them together).
  */
-import { partIdFromSource, partBuild, sourceFileName, type PartLoad, type ScenePart } from "../../../shared/scene-schema.mjs";
+import { outlinesOf, partIdFromSource, partBuild, sortOutlines, sourceFileName, type PartLoad, type ScenePart } from "../../../shared/scene-schema.mjs";
 import { confirmDialog, dialog, el, fmtBytes, fmtCount, fmtTime, toast } from "../ui/dom";
-import { api } from "./api";
+import { api, type RoiFileInfo } from "./api";
 import type { PartFileInfo } from "./sceneConfig";
 import type { SceneStore } from "./store";
 
@@ -44,10 +50,33 @@ const MODE_TEXT: Record<string, string> = {
   disabled: "",
 };
 
+type RegionState = RoiFileInfo | { error: string };
+
+/** "Outline 12" -> "12" (chips stay short); other names as they are. */
+const shortOutline = (name: string) => /^Outline (\d+)$/.exec(name)?.[1] ?? name;
+
+const hasFiles = (e: DragEvent) => [...(e.dataTransfer?.types ?? [])].includes("Files");
+
+let dropGuard = false;
+/** A file dropped next to the panel must not make the browser navigate to it. */
+function guardWindowDrops(): void {
+  if (dropGuard) return;
+  dropGuard = true;
+  window.addEventListener("dragover", (e) => { if (hasFiles(e)) e.preventDefault(); });
+  window.addEventListener("drop", (e) => { if (hasFiles(e)) e.preventDefault(); });
+}
+
 export class PartsPanel {
   readonly panel: HTMLDivElement;
   private readonly list: HTMLDivElement;
   private readonly note: HTMLDivElement;
+  private readonly regionBar: HTMLDivElement;
+  private readonly fileInput: HTMLInputElement;
+  /** Spherical-harmonics degree build-lod keeps (scene buildOptions.maxSh). */
+  private readonly shSelect: HTMLSelectElement;
+  /** Region files read from the dev server, by repo path. */
+  private readonly regions = new Map<string, RegionState>();
+  private readonly loadingRegions = new Set<string>();
 
   constructor(
     private readonly store: SceneStore,
@@ -55,18 +84,62 @@ export class PartsPanel {
   ) {
     this.list = el("div", { className: "parts-list" });
     this.note = el("div", { className: "panel-note" });
+    this.regionBar = el("div", { className: "region-bar" });
+    this.fileInput = el("input", { type: "file", accept: ".json,application/json", hidden: true });
+    this.fileInput.addEventListener("change", () => {
+      const f = this.fileInput.files?.[0];
+      this.fileInput.value = "";
+      if (f) void this.loadRegionFile(f);
+    });
+    this.shSelect = el("select", {
+      title:
+        "Spherical-harmonics degree the build keeps (view-dependent colour: sheen, reflections). " +
+        "1 is the scope default; 3 matches Spirula's training but triples the SH data on disk and doubles GPU memory per streamed splat. " +
+        "Changing it rebuilds every part.",
+    }, [0, 1, 2, 3].map((n) => el("option", { value: String(n), textContent: `SH ${n}${n === 1 ? " (default)" : n === 3 ? " (as trained)" : ""}` })));
+    this.shSelect.addEventListener("change", () => {
+      const n = Number(this.shSelect.value);
+      this.store.update((d) => {
+        if (n === 1) delete d.buildOptions.maxSh;
+        else d.buildOptions.maxSh = n;
+      }, "other");
+      toast(`SH degree ${n}: save, then Build (every part is rebuilt).`, "info");
+    });
     const title = el("strong", { textContent: "Parts" });
     this.panel = el("div", { className: "plan-panel parts-panel", hidden: true }, [
       el("div", { className: "plan-head" }, [title, el("button", { textContent: "Close", title: "Hide (L)", onclick: () => this.show(false) })]),
       this.note,
+      this.regionBar,
+      this.fileInput,
       this.list,
       el("div", { className: "plan-row" }, [
         el("button", { textContent: "+ Add parts…", title: "Add source files from assets/source_ply (same coordinate frame as the other parts)", onclick: () => void this.addParts() }),
         el("button", { textContent: "↻", title: "Re-read file sizes and build state", onclick: () => void this.host.refresh() }),
         el("button", { textContent: "Show all", onclick: () => this.showAll() }),
+        this.shSelect,
       ]),
     ]);
     title.addEventListener("click", () => this.panel.classList.toggle("collapsed"));
+
+    guardWindowDrops();
+    this.panel.addEventListener("dragover", (e) => {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+      this.panel.classList.add("drop-target");
+    });
+    this.panel.addEventListener("dragleave", (e) => {
+      if (!this.panel.contains(e.relatedTarget as Node | null)) this.panel.classList.remove("drop-target");
+    });
+    this.panel.addEventListener("drop", (e) => {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      this.panel.classList.remove("drop-target");
+      const f = [...(e.dataTransfer?.files ?? [])].find((x) => x.name.toLowerCase().endsWith(".json"));
+      if (!f) return void toast("Drop a Spirula ROI region .json file here.", "warn");
+      void this.loadRegionFile(f);
+    });
   }
 
   get visible(): boolean {
@@ -91,10 +164,116 @@ export class PartsPanel {
     this.note.textContent =
       `${doc.parts.length} part${doc.parts.length === 1 ? "" : "s"}, ${fmtBytes(total)} of sources. One scene transform for all of them.` +
       (blocked.length ? ` Unbuilt sources over the ${fmtBytes(this.host.capBytes())} preview cap are not loaded: Build, or Preview one part.` : "");
-    this.list.replaceChildren(...doc.parts.map((p) => this.row(p, plan.get(p.id), info.get(p.id))));
+    this.renderRegionBar();
+    this.shSelect.value = String(doc.buildOptions?.maxSh ?? 1);
+    // Which parts picked each area of each region file (shown on the chips: overlaps draw twice).
+    const owners = new Map<string, string[]>();
+    for (const p of doc.parts) {
+      const file = p.roi || doc.roi;
+      if (!file || p.enabled === false) continue;
+      for (const o of outlinesOf(p)) owners.set(`${file}\n${o}`, [...(owners.get(`${file}\n${o}`) ?? []), p.id]);
+    }
+    this.list.replaceChildren(...doc.parts.map((p) => this.row(p, plan.get(p.id), info.get(p.id), owners)));
   }
 
-  private row(part: ScenePart, load: PartLoad | undefined, info: PartFileInfo | undefined): HTMLElement {
+  /** The scene's region file: what it is, and Load / Replace / remove. */
+  private renderRegionBar(): void {
+    const file = this.store.doc.roi ?? null;
+    const load = el("button", {
+      textContent: file ? "Replace…" : "Load regions…",
+      title: "Pick a Spirula ROI region .json (or drop it on this panel). It is copied to assets/roi/<scene>/; dropping a newer save of the same file updates it.",
+      onclick: () => this.fileInput.click(),
+    });
+    if (!file) {
+      this.regionBar.replaceChildren(el("span", { textContent: "Regions: drop a Spirula ROI .json here to crop each part to the areas it was trained on." }), load);
+      return;
+    }
+    const r = this.region(file);
+    const usable = r && !("error" in r) ? r.outlines.filter((o) => o.usable).length : 0;
+    const text = !r ? "loading…" : "error" in r ? r.error : `${usable} area${usable === 1 ? "" : "s"}`;
+    this.regionBar.replaceChildren(
+      el("span", { textContent: `Regions: ${sourceFileName(file)} · ${text}`, title: file }),
+      load,
+      el("button", {
+        textContent: "✕",
+        title: "Stop using this region file: parts are built whole again (their area picks are kept)",
+        onclick: () => this.store.update((d) => void delete d.roi, "parts"),
+      }),
+    );
+  }
+
+  /** Cached region file info; starts loading it (and re-renders when it arrives) on first use. */
+  private region(p: string): RegionState | null {
+    const cached = this.regions.get(p);
+    if (cached) return cached;
+    if (!this.loadingRegions.has(p)) {
+      this.loadingRegions.add(p);
+      api.roi(this.store.doc.name, p)
+        .then((info) => void this.regions.set(p, info), (err: Error) => void this.regions.set(p, { error: err.message }))
+        .finally(() => {
+          this.loadingRegions.delete(p);
+          this.render();
+        });
+    }
+    return null;
+  }
+
+  private async loadRegionFile(file: File): Promise<void> {
+    if (!file.name.toLowerCase().endsWith(".json")) return void toast("Pick a Spirula ROI region .json file.", "warn");
+    let info: RoiFileInfo;
+    try {
+      info = await api.uploadRoi(this.store.doc.name, file.name, file);
+    } catch (err) {
+      return void toast(`Could not load ${file.name}: ${(err as Error).message}`, "error");
+    }
+    this.regions.set(info.path, info);
+    this.store.update((d) => void (d.roi = info.path), "parts");
+    const usable = info.outlines.filter((o) => o.usable).length;
+    const changed = info.changedOutlines?.length ? ` Changed since the last copy: ${info.changedOutlines.join(", ")} (parts using them rebuild).` : "";
+    toast(`${info.replaced ? "Updated" : "Loaded"} ${file.name}: ${usable} area${usable === 1 ? "" : "s"}. Tick each part's areas, save, then Build.${changed}`, "ok", 8000);
+    this.show(true);
+  }
+
+  private setAreas(id: string, names: string[]): void {
+    this.store.update((d) => {
+      const p = d.parts.find((x) => x.id === id);
+      if (!p) return;
+      const sorted = sortOutlines(names);
+      if (sorted.length) p.roiOutlines = sorted;
+      else delete p.roiOutlines;
+    }, "parts");
+  }
+
+  /** "Areas: [1] [2] [3] …" — the outlines of the part's region file it was trained on. */
+  private areas(part: ScenePart, owners: Map<string, string[]>): HTMLElement | null {
+    const doc = this.store.doc;
+    const file = part.roi || doc.roi;
+    if (!file) return null;
+    const picked = outlinesOf(part);
+    const own = !!part.roi && part.roi !== doc.roi;
+    const label = el("span", { className: "areas-label", textContent: own ? `Areas (${sourceFileName(file)})` : "Areas", title: file });
+    const r = this.region(file);
+    if (!r || "error" in r) return el("div", { className: "part-areas" }, [label, el("span", { className: "muted", textContent: r ? r.error : "loading…" })]);
+    const chip = (name: string, title: string, cls: string, enabled: boolean) => {
+      const on = picked.includes(name);
+      const box = el("input", { type: "checkbox", checked: on, disabled: !enabled && !on });
+      box.addEventListener("change", () => this.setAreas(part.id, box.checked ? [...picked, name] : picked.filter((n) => n !== name)));
+      return el("label", { className: `area-chip${cls}`, title }, [box, shortOutline(name)]);
+    };
+    const chips = r.outlines.map((o) => {
+      const others = (owners.get(`${file}\n${o.name}`) ?? []).filter((id) => id !== part.id);
+      const on = picked.includes(o.name);
+      const shared = others.length ? (on ? `also ticked for ${others.join(", ")} (drawn by both)` : `ticked for ${others.join(", ")}`) : "";
+      const title = [o.name, o.enabled ? "enabled in the file when saved" : "", o.usable ? "" : `cannot be used: ${o.error}`, shared].filter(Boolean).join(" · ");
+      return chip(o.name, title, `${others.length && on ? " shared" : ""}${o.usable ? "" : " bad"}`, o.usable);
+    });
+    // Picked names the file no longer has: the build refuses them until unticked.
+    for (const n of picked.filter((x) => !r.outlines.some((o) => o.name === x))) chips.push(chip(n, `${n} is not in ${file}: untick it (the build fails while it is picked)`, " bad", false));
+    const summary = picked.length ? "" : part.roi ? "top-level region" : "none: built whole";
+    return el("div", { className: "part-areas" }, [label, ...chips, summary && el("span", { className: "muted", textContent: summary })]);
+  }
+
+  private row(part: ScenePart, load: PartLoad | undefined, info: PartFileInfo | undefined, owners: Map<string, string[]>): HTMLElement {
     const doc = this.store.doc;
     const enabled = part.enabled !== false;
     const b = partBuild(doc, part.id);
@@ -138,6 +317,7 @@ export class PartsPanel {
       sourceFileName(part.source),
       info ? (info.exists ? fmtBytes(info.bytes ?? 0) : "source missing") : "",
       info?.splats ? `${fmtCount(info.splats)} splats in source` : "",
+      b?.crop?.keptSplats ? `cropped to ${fmtCount(b.crop.keptSplats)}${b.crop.droppedSplats !== undefined ? ` of ${fmtCount(b.crop.keptSplats + b.crop.droppedSplats)}` : ""}` : "",
       splats ? `${fmtCount(splats)} in .rad` : "",
       b?.finishedAt ? `built ${fmtTime(b.finishedAt)}${b.wallClockSeconds ? ` (${Math.round(b.wallClockSeconds)} s${b.peakMemoryBytes ? `, peak ${fmtBytes(b.peakMemoryBytes)}` : ""})` : ""}` : "",
       MODE_TEXT[mode] ?? "",
@@ -147,6 +327,7 @@ export class PartsPanel {
       eye,
       el("span", { className: "part-name" }, [el("strong", { textContent: part.label ? `${part.label} (${part.id})` : part.id }), ...badges]),
       el("span", { className: "part-actions" }, actions),
+      this.areas(part, owners),
       el("span", { className: "part-meta", textContent: meta }),
     ]);
   }

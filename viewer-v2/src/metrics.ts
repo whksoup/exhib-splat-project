@@ -16,7 +16,7 @@ export interface FrameSummary {
   maxFrameMs: number;
 }
 
-function summarize(dts: ArrayLike<number>, count: number): FrameSummary {
+export function summarize(dts: ArrayLike<number>, count = dts.length): FrameSummary {
   if (count === 0) {
     return { frames: 0, durationS: 0, avgFps: 0, onePctLowFps: 0, avgFrameMs: 0, p99FrameMs: 0, maxFrameMs: 0 };
   }

@@ -28,7 +28,17 @@ export const BUILD_LOG = path.resolve(process.env.PIPELINE_BUILD_LOG || path.joi
 
 // Flags required by docs/Project_Scope.md ("Technical architecture", step 3).
 // Verified against rust/build-lod/src/main.rs at v2.3.1.
-export const SCOPE_FLAGS = ['--quality', '--rad-chunked', '--max-sh=1'];
+export const DEFAULT_MAX_SH = 1;
+export const SCOPE_FLAGS = scopeFlags();
+
+/**
+ * The fixed build-lod flags with a chosen spherical-harmonics cap (0-3). The
+ * scope default is 1; a scene can keep up to the trained degree (Spirula: 3)
+ * at the cost of ~3x SH data on disk and in the viewer's page pool.
+ */
+export function scopeFlags({ maxSh = DEFAULT_MAX_SH } = {}) {
+  return ['--quality', '--rad-chunked', `--max-sh=${maxSh}`];
+}
 
 /** Resolve which build-lod binary to use: --build-lod flag > env > local build. */
 export function resolveBuildLodBin(override) {

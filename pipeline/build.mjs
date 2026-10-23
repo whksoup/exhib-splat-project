@@ -66,7 +66,7 @@ export async function inspectInput(inputPath, { scan = true, log = console.log }
   return summary;
 }
 
-export function analyseSummary(s, { recentreThreshold = 10 } = {}) {
+export function analyseSummary(s, { recentreThreshold = 10, maxSh = 1 } = {}) {
   const warnings = [];
   const b = s.bounds;
   if (b?.centroid) {
@@ -86,8 +86,8 @@ export function analyseSummary(s, { recentreThreshold = 10 } = {}) {
       warnings.push(`${b.nonFiniteSplats} splats have non-finite positions; build-lod will refuse the file unless "-- --skip-validate" is passed.`);
     }
   }
-  if (s.shDegree !== null && s.shDegree > 1) {
-    warnings.push(`Input has SH degree ${s.shDegree}; --max-sh=1 drops degrees 2-${s.shDegree} (scope decision, pending visual check).`);
+  if (s.shDegree !== null && s.shDegree > maxSh) {
+    warnings.push(`Input has SH degree ${s.shDegree}; --max-sh=${maxSh} drops degrees ${maxSh + 1}-${s.shDegree}${maxSh === 1 ? ' (scope decision, pending visual check)' : ''}.`);
   }
   if (s.ext === '.sog') {
     warnings.push('Input is .sog (already quantised by PlayCanvas). build-lod accepts it, but building from the original trained .ply gives better quality.');
@@ -195,6 +195,7 @@ export function checkInputFile(inputPath) {
  * @param {string} o.outDir        output folder (created)
  * @param {string} [o.version]     recorded in the report
  * @param {string[]} [o.extra]     extra build-lod flags
+ * @param {string[]} [o.scopeFlags]  the fixed flags (default SCOPE_FLAGS; scopeFlags({ maxSh }) for another SH cap)
  * @param {string} o.buildLodBin
  * @param {boolean} [o.scan]
  * @param {number} [o.recentreThreshold]
@@ -221,7 +222,9 @@ export async function buildModel(o) {
     console.error(`error: could not read input: ${e.message}`);
     return { code: 1, report: null };
   }
-  const warnings = analyseSummary(summary, { recentreThreshold });
+  const fixedFlags = o.scopeFlags ?? SCOPE_FLAGS;
+  const maxShFlag = fixedFlags.find((f) => f.startsWith('--max-sh='));
+  const warnings = analyseSummary(summary, { recentreThreshold, maxSh: maxShFlag ? Number(maxShFlag.slice(9)) : 3 });
   console.log(`  format:       ${summary.format}`);
   console.log(`  splats:       ${summary.splatCount?.toLocaleString('en-US') ?? 'unknown'}`);
   console.log(`  SH degree:    ${summary.shDegree ?? 'unknown'}`);
@@ -250,7 +253,7 @@ export async function buildModel(o) {
 
   const buildExt = ext === '.zip' ? '.zip' : ext;
   const stagedName = `${name}${buildExt}`;
-  const args = [...SCOPE_FLAGS, ...extra];
+  const args = [...fixedFlags, ...extra];
 
   if (dryRun) {
     console.log('\nDry run, nothing written. Would run:');

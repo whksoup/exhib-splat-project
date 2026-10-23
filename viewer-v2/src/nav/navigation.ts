@@ -163,6 +163,10 @@ export class Navigation {
     this.renderHud();
   }
 
+  setSpeedScale(scale: number): void {
+    this.player.speedScale = scale;
+  }
+
   enterFrom(camera: THREE.PerspectiveCamera): void {
     const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
     const yaw = THREE.MathUtils.radToDeg(Math.atan2(-fwd.x, -fwd.z));

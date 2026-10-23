@@ -9,7 +9,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
-import { tmpDir, writeGaussianPly, FAKE_BUILD_LOD } from './fixtures.mjs';
+import { tmpDir, writeGaussianPly, gridPartition, FAKE_BUILD_LOD } from './fixtures.mjs';
 import { parseBuildSceneArgs, makeBuildLodProgress, partReuseCheck, summariseParts } from '../build-scene.mjs';
 import { parseNewSceneArgs, expandSources } from '../new-scene.mjs';
 import { swapBuildDir, acquireBuildLock, readScene } from '../lib/scene-files.mjs';
@@ -19,7 +19,7 @@ import {
   createScene, validateScene, composeTransforms, transformFromTRS, transformFromMatrix, deltaMatrix,
   mat4Multiply, mat4Invert, mat4ApplyPoint, matricesEqual, isIdentityMatrix, transformChangedSinceBuild,
   navMayBeMisaligned, previewPlan, loadPlan, migrateScene, partState, buildSummary, partsFromSources, partIdFromSource,
-  isSafeSceneRelPath, isSafeSourcePath, decomposeTRS, IDENTITY, SCENE_SCHEMA_VERSION,
+  isSafeSceneRelPath, isSafeSourcePath, decomposeTRS, IDENTITY, SCENE_SCHEMA_VERSION, partCrop, sameCrop, isSafeRoiPath,
 } from '../../shared/scene-schema.mjs';
 
 const PIPELINE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -609,4 +609,259 @@ test('build-scene: missing scene, bad name, missing source, held lock', () => {
     fs.rmSync(lock, { force: true });
   }
   assert.ok(readPlyHeader && scanPlyPositions); // readers used by build-scene are importable
+});
+
+test('schema: partition crop fields, part state and reuse', () => {
+  const s = createScene({ name: 'pc', sources: ['a/p0.ply', 'a/p1.ply'], now: 't' });
+  assert.equal(partCrop(s, s.parts[0]), null, 'no partition: no crop');
+  s.parts[0].partitionPart = 2;
+  assert.equal(partCrop(s, s.parts[0]), null, 'a partitionPart alone does nothing');
+  assert.match(validateScene(JSON.parse(JSON.stringify(s))).warnings.join(), /no "partition"/);
+  s.partition = 'assets/partitions/X/partition.json';
+  assert.deepEqual(partCrop(s, s.parts[0]), { partition: s.partition, part: 2 });
+  assert.equal(partCrop(s, s.parts[1]), null);
+  const v = validateScene(JSON.parse(JSON.stringify({ ...s, parts: [{ ...s.parts[0] }, { ...s.parts[1], partitionPart: null }] })));
+  assert.deepEqual(v.errors, []);
+  assert.equal(v.scene.partition, s.partition);
+  assert.equal(v.scene.parts[0].partitionPart, 2);
+  assert.ok(!('partitionPart' in v.scene.parts[1]), 'null partitionPart dropped');
+  assert.match(validateScene({ ...s, partition: 'x.bin' }).errors.join(), /partition/);
+  assert.match(validateScene({ ...s, parts: [{ ...s.parts[0], partitionPart: 1.5 }] }).errors.join(), /partitionPart/);
+  assert.match(validateScene({ ...s, parts: [{ ...s.parts[0], partitionPart: 255 }] }).errors.join(), /partitionPart/);
+
+  assert.ok(sameCrop(null, null));
+  assert.ok(!sameCrop(null, { partition: 'a', part: 0 }));
+  assert.ok(sameCrop({ partition: 'a', part: 0, keptSplats: 5 }, { partition: 'a', part: 0 }));
+  assert.ok(!sameCrop({ partition: 'a', part: 0 }, { partition: 'a', part: 1 }));
+
+  // A build without the crop is outdated once the part should be cropped, and vice versa.
+  s.build = fakeBuild(s, s.transform.matrix);
+  assert.deepEqual(s.parts.map((p) => partState(s, p)), ['outdated', 'built']);
+  s.build.parts[0].crop = { partition: s.partition, part: 2, keptSplats: 9 };
+  assert.deepEqual(s.parts.map((p) => partState(s, p)), ['built', 'built']);
+  s.build.parts[1].crop = { partition: s.partition, part: 0 };
+  assert.equal(partState(s, s.parts[1]), 'outdated');
+
+  const mtime = new Date('2026-01-01T00:00:00Z');
+  const now = { matrix: [...IDENTITY], flags: [], stat: { size: 10, mtime } };
+  const prev = { source: 'a.ply', sourceBytes: 10, sourceModified: mtime.toISOString(), transformMatrix: [...IDENTITY], buildLodFlags: [] };
+  const crop = { partition: 'p.json', part: 1, partitionBytes: 100 };
+  assert.ok(partReuseCheck(prev, { source: 'a.ply' }, now).ok);
+  assert.match(partReuseCheck(prev, { source: 'a.ply' }, { ...now, crop }).reason, /crop added/);
+  assert.match(partReuseCheck({ ...prev, crop }, { source: 'a.ply' }, now).reason, /crop removed/);
+  assert.match(partReuseCheck({ ...prev, crop }, { source: 'a.ply' }, { ...now, crop: { ...crop, part: 2 } }).reason, /crop changed/);
+  assert.match(partReuseCheck({ ...prev, crop }, { source: 'a.ply' }, { ...now, crop: { ...crop, partitionBytes: 101 } }).reason, /partition file changed/);
+  assert.ok(partReuseCheck({ ...prev, crop: { ...crop, keptSplats: 3 } }, { source: 'a.ply' }, { ...now, crop }).ok);
+
+  // Region of interest: part of the crop key; the region's digest decides reuse.
+  const r = { roi: 'assets/roi/s/region6.json', roiDigest: 'aaa' };
+  assert.deepEqual(partCrop({ parts: [] }, { id: 'p', roi: r.roi }), { roi: r.roi });
+  assert.deepEqual(partCrop(s, { ...s.parts[0], roi: r.roi }), { partition: s.partition, part: 2, roi: r.roi }, 'both crops');
+  assert.ok(!sameCrop({ roi: 'a.json' }, { roi: 'b.json' }));
+  assert.deepEqual(partCrop({ parts: [] }, { id: 'p', roi: r.roi, roiOutlines: ['Outline 2'] }), { roi: r.roi, roiOutlines: ['Outline 2'] });
+  assert.equal(partCrop({ parts: [] }, { id: 'p', roiOutlines: ['Outline 2'] }), null, 'outlines without a region file do nothing');
+  assert.ok(!sameCrop({ roi: 'a.json', roiOutlines: ['Outline 1'] }, { roi: 'a.json', roiOutlines: ['Outline 2'] }));
+  assert.ok(!sameCrop({ roi: 'a.json', roiOutlines: ['Outline 1'] }, { roi: 'a.json' }));
+  assert.ok(sameCrop({ roi: 'a.json', roiOutlines: ['Outline 2', 'Outline 1'] }, { roi: 'a.json', roiOutlines: ['Outline 1', 'Outline 2'] }), 'order does not matter');
+  assert.ok(sameCrop({ roi: 'a.json', roiOutline: 'Outline 1' }, { roi: 'a.json', roiOutlines: ['Outline 1'] }), 'older single-outline records still match');
+  assert.match(validateScene({ ...s, parts: [{ ...s.parts[0], roiOutline: 3 }] }).errors.join(), /roiOutline/);
+  assert.match(validateScene({ ...s, parts: [{ ...s.parts[0], roiOutlines: 'Outline 1' }] }).errors.join(), /roiOutlines/);
+  assert.deepEqual(validateScene({ ...s, parts: [{ ...s.parts[0], roiOutline: 'Outline 1' }] }).scene.parts[0].roiOutlines, ['Outline 1'], 'roiOutline read as a list');
+  assert.deepEqual(validateScene({ ...s, parts: [{ ...s.parts[0], roiOutlines: ['Outline 10', 'Outline 2', 'Outline 2'] }] }).scene.parts[0].roiOutlines, ['Outline 2', 'Outline 10'], 'sorted, unique');
+
+  // The scene's region file: parts pick outlines in it; a part's own roi overrides it.
+  const sr = { ...createScene({ name: 'sr', sources: ['a/p0.ply', 'a/p1.ply', 'a/p2.ply'], now: 't' }), roi: 'assets/roi/sr/six.json' };
+  sr.parts[0].roiOutlines = ['Outline 1', 'Outline 2'];
+  sr.parts[2].roi = 'assets/roi/sr/other.json';
+  assert.deepEqual(partCrop(sr, sr.parts[0]), { roi: sr.roi, roiOutlines: ['Outline 1', 'Outline 2'] });
+  assert.equal(partCrop(sr, sr.parts[1]), null, 'no outlines picked: not cropped');
+  assert.deepEqual(partCrop(sr, sr.parts[2]), { roi: 'assets/roi/sr/other.json' }, 'own file, top-level region');
+  assert.deepEqual(validateScene(JSON.parse(JSON.stringify(sr))).errors, []);
+  assert.match(validateScene({ ...sr, roi: 'x.ply' }).errors.join(), /"roi"/);
+  assert.match(validateScene({ ...sr, roi: null }).warnings.join(), /roiOutlines but neither/);
+  assert.ok(isSafeRoiPath('assets/roi/sr/Oculus6Part.json'));
+  for (const bad of ['assets/roi/sr/../x.json', 'assets/roi/x.json', 'assets/source_ply/sr/x.json', 'assets/roi/sr/x.ply', 'assets/roi/a.b/x.json', 'C:/assets/roi/sr/x.json']) assert.ok(!isSafeRoiPath(bad), bad);
+  assert.ok(!sameCrop({ partition: 'p', part: 0 }, { partition: 'p', part: 0, roi: 'a.json' }));
+  assert.match(partReuseCheck(prev, { source: 'a.ply' }, { ...now, crop: r }).reason, /crop added/);
+  assert.ok(partReuseCheck({ ...prev, crop: r }, { source: 'a.ply' }, { ...now, crop: r }).ok);
+  assert.match(partReuseCheck({ ...prev, crop: r }, { source: 'a.ply' }, { ...now, crop: { ...r, roiDigest: 'bbb' } }).reason, /ROI region changed/);
+  assert.match(validateScene({ ...s, parts: [{ ...s.parts[0], roi: 'x.ply' }] }).errors.join(), /roi/);
+  assert.ok(!('roi' in validateScene({ ...s, parts: [{ ...s.parts[0], roi: null }] }).scene.parts[0]));
+});
+
+test('build-scene: ROI crop keeps only the splats inside the region, alone and with a partition', () => {
+  const json = gridPartition(path.join(dir, 'partition-roi'));
+  const srcDir = path.join(dir, 'roi');
+  fs.mkdirSync(srcDir, { recursive: true });
+  // Box x -2.5..0.5, y 0..2, z 0..2 (a quad prism like Spirula's).
+  const roiFile = path.join(srcDir, 'region6.json');
+  const writeRegion = (halfHeight) => fs.writeFileSync(roiFile, JSON.stringify({
+    type: 'prism', center: [-1, 1, 1], rotation: [1, 0, 0, 0, 1, 0, 0, 0, 1], half_height: halfHeight,
+    polygon: [-1.5, -1, 1.5, -1, 1.5, 1, -1.5, 1], editor: { version: 1, shapes: [] },
+  }));
+  writeRegion(1);
+  const a = [[-2, 1, 1], [-0.5, 1, 1], [0.2, 0.5, 0.5], [2, 1, 1], [-2, 1, 2.5]]; // 3 inside the box (parts 0, 1, 1), 2 outside
+  const b = [[-1.8, 0.4, 0.3], [0.4, 1.9, 1.9], [2.5, 1, 1]]; // 2 inside
+  writeGaussianPly(path.join(srcDir, 'roi_a.ply'), a, { shRest: 0 });
+  writeGaussianPly(path.join(srcDir, 'roi_b.ply'), b, { shRest: 0 });
+  const sceneDir = makeScene('roiscn', [path.join(srcDir, 'roi_a.ply'), path.join(srcDir, 'roi_b.ply')]);
+  const file = path.join(sceneDir, 'scene.json');
+  const edit = (fn) => { const s = readJson(file); fn(s); fs.writeFileSync(file, JSON.stringify(s, null, 2)); };
+  edit((s) => { for (const p of s.parts) p.roi = roiFile; });
+
+  const r = runBuildScene(['roiscn']);
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  assert.match(r.stdout, /crop to ROI region6\.json/);
+  const s1 = readJson(file);
+  assert.deepEqual(s1.build.parts.map((p) => [p.crop.keptSplats, p.crop.droppedSplats, p.crop.droppedOutsideRoi]), [[3, 2, 2], [2, 1, 1]]);
+  assert.ok(s1.build.parts.every((p) => p.crop.roi === roiFile && /^[0-9a-f]{16}$/.test(p.crop.roiDigest) && !('droppedOutsidePart' in p.crop)));
+  close(s1.build.parts[0].bounds.bboxMin, [-2, 0.5, 0.5], 1e-6);
+  close(s1.build.parts[0].bounds.bboxMax, [0.2, 1, 1], 1e-6);
+  assert.deepEqual(fs.readdirSync(sceneDir).sort(), ['build', 'nav', 'scene.json'], 'no temp files left');
+
+  // Same region with other editor outlines: reused. A changed region: rebuilt.
+  assert.match(runBuildScene(['roiscn']).stdout, /up to date/);
+  writeRegion(0.6); // z 0.4..1.6: drops a's (0.2, 0.5, 0.5) and b's (-1.8, 0.4, 0.3) and (0.4, 1.9, 1.9)
+  const r2 = runBuildScene(['roiscn', '--part', 'roi_a']);
+  assert.equal(r2.status, 0, r2.stdout + r2.stderr);
+  assert.match(r2.stdout, /--part \(ROI region changed\)/);
+  const r3 = runBuildScene(['roiscn']);
+  assert.equal(r3.status, 1, 'roi_b has nothing left inside');
+  assert.match(r3.stdout + r3.stderr, /no splat of roi_b\.ply is kept: none lies in ROI region6\.json/);
+
+  // ROI and partition together: a splat must be in the part's partition region AND inside the ROI.
+  writeRegion(1);
+  edit((s) => { s.partition = json; s.parts[0].partitionPart = 1; s.parts[1].enabled = false; });
+  const r4 = runBuildScene(['roiscn']);
+  assert.equal(r4.status, 0, r4.stdout + r4.stderr);
+  assert.match(r4.stdout, /crop to partition part 1 and ROI region6\.json/);
+  const c = readJson(file).build.parts.find((p) => p.id === 'roi_a').crop;
+  assert.deepEqual([c.part, c.keptSplats, c.droppedOutsidePart, c.droppedOutsideRoi], [1, 2, 1, 2]);
+
+  // The scene's region file + outline pairs per part (the editor's Regions): union of the picked outlines.
+  const six = path.join(srcDir, 'six.json');
+  const outline = (name, x0) => ({ name, kind: 'prism', op: 'add', enabled: false, origin: [x0, 1, 0], rotation: [1, 0, 0, 0, 1, 0, 0, 0, 1], lo: [0, 0, 0], hi: [0, 0, 2], polygon: [0, -1, 1, -1, 1, 1, 0, 1] });
+  fs.writeFileSync(six, JSON.stringify({
+    type: 'union', children: [{ type: 'prism', center: [2, 1, 1], rotation: [1, 0, 0, 0, 1, 0, 0, 0, 1], half_height: 1, polygon: [0, -1, 1, -1, 1, 1, 0, 1] }],
+    editor: { version: 1, shapes: [outline('Outline 1', -3), outline('Outline 2', -2), outline('Outline 3', -1), outline('Outline 4', 0)] },
+  }));
+  edit((s) => {
+    delete s.partition;
+    s.roi = six;
+    s.parts[0] = { ...s.parts[0], roiOutlines: ['Outline 2', 'Outline 1'] }; // x -3..-1
+    delete s.parts[0].roi;
+    delete s.parts[0].partitionPart;
+    s.parts[1] = { ...s.parts[1], enabled: true, roiOutlines: ['Outline 3', 'Outline 4'] }; // x -1..1
+    delete s.parts[1].roi;
+  });
+  const r5 = runBuildScene(['roiscn']);
+  assert.equal(r5.status, 0, r5.stdout + r5.stderr);
+  assert.match(r5.stdout, /crop to ROI six\.json "Outline 1" \+ "Outline 2"/);
+  const s5 = readJson(file);
+  assert.deepEqual(s5.parts.map((p) => p.roiOutlines), [['Outline 1', 'Outline 2'], ['Outline 3', 'Outline 4']], 'stored sorted');
+  // a: (-2,1,1) and (-2,1,2.5 above) -> 1 kept; b: (-1.8,..) is in outlines 1-2 (dropped), (0.4,1.9,1.9) kept, (2.5,..) dropped.
+  assert.deepEqual(s5.build.parts.map((p) => [p.crop.roi, p.crop.roiOutlines, p.crop.keptSplats]), [[six, ['Outline 1', 'Outline 2'], 1], [six, ['Outline 3', 'Outline 4'], 1]]);
+  assert.match(runBuildScene(['roiscn']).stdout, /up to date/);
+  edit((s) => { s.parts[1].roiOutlines = ['Outline 4']; });
+  const r6 = runBuildScene(['roiscn']);
+  assert.deepEqual(lines(r6.stdout, 'part').filter((p) => ['built', 'reused'].includes(p.status)).map((p) => `${p.status}:${p.id}`), ['reused:roi_a', 'built:roi_b']);
+  edit((s) => { s.parts[1].roiOutlines = ['Outline 9']; });
+  const missing = runBuildScene(['roiscn']);
+  assert.equal(missing.status, 2);
+  assert.match(missing.stderr, /no outline named "Outline 9"/);
+  edit((s) => { delete s.roi; for (const p of s.parts) { delete p.roiOutlines; p.roi = roiFile; } });
+
+  // A broken region file is refused before anything runs.
+  fs.writeFileSync(roiFile, JSON.stringify({ type: 'sphere' }));
+  const bad = runBuildScene(['roiscn', '--force']);
+  assert.equal(bad.status, 2);
+  assert.match(bad.stderr, /roi: region6\.json: region type "sphere" is not supported/);
+});
+
+test('build-scene: partition crop drops each part\'s splats outside its own region, before the transform', () => {
+  const json = gridPartition(path.join(dir, 'partition-oc'));
+  const srcDir = path.join(dir, 'oc');
+  fs.mkdirSync(srcDir, { recursive: true });
+  // Part exports trained for partition parts 0 and 2, each with a few low-detail
+  // splats in the other regions (x < -1: part 0, -1..1: part 1, > 1: part 2).
+  const a = [[-2, 1, 1], [-1.6, 0.5, 0.5], [-2.5, 1.5, 0.2], [0.2, 1, 1], [2.4, 1, 1]];
+  const b = [[2, 1, 1], [1.5, 0.4, 1.6], [-2.2, 1, 1]];
+  writeGaussianPly(path.join(srcDir, 'oc_a.ply'), a, { shRest: 0 });
+  writeGaussianPly(path.join(srcDir, 'oc_b.ply'), b, { shRest: 0 });
+  const t = transformFromTRS({ position: [0, 0, 1], quaternion: [0, 0, 0, 1], scale: 2 });
+  const sceneDir = makeScene('oc', [path.join(srcDir, 'oc_a.ply'), path.join(srcDir, 'oc_b.ply')], t);
+  const file = path.join(sceneDir, 'scene.json');
+  const edit = (fn) => { const s = readJson(file); fn(s); fs.writeFileSync(file, JSON.stringify(s, null, 2)); };
+  edit((s) => { s.partition = json; s.parts[0].partitionPart = 0; s.parts[1].partitionPart = 2; });
+
+  const dry = runBuildScene(['oc', '--dry-run']);
+  assert.equal(dry.status, 0, dry.stdout + dry.stderr);
+  assert.match(dry.stdout, /crop .*oc_a\.ply to partition part 0/);
+  assert.match(dry.stdout, /transform\.mjs _cropped-oc_a\.ply/);
+
+  const r = runBuildScene(['oc']);
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  assert.deepEqual(fs.readdirSync(sceneDir).sort(), ['build', 'nav', 'scene.json'], 'no temp files left');
+  const s1 = readJson(file);
+  assert.equal(s1.build.status, 'ok');
+  const binBytes = fs.statSync(path.join(dir, 'partition-oc', 'partition.bin')).size;
+  assert.deepEqual(s1.build.parts.map((p) => ({ part: p.crop.part, kept: p.crop.keptSplats, dropped: p.crop.droppedSplats, bytes: p.crop.partitionBytes })), [
+    { part: 0, kept: 3, dropped: 2, bytes: binBytes },
+    { part: 2, kept: 2, dropped: 1, bytes: binBytes },
+  ]);
+  // Bounds are of the cropped, then transformed, splats: only part 0's region for oc_a.
+  const own = a.slice(0, 3).map((p) => mat4ApplyPoint(t.matrix, p));
+  close(s1.build.parts[0].bounds.bboxMin, [0, 1, 2].map((i) => Math.min(...own.map((p) => p[i]))), 1e-5);
+  close(s1.build.parts[0].bounds.bboxMax, [0, 1, 2].map((i) => Math.max(...own.map((p) => p[i]))), 1e-5);
+  const rep = readJson(path.join(sceneDir, 'build', 'oc_a', 'build-report.json'));
+  assert.equal(rep.input.partitionCrop.part, 0);
+  const prog = lines(r.stdout, 'progress');
+  assert.ok(prog.some((p) => p.stage === 'crop' && p.part?.id === 'oc_b'));
+  assert.ok(prog.every((p, i) => i === 0 || p.pct >= prog[i - 1].pct), 'overall progress never goes back');
+  assert.deepEqual(s1.parts.map((p) => partState(s1, p)), ['built', 'built']);
+
+  // Unchanged: reused. Another partitionPart for one part: only that part is rebuilt.
+  assert.match(runBuildScene(['oc']).stdout, /up to date/);
+  edit((s) => { s.parts[1].partitionPart = 0; });
+  const r2 = runBuildScene(['oc']);
+  assert.equal(r2.status, 0, r2.stdout + r2.stderr);
+  assert.deepEqual(lines(r2.stdout, 'part').filter((p) => ['built', 'reused'].includes(p.status)).map((p) => `${p.status}:${p.id}`), ['reused:oc_a', 'built:oc_b']);
+  assert.deepEqual([readJson(file).build.parts[1].crop.keptSplats, readJson(file).build.parts[1].crop.droppedSplats], [1, 2]);
+
+  // A part number the partition does not have is refused before anything runs.
+  edit((s) => { s.parts[1].partitionPart = 7; });
+  const bad = runBuildScene(['oc']);
+  assert.equal(bad.status, 2);
+  assert.match(bad.stderr, /partitionPart 7 does not exist/);
+
+  // Partition removed: every part rebuilt uncropped.
+  edit((s) => { delete s.partition; s.parts[1].partitionPart = 2; });
+  const r3 = runBuildScene(['oc']);
+  assert.equal(r3.status, 0, r3.stdout + r3.stderr);
+  const s3 = readJson(file);
+  assert.deepEqual(s3.build.parts.map((p) => p.crop), [null, null]);
+  close(s3.build.parts[0].bounds.bboxMax, mat4ApplyPoint(t.matrix, [2.4, 1.5, 1]), 1e-5);
+});
+
+test('build-scene: buildOptions.maxSh sets build-lod --max-sh and rebuilds when it changes', () => {
+  const src = path.join(dir, 'sh', 'sh.ply');
+  fs.mkdirSync(path.dirname(src), { recursive: true });
+  writeGaussianPly(src, [[0, 0, 0], [1, 1, 1]]);
+  const sceneDir = makeScene('shscn', src);
+  const file = path.join(sceneDir, 'scene.json');
+  const r1 = runBuildScene(['shscn']);
+  assert.equal(r1.status, 0, r1.stdout + r1.stderr);
+  assert.deepEqual(readJson(file).build.buildLodFlags, ['--quality', '--rad-chunked', '--max-sh=1']);
+  assert.match(r1.stdout + r1.stderr, /--max-sh=1 drops degrees 2-3/);
+  const s = readJson(file);
+  s.buildOptions = { maxSh: 3 };
+  fs.writeFileSync(file, JSON.stringify(s, null, 2));
+  const r2 = runBuildScene(['shscn']);
+  assert.equal(r2.status, 0, r2.stdout + r2.stderr);
+  assert.match(r2.stdout, /build-lod flags changed/);
+  assert.match(r2.stdout, /Using --max-sh=3/);
+  assert.doesNotMatch(r2.stdout + r2.stderr, /drops degrees/);
+  assert.deepEqual(readJson(file).build.parts[0].buildLodFlags.slice(0, 3), ['--quality', '--rad-chunked', '--max-sh=3']);
+  assert.match(validateScene({ ...s, buildOptions: { maxSh: 4 } }).errors.join(), /maxSh/);
+  assert.match(validateScene({ ...s, buildOptions: { extraFlags: ['--max-sh=3'] } }).errors.join(), /buildOptions.maxSh/);
 });

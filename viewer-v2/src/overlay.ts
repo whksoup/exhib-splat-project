@@ -3,13 +3,18 @@
  * UI (info panels, loading states) should live in its own module and leave
  * this one as a debug/test tool toggled with ?overlay=0/1 or the P key.
  */
-import { buildResults, SPARK_VERSION } from "./results";
+import { benchRunning, formatBench, runOrbitBenchmark } from "./bench";
+import { HitchLog, type Dist } from "./diagnostics";
+import { buildResults, GSL_VERSION, SPARK_VERSION } from "./results";
 import { isTypingTarget } from "./ui/dom";
 import type { Viewer } from "./viewer";
 
 const fmtCount = (n: number): string =>
   n >= 1e6 ? `${(n / 1e6).toFixed(2)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(0)}K` : String(n);
 const fmtMs = (v: number | null): string => (v === null ? "—" : `${(v / 1000).toFixed(2)} s`);
+/** "median (p95 x)" in ms, or a dash when there were no samples. */
+const fmtDist = (d: Dist | null, digits = 1): string =>
+  d === null ? "—" : `${d.median.toFixed(digits)} ms (p95 ${d.p95.toFixed(digits)})`;
 
 function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -52,7 +57,9 @@ export class Overlay {
   private readonly showButton: HTMLButtonElement;
   private readonly controlsButton: HTMLButtonElement;
   private readonly saveButton: HTMLButtonElement;
+  private readonly benchButton: HTMLButtonElement;
   private visible: boolean;
+  private autoBenchDone = false;
 
   constructor(
     private readonly root: HTMLElement,
@@ -67,10 +74,16 @@ export class Overlay {
       hidden: true,
       onclick: () => void this.save(),
     });
+    this.benchButton = el("button", {
+      textContent: "Orbit bench (K)",
+      title: "Circle the camera around the look-at point for 10 s and summarise (?bench=<s> runs it after load)",
+      onclick: () => void this.bench(10),
+    });
     const buttons = el("div", { className: "perf-buttons" }, [
       el("button", { textContent: "Copy results JSON", onclick: () => void this.copy() }),
       this.saveButton,
-      el("button", { textContent: "Reset fps stats", title: "Start a new measurement window (R)", onclick: () => this.resetStats() }),
+      el("button", { textContent: "Reset fps stats", title: "Start a new measurement window and clear the hitch log (R)", onclick: () => this.resetStats() }),
+      this.benchButton,
       this.controlsButton,
       el("button", { textContent: "Reset view", title: "Back to start viewpoint (V)", onclick: () => viewer.resetView() }),
       el("button", { textContent: "Hide", title: "Toggle overlay (P)", onclick: () => this.setVisible(false) }),
@@ -88,6 +101,7 @@ export class Overlay {
       else if (e.code === "KeyC") this.toggleControls();
       else if (e.code === "KeyR") this.resetStats();
       else if (e.code === "KeyV") viewer.resetView();
+      else if (e.code === "KeyK") void this.bench(10);
     });
 
     // "Save to reports/" only works against the Vite dev/preview server.
@@ -118,7 +132,21 @@ export class Overlay {
 
   private resetStats(): void {
     this.viewer.frames.resetMeasurement();
-    this.flash("FPS measurement window reset");
+    this.viewer.hitches.reset();
+    this.flash("FPS measurement window and hitch log reset");
+  }
+
+  private async bench(seconds: number): Promise<void> {
+    if (benchRunning()) return;
+    this.benchButton.disabled = true;
+    this.flash(`Orbit benchmark: ${seconds} s…`);
+    try {
+      const r = await runOrbitBenchmark(this.viewer, { seconds });
+      console.info("orbit benchmark", r);
+      this.flash(`Bench: ${formatBench(r)}`);
+    } finally {
+      this.benchButton.disabled = false;
+    }
   }
 
   private async copy(): Promise<void> {
@@ -149,27 +177,60 @@ export class Overlay {
   }
 
   private render(): void {
-    if (!this.visible) return;
     const v = this.viewer;
+    if (v.config.benchSeconds && !this.autoBenchDone && v.timeline.status === "settled") {
+      this.autoBenchDone = true;
+      void this.bench(v.config.benchSeconds);
+    }
+    if (!this.visible) return;
     const live = v.frames.live();
     const meas = v.frames.measurement();
     const t = v.timeline;
     const net = v.network.get();
-    const drawn = v.spark.activeSplats;
-    const pager = v.spark.pager;
+    const drawn = v.activeSplats;
+    const pager = v.spark?.pager;
     const ranges = v.models.map((m) => m.preflight.range);
     const plainMB = v.models.reduce((sum, m) => sum + (m.paged ? 0 : m.bytesLoaded), 0) / 1e6;
+    const sp = v.sparkStats?.summary();
+    const ps = v.sparkStats?.pagerState();
+    const gs = v.gsl?.summary();
+    const lastHitch = v.hitches.entries[v.hitches.entries.length - 1];
     const lines = [
       `FPS        ${live.avgFps.toFixed(1)}  (1% low ${live.onePctLowFps.toFixed(1)})`,
       `Frame      ${live.avgFrameMs.toFixed(2)} ms  (max ${live.maxFrameMs.toFixed(1)})`,
+      `GPU        ${v.gpu.supported ? fmtDist(v.gpu.summary(), 2) : "n/a (no timer query)"}`,
       `Measured   ${meas.avgFps.toFixed(1)} fps, 1% low ${meas.onePctLowFps.toFixed(1)}  over ${meas.durationS.toFixed(0)} s`,
+      `Hitches    ${v.hitches.total}${lastHitch ? `  last ${lastHitch.frameMs.toFixed(0)} ms @ ${fmtMs(lastHitch.atMs)} (${HitchLog.tags(lastHitch)})` : ""}`,
       `Splats     ${fmtCount(drawn)} / ${fmtCount(v.budget)}  (${v.budgetSource})`,
+      ...(v.models.length > 1 || v.models.some((m) => m.id)
+        ? [`Parts      ${v.models.map((m) => `${m.id ?? "model"} ${fmtCount(v.modelSplats(m))}${m.stream ? `/${fmtCount(m.stream.splatBudget)}` : ""}`).join(" · ")}`]
+        : []),
+      ...(sp
+        ? [
+          `LoD upd    ${sp.lodUpdatesPerS.toFixed(1)}/s  traverse ${fmtDist(sp.traverseMs, 0)}`,
+          `Sort       ${sp.sortsPerS.toFixed(1)}/s  ${fmtDist(sp.sortMs)}  readback ${fmtDist(sp.readbackMs)}`,
+        ]
+        : []),
+      ...(gs
+        ? [
+          `LoD        ${fmtDist(gs.lodTimeMs)} per selection, ${gs.loadingChunks} chunks loading, ${(gs.loadProgress * 100).toFixed(0)}% ready`,
+          `Memory     CPU ${gs.residentCpuMB.toFixed(0)} MB, GPU ${gs.residentGpuMB.toFixed(0)} MB (GSL estimates), wasm peak ${gs.peakWasmMB.toFixed(0)} MB`,
+        ]
+        : []),
+      ...(ps
+        ? [
+          `Pager      ${ps.pagesUsed}/${ps.maxPages} pages, ${ps.fetching} fetching, ${ps.awaitingUpload} to upload, ${ps.missingChunks} missing`,
+          `Upload     ${sp?.uploadMsPerS.toFixed(1)} ms/s main thread, ${sp?.pagesUploadedPerS.toFixed(1)} pages/s`,
+        ]
+        : []),
+      ...(v.lastBenchmark ? [`Bench      ${formatBench(v.lastBenchmark)}`] : []),
+      ...(sp?.missing.length ? [`! Spark internals not found: ${sp.missing.join(", ")}`] : []),
       `Device     ${v.device.profile.id}${v.device.forced ? ` (forced; detected ${v.device.detected})` : ""}  px ${v.pixelRatio.toFixed(2)}`,
       `1st splat  ${fmtMs(t.firstSplatFrameMs)}`,
       `LoD        ${t.status}${t.settledMs !== null ? `  settled ${fmtMs(t.settledMs)}` : ""}${t.interactedBeforeSettle ? "  (moved first)" : ""}`,
-      `Network    ${net.requests} req, ${(net.bodyBytes / 1e6 + plainMB).toFixed(1)} MB${pager ? `, ${pager.isFetching() ? "fetching" : "idle"}` : ""}`,
+      `Network    ${net.requests} req, ${(net.bodyBytes / 1e6 + plainMB).toFixed(1)} MB${pager ? `, ${pager.isFetching() ? "fetching" : "idle"}` : ""}${gs ? `  (GSL counted ${gs.downloadedMB.toFixed(1)} MB)` : ""}`,
       ...(ranges.length ? [`Range      ${ranges.join(", ")}`] : []),
-      `Spark ${SPARK_VERSION}`,
+      v.gsl ? `Renderer   Gaussian Splat Lite ${GSL_VERSION} (${v.rendererKind})` : `Spark ${SPARK_VERSION}`,
       ...v.device.notes.map((n) => `! ${n}`),
     ];
     this.body.textContent = lines.join("\n");

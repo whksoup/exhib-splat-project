@@ -1,0 +1,15 @@
+// Deploy the static site assembled by publish-static.mjs to Cloudflare
+// (Workers static assets; current Wrangler sends Pages deploys here too):
+//   npm run publish:static -- --scene <name>   (in viewer-v2/)
+//   npm run deploy:static                       (needs `npx wrangler login` once)
+// Live at https://oculussplat-test.exhib-splat-project.workers.dev
+{
+  "name": "oculussplat-test",
+  "compatibility_date": "2026-10-23",
+  "assets": {
+    // Relative to this file.
+    "directory": "../../publish/site",
+    // A missing chunk must be a 404, never the app page.
+    "not_found_handling": "none"
+  }
+}

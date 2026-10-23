@@ -34,11 +34,11 @@ function fail(file, msg) {
 }
 
 /**
- * Read partition.json and its binary point table.
+ * Read and check partition.json only (cheap: no binary read).
  * @param {string} jsonPath
- * @returns {{ json: object, numParts: number, count: number, positions: Float32Array, labels: Uint8Array, labelCounts: number[], bbox: { min: number[], max: number[] }, binPath: string, unknownHeaderU32: number }}
+ * @returns {{ json: object, numParts: number, binPath: string, binBytes: number }}
  */
-export function readPartition(jsonPath) {
+export function readPartitionInfo(jsonPath) {
   let json;
   try {
     json = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
@@ -54,8 +54,16 @@ export function readPartition(jsonPath) {
   if (typeof binName !== 'string' || binName !== path.basename(binName) || binName.startsWith('.')) fail(jsonPath, `"binary" must be a plain file name next to the JSON, got ${JSON.stringify(binName)}`);
   const binPath = path.join(path.dirname(path.resolve(jsonPath)), binName);
   if (!fs.existsSync(binPath)) fail(jsonPath, `binary file not found: ${binPath}`);
+  return { json, numParts, binPath, binBytes: fs.statSync(binPath).size };
+}
 
-  const size = fs.statSync(binPath).size;
+/**
+ * Read partition.json and its binary point table.
+ * @param {string} jsonPath
+ * @returns {{ json: object, numParts: number, count: number, positions: Float32Array, labels: Uint8Array, labelCounts: number[], bbox: { min: number[], max: number[] }, binPath: string, unknownHeaderU32: number }}
+ */
+export function readPartition(jsonPath) {
+  const { json, numParts, binPath, binBytes: size } = readPartitionInfo(jsonPath);
   if (size < HEADER_BYTES) fail(binPath, `too small (${size} bytes) for the 32-byte header`);
   const fd = fs.openSync(binPath, 'r');
   try {

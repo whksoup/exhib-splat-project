@@ -7,9 +7,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { tmpDir, writeGaussianPly, GS_PROPS } from './fixtures.mjs';
-import { readPartition, KdTree } from '../lib/partition.mjs';
-import { partitionSplit, parseSplitArgs, headerWithCount } from '../partition-split.mjs';
+import { tmpDir, writeGaussianPly, writePartition, GS_PROPS } from './fixtures.mjs';
+import { readPartition, readPartitionInfo, KdTree } from '../lib/partition.mjs';
+import {
+  partitionSplit, parseSplitArgs, headerWithCount, cropToPartitionPart, detectPartitionPart, loadPartitionTree,
+} from '../partition-split.mjs';
 import { readPlyHeader } from '../lib/ply.mjs';
 
 const PIPELINE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -20,41 +22,6 @@ test.after(() => fs.rmSync(dir, { recursive: true, force: true }));
 function rng(seed) {
   let s = seed >>> 0;
   return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 2 ** 32);
-}
-
-/**
- * Write a synthetic partition (same layout as Spirula's): points labelled by
- * which third of the X range they lie in.
- */
-function writePartition(folder, points, labels, numParts, { magic = 'SSPT', nodes = 3, extra = {} } = {}) {
-  fs.mkdirSync(folder, { recursive: true });
-  const n = points.length;
-  const head = Buffer.alloc(32);
-  head.write(magic, 0, 'latin1');
-  head.writeUInt32LE(2, 4);
-  head.write('SSLF', 8, 'latin1');
-  head.writeUInt32LE(1, 12);
-  head.writeBigUInt64LE(BigInt(n), 16);
-  head.writeUInt32LE(nodes, 24);
-  const pts = Buffer.alloc(n * 16);
-  points.forEach(([x, y, z], i) => {
-    pts.writeFloatLE(x, i * 16);
-    pts.writeFloatLE(y, i * 16 + 4);
-    pts.writeFloatLE(z, i * 16 + 8);
-    pts[i * 16 + 12] = labels[i];
-    pts[i * 16 + 13] = 200; // the 3 unknown bytes (colour?)
-  });
-  const tree = Buffer.alloc(nodes * 32);
-  const tail = Buffer.alloc(16);
-  tail.writeBigUInt64LE(5n, 0);
-  fs.writeFileSync(path.join(folder, 'partition.bin'), Buffer.concat([head, pts, tree, tail]));
-  const json = {
-    format: 'spirula-scene-partition', version: 1, num_parts: numParts, num_frames: 0, num_points: n,
-    options: { method: 'viewgraph', parts: numParts }, binary: 'partition.bin', frame_names: [], frame_parts: [],
-    parts: Array.from({ length: numParts }, () => ({ core: 0, points: 0, ring: [] })), ...extra,
-  };
-  fs.writeFileSync(path.join(folder, 'partition.json'), JSON.stringify(json));
-  return path.join(folder, 'partition.json');
 }
 
 const labelOfX = (x) => (x < -1 ? 0 : x < 1 ? 1 : 2);
@@ -214,4 +181,65 @@ test('partition-split: argument parsing and unsupported inputs', async () => {
   const trunc = path.join(dir, 'trunc.ply');
   writeGaussianPly(trunc, [[0, 0, 0], [1, 1, 1]], { truncateBy: 10 });
   await assert.rejects(partitionSplit({ input: trunc, partition: json, outDir: path.join(dir, 'o2'), log: () => {} }), /truncated/);
+});
+
+test('crop + detect: a part export keeps only its own region', () => {
+  const { json } = syntheticPartition(path.join(dir, 'crop-part'));
+  // A Spirula part export for part 1: its own region, plus low-detail copies of
+  // what its ring cameras saw of parts 0 and 2, interleaved in file order.
+  const r = rng(11);
+  const pts = [];
+  const region = [];
+  const ranges = [[-3, -1], [-1, 1], [1, 3]];
+  for (let i = 0; i < 320; i++) {
+    const k = i % 16 === 5 ? 0 : i % 40 === 9 ? 2 : 1;
+    const [lo, hi] = ranges[k];
+    pts.push([lo + 0.3 + r() * (hi - lo - 0.6), 0.1 + r() * 1.8, 0.1 + r() * 1.8]);
+    region.push(k);
+  }
+  const src = path.join(dir, 'export_p1.ply');
+  const { stride } = writeGaussianPly(src, pts);
+  const buf = fs.readFileSync(src);
+  const hb = readPlyHeader(src).headerBytes;
+  for (let i = 0; i < pts.length; i++) buf.writeFloatLE(i, hb + i * stride + GS_PROPS.indexOf('f_rest_44') * 4);
+  fs.writeFileSync(src, buf);
+  const own = region.filter((k) => k === 1).length;
+
+  const info = readPartitionInfo(json);
+  assert.equal(info.numParts, 3);
+  assert.equal(info.binBytes, fs.statSync(path.join(dir, 'crop-part', 'partition.bin')).size);
+
+  const loaded = loadPartitionTree(json);
+  const d = detectPartitionPart(src, loaded, { samples: 1000 });
+  assert.equal(d.part, 1);
+  assert.ok(Math.abs(d.share - own / pts.length) < 0.02, `share ${d.share}`);
+  assert.equal(detectPartitionPart(src, json).part, 1, 'accepts a partition.json path too');
+
+  const out = path.join(dir, 'crop-out', 'p1.ply');
+  const rep = cropToPartitionPart({ input: src, out, partition: loaded, part: 1, onProgress: () => {}, readBytes: 7 * stride });
+  assert.equal(rep.keptSplats, own);
+  assert.equal(rep.droppedSplats, pts.length - own);
+  assert.deepEqual(rep.droppedByPart, [region.filter((k) => k === 0).length, 0, region.filter((k) => k === 2).length]);
+  const h = readPlyHeader(out);
+  assert.equal(h.splatCount, own);
+  assert.equal(fs.readFileSync(out).subarray(0, h.headerBytes).toString('latin1'), buf.subarray(0, hb).toString('latin1').replace(/element vertex \d+/, `element vertex ${own}`));
+  const body = fs.readFileSync(out).subarray(h.headerBytes);
+  assert.equal(body.length, own * stride);
+  const kept = [];
+  for (let i = 0; i < own; i++) {
+    const tag = body.readFloatLE(i * stride + GS_PROPS.indexOf('f_rest_44') * 4);
+    assert.ok(body.subarray(i * stride, (i + 1) * stride).equals(buf.subarray(hb + tag * stride, hb + (tag + 1) * stride)), 'record bytes unchanged');
+    kept.push(tag);
+  }
+  assert.deepEqual(kept, region.map((k, i) => (k === 1 ? i : -1)).filter((i) => i >= 0), 'exactly the own-region splats, in file order');
+  assert.deepEqual(fs.readdirSync(path.dirname(out)), ['p1.ply'], 'no .tmp left');
+
+  assert.throws(() => cropToPartitionPart({ input: src, out, partition: loaded, part: 3, onProgress: () => {} }), /does not exist/);
+  assert.throws(() => cropToPartitionPart({ input: src, out: src, partition: loaded, part: 1, onProgress: () => {} }), /overwrite the input/);
+  const only0 = path.join(dir, 'only0.ply');
+  writeGaussianPly(only0, [[-2, 1, 1], [-1.5, 0.5, 0.5]]);
+  assert.throws(() => cropToPartitionPart({ input: only0, out: path.join(dir, 'x.ply'), partition: loaded, part: 2, onProgress: () => {} }), /wrong part number/);
+  const half = path.join(dir, 'half.ply');
+  writeGaussianPly(half, [[-2, 1, 1], [-1.5, 1, 1], [0, 1, 1], [0.5, 1, 1]]);
+  assert.throws(() => detectPartitionPart(half, loaded), /not clearly one partition part/);
 });

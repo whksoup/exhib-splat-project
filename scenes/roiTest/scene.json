@@ -1,0 +1,361 @@
+{
+  "schemaVersion": 2,
+  "name": "roiTest",
+  "parts": [
+    {
+      "id": "ROI1",
+      "source": "assets/source_ply/ROI1.ply",
+      "enabled": true,
+      "roi": "assets/roi/roiTest/region6.json",
+      "roiOutline": "Outline 1"
+    },
+    {
+      "id": "ROI2",
+      "source": "assets/source_ply/ROI2.ply",
+      "enabled": true,
+      "roi": "assets/roi/roiTest/region6.json",
+      "roiOutline": "Outline 2"
+    },
+    {
+      "id": "ROI3",
+      "source": "assets/source_ply/ROI3.ply",
+      "enabled": true,
+      "roi": "assets/roi/roiTest/region6.json",
+      "roiOutline": "Outline 3"
+    }
+  ],
+  "transform": {
+    "position": [
+      0,
+      0,
+      0
+    ],
+    "rotationDeg": [
+      -90,
+      0,
+      0
+    ],
+    "eulerOrder": "XYZ",
+    "quaternion": [
+      -0.7071067811865475,
+      0,
+      0,
+      0.7071067811865476
+    ],
+    "scale": 8,
+    "matrix": [
+      8,
+      0,
+      0,
+      0,
+      0,
+      1.7763568394002505e-15,
+      -8,
+      0,
+      0,
+      8,
+      1.7763568394002505e-15,
+      0,
+      0,
+      0,
+      0,
+      1
+    ],
+    "appliedOrder": "scale, then rotate, then translate, about the world origin (three.js Object3D: M = T * R * S, column vectors)"
+  },
+  "floorY": null,
+  "navigation": {},
+  "camera": null,
+  "navTransformMatrix": null,
+  "buildOptions": {},
+  "build": {
+    "status": "ok",
+    "transformMatrix": [
+      8,
+      0,
+      0,
+      0,
+      0,
+      1.7763568394002505e-15,
+      -8,
+      0,
+      0,
+      8,
+      1.7763568394002505e-15,
+      0,
+      0,
+      0,
+      0,
+      1
+    ],
+    "startedAt": "2026-10-21T07:35:44.911Z",
+    "finishedAt": "2026-10-21T07:36:00.505Z",
+    "wallClockSeconds": 15.6,
+    "splatCount": {
+      "input": 1954868,
+      "final": 2656628
+    },
+    "bounds": {
+      "bboxMin": [
+        -21.006338119506836,
+        -2.7292027473449707,
+        -9.372220039367676
+      ],
+      "bboxMax": [
+        12.733199119567871,
+        15.048815727233887,
+        11.413244247436523
+      ]
+    },
+    "chunkCount": 42,
+    "totalBytes": 64736552,
+    "peakMemoryBytes": 334524416,
+    "buildLodFlags": [
+      "--quality",
+      "--rad-chunked",
+      "--max-sh=1"
+    ],
+    "sparkTag": "v2.3.1",
+    "parts": [
+      {
+        "id": "ROI1",
+        "status": "ok",
+        "radFile": "ROI1/roiTest-ROI1-lod.rad",
+        "transformMatrix": [
+          8,
+          0,
+          0,
+          0,
+          0,
+          1.7763568394002505e-15,
+          -8,
+          0,
+          0,
+          8,
+          1.7763568394002505e-15,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
+        "source": "assets/source_ply/ROI1.ply",
+        "sourceBytes": 240801347,
+        "sourceModified": "2026-10-21T05:01:02.721Z",
+        "buildLodFlags": [
+          "--quality",
+          "--rad-chunked",
+          "--max-sh=1"
+        ],
+        "sparkTag": "v2.3.1",
+        "startedAt": "2026-10-21T07:35:44.911Z",
+        "finishedAt": "2026-10-21T07:35:48.221Z",
+        "wallClockSeconds": 3.3,
+        "buildLodSeconds": 2.631,
+        "peakMemoryBytes": 202330112,
+        "splatCount": {
+          "input": 480358,
+          "final": 610210
+        },
+        "bounds": {
+          "bboxMin": [
+            -21.006338119506836,
+            -1.5405203104019165,
+            -0.18016448616981506
+          ],
+          "bboxMax": [
+            -4.818594932556152,
+            13.602962493896484,
+            11.413244247436523
+          ]
+        },
+        "chunkCount": 10,
+        "totalBytes": 13058016,
+        "transformStep": {
+          "splatTransform": "3.10.0",
+          "seconds": 0.365,
+          "peakMemoryBytes": 202682368,
+          "maxRelError": 2.4484928174332295e-16
+        },
+        "crop": {
+          "roi": "assets/roi/roiTest/region6.json",
+          "roiOutline": "Outline 1",
+          "roiDigest": "b356f3a997276e1e",
+          "keptSplats": 480358,
+          "droppedSplats": 490609,
+          "droppedOutsideRoi": 490609,
+          "seconds": 0.2
+        }
+      },
+      {
+        "id": "ROI2",
+        "status": "ok",
+        "radFile": "ROI2/roiTest-ROI2-lod.rad",
+        "transformMatrix": [
+          8,
+          0,
+          0,
+          0,
+          0,
+          1.7763568394002505e-15,
+          -8,
+          0,
+          0,
+          8,
+          1.7763568394002505e-15,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
+        "source": "assets/source_ply/ROI2.ply",
+        "sourceBytes": 247390211,
+        "sourceModified": "2026-10-21T06:12:20.019Z",
+        "buildLodFlags": [
+          "--quality",
+          "--rad-chunked",
+          "--max-sh=1"
+        ],
+        "sparkTag": "v2.3.1",
+        "startedAt": "2026-10-21T07:35:48.230Z",
+        "finishedAt": "2026-10-21T07:35:53.399Z",
+        "wallClockSeconds": 5.2,
+        "buildLodSeconds": 4.444,
+        "peakMemoryBytes": 243036160,
+        "splatCount": {
+          "input": 609850,
+          "final": 845094
+        },
+        "bounds": {
+          "bboxMin": [
+            -17.417695999145508,
+            -2.7292027473449707,
+            -9.372220039367676
+          ],
+          "bboxMax": [
+            -2.9233312606811523,
+            13.02725887298584,
+            4.214597225189209
+          ]
+        },
+        "chunkCount": 13,
+        "totalBytes": 20332296,
+        "transformStep": {
+          "splatTransform": "3.10.0",
+          "seconds": 0.411,
+          "peakMemoryBytes": 210632704,
+          "maxRelError": 2.0040121154322321e-16
+        },
+        "crop": {
+          "roi": "assets/roi/roiTest/region6.json",
+          "roiOutline": "Outline 2",
+          "roiDigest": "674a1c853ffa321f",
+          "keptSplats": 609850,
+          "droppedSplats": 387685,
+          "droppedOutsideRoi": 387685,
+          "seconds": 0.2
+        }
+      },
+      {
+        "id": "ROI3",
+        "status": "ok",
+        "radFile": "ROI3/roiTest-ROI3-lod.rad",
+        "transformMatrix": [
+          8,
+          0,
+          0,
+          0,
+          0,
+          1.7763568394002505e-15,
+          -8,
+          0,
+          0,
+          8,
+          1.7763568394002505e-15,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
+        "source": "assets/source_ply/ROI3.ply",
+        "sourceBytes": 247635979,
+        "sourceModified": "2026-10-21T07:19:49.258Z",
+        "buildLodFlags": [
+          "--quality",
+          "--rad-chunked",
+          "--max-sh=1"
+        ],
+        "sparkTag": "v2.3.1",
+        "startedAt": "2026-10-21T07:35:53.413Z",
+        "finishedAt": "2026-10-21T07:36:00.473Z",
+        "wallClockSeconds": 7.1,
+        "buildLodSeconds": 6.189,
+        "peakMemoryBytes": 334524416,
+        "splatCount": {
+          "input": 864660,
+          "final": 1201324
+        },
+        "bounds": {
+          "bboxMin": [
+            -4.970283031463623,
+            -1.5778526067733765,
+            -5.00167179107666
+          ],
+          "bboxMax": [
+            12.733199119567871,
+            15.048815727233887,
+            5.950680732727051
+          ]
+        },
+        "chunkCount": 19,
+        "totalBytes": 31346240,
+        "transformStep": {
+          "splatTransform": "3.10.0",
+          "seconds": 0.52,
+          "peakMemoryBytes": 225308672,
+          "maxRelError": 2.743297564870197e-16
+        },
+        "crop": {
+          "roi": "assets/roi/roiTest/region6.json",
+          "roiOutline": "Outline 3",
+          "roiDigest": "bb5f8f945238c7cd",
+          "keptSplats": 864660,
+          "droppedSplats": 133866,
+          "droppedOutsideRoi": 133866,
+          "seconds": 0.2
+        }
+      }
+    ]
+  },
+  "buildAttempt": {
+    "status": "ok",
+    "startedAt": "2026-10-21T07:35:44.911Z",
+    "finishedAt": "2026-10-21T07:36:00.505Z",
+    "error": null,
+    "parts": [
+      {
+        "id": "ROI1",
+        "status": "built",
+        "seconds": 3.3,
+        "peakMemoryBytes": 202330112
+      },
+      {
+        "id": "ROI2",
+        "status": "built",
+        "seconds": 5.2,
+        "peakMemoryBytes": 243036160
+      },
+      {
+        "id": "ROI3",
+        "status": "built",
+        "seconds": 7.1,
+        "peakMemoryBytes": 334524416
+      }
+    ]
+  },
+  "hotspots": [],
+  "createdAt": "2026-10-21T06:31:43.531Z",
+  "updatedAt": "2026-10-21T07:35:36.340Z"
+}

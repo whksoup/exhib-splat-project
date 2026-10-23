@@ -74,7 +74,7 @@ export function sceneModels(scene: SceneDoc, info: PartFileInfo[] | null, o: Sce
   return { plan, models, mode };
 }
 
-/** Preview cap from ?previewCapGB= (decimal GB), else the shared default (1.5 GB). */
+/** Preview cap from ?previewCapGB= (decimal GB), else the shared default (3 GB). */
 export function previewCapBytes(search: string): number {
   const v = Number(new URLSearchParams(search).get("previewCapGB"));
   return Number.isFinite(v) && v > 0 ? v * 1e9 : PREVIEW_SOURCE_CAP_BYTES;

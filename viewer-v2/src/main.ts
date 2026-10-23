@@ -4,10 +4,13 @@
  *   ?scene=<name>         scene editor: scenes/<name>/scene.json + its built .rad
  *                         (or the source when unbuilt), see src/scene/editor.ts
  *   ?model=<url> / ?config=<json>   v1-style debug viewer (no save / build)
+ * A published build (VITE_STATIC=1, scene/published.ts) has no dev server: the
+ * start page lists scenes/index.json and ?scene= opens the scene view-only.
  */
 import "./style.css";
 import { validateScene, type SceneDoc } from "../../shared/scene-schema.mjs";
 import { AlignMode, localAlignBinding } from "./align/alignMode";
+import { runOrbitBenchmark, type BenchOptions } from "./bench";
 import { loadConfig, type ViewerConfigFile } from "./config";
 import { resolveDevice } from "./device";
 import { attachNavigation } from "./nav";
@@ -16,6 +19,7 @@ import { PlanMode } from "./plan/planMode";
 import { api, fetchSceneJson } from "./scene/api";
 import { SceneEditor } from "./scene/editor";
 import { previewCapBytes, sceneCamera, sceneModels, sceneNavigation, type PartFileInfo, type SceneModels } from "./scene/sceneConfig";
+import { PUBLISHED, PublishedIndex, publishedChrome } from "./scene/published";
 import { StartPage } from "./scene/startPage";
 import { el, fmtBytes, guardTyping } from "./ui/dom";
 import { Viewer } from "./viewer";
@@ -29,10 +33,12 @@ async function openScene(name: string): Promise<{ scene: SceneDoc; load: SceneMo
   if (scene.name !== name) throw new Error(`scenes/${name}/scene.json says name "${scene.name}"`);
   // Which .rad files are really on disk (build/ is gitignored) and how big the sources are (preview cap).
   let info: PartFileInfo[] | null = null;
-  try {
-    info = await api.info(name);
-  } catch (err) {
-    console.warn("scene info unavailable; assuming recorded builds exist", err);
+  if (!PUBLISHED) {
+    try {
+      info = await api.info(name);
+    } catch (err) {
+      console.warn("scene info unavailable; assuming recorded builds exist", err);
+    }
   }
   const load = sceneModels(scene, info, { capBytes: previewCapBytes(window.location.search) });
   let camera = sceneCamera(scene);
@@ -47,7 +53,15 @@ async function openScene(name: string): Promise<{ scene: SceneDoc; load: SceneMo
     scene,
     load,
     info,
-    base: { models: load.models, camera, navigation: sceneNavigation(scene), controls: "orbit" },
+    // Published tours start without the performance overlay (P or ?overlay=1 shows it) and on
+    // Gaussian Splat Lite (?renderer=spark switches back; reports/benchmarks/2026-10-23-spark-vs-gsl).
+    base: {
+      models: load.models,
+      camera,
+      navigation: sceneNavigation(scene),
+      controls: "orbit",
+      ...(PUBLISHED && { overlay: false, renderer: "gsl" as const }),
+    },
   };
 }
 
@@ -61,7 +75,8 @@ async function main(): Promise<void> {
   const q = new URLSearchParams(window.location.search);
   const sceneName = q.get("scene");
   if (!sceneName && q.getAll("model").length === 0 && !q.get("config")) {
-    new StartPage(ui);
+    if (PUBLISHED) new PublishedIndex(ui);
+    else new StartPage(ui);
     return;
   }
 
@@ -89,9 +104,9 @@ async function main(): Promise<void> {
   let viewer: Viewer;
   try {
     app.hidden = false;
-    viewer = new Viewer(app, config, device);
+    viewer = await Viewer.create(app, config, device);
   } catch (err) {
-    // Typically: WebGL2 unavailable.
+    // Typically: WebGL2 unavailable (or WebGPU on ?renderer=gsl).
     app.hidden = true;
     showMessage(ui, { title: "Renderer failed to start", lines: [(err as Error).message], error: true });
     return;
@@ -99,10 +114,15 @@ async function main(): Promise<void> {
   // Exposed for console debugging and future automation (e.g. scripted test routes).
   const w = window as unknown as Record<string, unknown>;
   w.viewer = viewer;
+  w.bench = (opts?: BenchOptions) => runOrbitBenchmark(viewer, opts);
 
   new Overlay(ui, viewer);
 
-  if (opened) {
+  if (opened && PUBLISHED) {
+    guardTyping(ui);
+    attachNavigation(viewer, ui);
+    publishedChrome(viewer, ui, opened.scene.name);
+  } else if (opened) {
     const editor = new SceneEditor(viewer, ui, opened.scene, opened.load, opened.info);
     Object.assign(w, { editor, store: editor.store, align: editor.align, plan: editor.plan });
   } else {

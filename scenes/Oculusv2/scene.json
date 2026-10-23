@@ -1,0 +1,315 @@
+{
+  "schemaVersion": 2,
+  "name": "Oculusv2",
+  "parts": [
+    {
+      "id": "oculus_v2_p1",
+      "source": "assets/source_ply/oculus_v2_p1.ply",
+      "enabled": true,
+      "partitionPart": 1
+    },
+    {
+      "id": "oculus_v2_p2",
+      "source": "assets/source_ply/oculus_v2_p2.ply",
+      "enabled": true,
+      "partitionPart": 0
+    },
+    {
+      "id": "oculus_v2_p3",
+      "source": "assets/source_ply/oculus_v2_p3.ply",
+      "enabled": true,
+      "partitionPart": 2
+    }
+  ],
+  "transform": {
+    "position": [
+      0,
+      0,
+      0
+    ],
+    "rotationDeg": [
+      0,
+      0,
+      0
+    ],
+    "eulerOrder": "XYZ",
+    "quaternion": [
+      0,
+      0,
+      0,
+      1
+    ],
+    "scale": 1,
+    "matrix": [
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1
+    ],
+    "appliedOrder": "scale, then rotate, then translate, about the world origin (three.js Object3D: M = T * R * S, column vectors)"
+  },
+  "floorY": null,
+  "navigation": {},
+  "camera": null,
+  "navTransformMatrix": null,
+  "buildOptions": {},
+  "build": {
+    "status": "ok",
+    "transformMatrix": [
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1
+    ],
+    "startedAt": "2026-10-21T03:39:15.000Z",
+    "finishedAt": "2026-10-21T03:42:23.300Z",
+    "wallClockSeconds": 188.3,
+    "splatCount": {
+      "input": 35862051,
+      "final": 47719526
+    },
+    "bounds": {
+      "bboxMin": [
+        -5.62253999710083,
+        -3.940572738647461,
+        -0.9127177596092224
+      ],
+      "bboxMax": [
+        3.8185129165649414,
+        2.067605972290039,
+        5.1616411209106445
+      ]
+    },
+    "chunkCount": 730,
+    "totalBytes": 1278459456,
+    "peakMemoryBytes": 4673990656,
+    "buildLodFlags": [
+      "--quality",
+      "--rad-chunked",
+      "--max-sh=1"
+    ],
+    "sparkTag": "v2.3.1",
+    "parts": [
+      {
+        "id": "oculus_v2_p1",
+        "status": "ok",
+        "radFile": "oculus_v2_p1/Oculusv2-oculus_v2_p1-lod.rad",
+        "transformMatrix": [
+          1,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
+        "source": "assets/source_ply/oculus_v2_p1.ply",
+        "sourceBytes": 2964069509,
+        "sourceModified": "2026-10-20T10:05:03.263Z",
+        "buildLodFlags": [
+          "--quality",
+          "--rad-chunked",
+          "--max-sh=1"
+        ],
+        "sparkTag": "v2.3.1",
+        "startedAt": "2026-10-21T03:26:12.547Z",
+        "finishedAt": "2026-10-21T03:29:15.039Z",
+        "wallClockSeconds": 182.5,
+        "buildLodSeconds": 181.927,
+        "peakMemoryBytes": 4672348160,
+        "splatCount": {
+          "input": 11951887,
+          "final": 15874945
+        },
+        "bounds": {
+          "bboxMin": [
+            -5.62253999710083,
+            -3.940572738647461,
+            -0.9127177596092224
+          ],
+          "bboxMax": [
+            3.8185129165649414,
+            1.6215012073516846,
+            2.4895718097686768
+          ]
+        },
+        "chunkCount": 243,
+        "totalBytes": 437982496,
+        "transformStep": null,
+        "reusedFrom": "2026-10-21T03:29:15.039Z"
+      },
+      {
+        "id": "oculus_v2_p2",
+        "status": "ok",
+        "radFile": "oculus_v2_p2/Oculusv2-oculus_v2_p2-lod.rad",
+        "transformMatrix": [
+          1,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
+        "source": "assets/source_ply/oculus_v2_p2.ply",
+        "sourceBytes": 2968057101,
+        "sourceModified": "2026-10-20T14:36:39.822Z",
+        "buildLodFlags": [
+          "--quality",
+          "--rad-chunked",
+          "--max-sh=1"
+        ],
+        "sparkTag": "v2.3.1",
+        "startedAt": "2026-10-21T03:36:18.002Z",
+        "finishedAt": "2026-10-21T03:39:06.524Z",
+        "wallClockSeconds": 168.5,
+        "buildLodSeconds": 167.527,
+        "peakMemoryBytes": 4667109376,
+        "splatCount": {
+          "input": 11967966,
+          "final": 16027603
+        },
+        "bounds": {
+          "bboxMin": [
+            -3.730196237564087,
+            -2.188793659210205,
+            -0.7975524067878723
+          ],
+          "bboxMax": [
+            1.658550500869751,
+            2.067605972290039,
+            2.5997958183288574
+          ]
+        },
+        "chunkCount": 245,
+        "totalBytes": 405973864,
+        "transformStep": null,
+        "reusedFrom": "2026-10-21T03:39:06.524Z"
+      },
+      {
+        "id": "oculus_v2_p3",
+        "status": "ok",
+        "radFile": "oculus_v2_p3/Oculusv2-oculus_v2_p3-lod.rad",
+        "transformMatrix": [
+          1,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
+        "source": "assets/source_ply/oculus_v2_p3.ply",
+        "sourceBytes": 2961666637,
+        "sourceModified": "2026-10-20T18:35:53.965Z",
+        "buildLodFlags": [
+          "--quality",
+          "--rad-chunked",
+          "--max-sh=1"
+        ],
+        "sparkTag": "v2.3.1",
+        "startedAt": "2026-10-21T03:39:15.059Z",
+        "finishedAt": "2026-10-21T03:42:23.261Z",
+        "wallClockSeconds": 188.2,
+        "buildLodSeconds": 187.568,
+        "peakMemoryBytes": 4673990656,
+        "splatCount": {
+          "input": 11942198,
+          "final": 15816978
+        },
+        "bounds": {
+          "bboxMin": [
+            -2.1828067302703857,
+            -3.0618155002593994,
+            -0.38777676224708557
+          ],
+          "bboxMax": [
+            1.5306780338287354,
+            0.8893051147460938,
+            5.1616411209106445
+          ]
+        },
+        "chunkCount": 242,
+        "totalBytes": 434503096,
+        "transformStep": null
+      }
+    ]
+  },
+  "buildAttempt": {
+    "status": "ok",
+    "startedAt": "2026-10-21T03:39:15.000Z",
+    "finishedAt": "2026-10-21T03:42:23.300Z",
+    "error": null,
+    "parts": [
+      {
+        "id": "oculus_v2_p1",
+        "status": "kept"
+      },
+      {
+        "id": "oculus_v2_p2",
+        "status": "kept"
+      },
+      {
+        "id": "oculus_v2_p3",
+        "status": "built",
+        "seconds": 188.2,
+        "peakMemoryBytes": 4673990656
+      }
+    ]
+  },
+  "hotspots": [],
+  "createdAt": "2026-10-21T03:02:11.024Z",
+  "updatedAt": "2026-10-21T03:02:11.024Z",
+  "partition": "assets/partitions/OculusV1/partition.json"
+}

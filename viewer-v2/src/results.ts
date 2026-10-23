@@ -3,18 +3,19 @@
  * reports/ can be compared across devices and runs.
  */
 import * as THREE from "three";
-import { gpuInfo } from "./device";
 import type { Viewer } from "./viewer";
 
 declare const __SPARK_VERSION__: string;
+declare const __GSL_VERSION__: string;
 
 export const SPARK_VERSION: string = typeof __SPARK_VERSION__ === "string" ? __SPARK_VERSION__ : "unknown";
+export const GSL_VERSION: string = typeof __GSL_VERSION__ === "string" ? __GSL_VERSION__ : "unknown";
 
 const round = (v: number | null | undefined, digits = 1): number | null =>
   v === null || v === undefined || !Number.isFinite(v) ? null : Number(v.toFixed(digits));
 
 export function buildResults(viewer: Viewer) {
-  const { spark, timeline, device, config } = viewer;
+  const { spark, gsl, timeline, device, config } = viewer;
   const live = viewer.frames.live();
   const measured = viewer.frames.measurement();
   const fr = (s: typeof live) => ({
@@ -32,14 +33,15 @@ export function buildResults(viewer: Viewer) {
     schema: "splat-viewer-results/1",
     capturedAt: new Date().toISOString(),
     pageUrl: window.location.href,
-    versions: { spark: SPARK_VERSION, three: THREE.REVISION },
+    renderer: viewer.rendererKind,
+    versions: { spark: SPARK_VERSION, gsl: GSL_VERSION, three: THREE.REVISION },
     device: {
       profile: device.profile.id,
       detected: device.detected,
       forced: device.forced,
       mobile: device.mobile,
       userAgent: navigator.userAgent,
-      gpu: gpuInfo(viewer.renderer.getContext()),
+      gpu: viewer.gpuInfo(),
       devicePixelRatio: window.devicePixelRatio,
       pixelRatio: viewer.pixelRatio,
       drawingBuffer: [size.x, size.y],
@@ -48,13 +50,18 @@ export function buildResults(viewer: Viewer) {
     budget: {
       effective: viewer.budget,
       source: viewer.budgetSource,
-      lodSplatCount: spark.lodSplatCount ?? null,
-      sparkDefaultSplatTarget: spark.defaultSplatTarget(),
-      lodSplatScale: spark.lodSplatScale,
-      lodRenderScale: spark.lodRenderScale,
-      maxStdDev: round(spark.maxStdDev, 4),
-      maxPagedSplats: spark.maxPagedSplats,
-      pagedExtSplats: spark.pagedExtSplats,
+      detail: viewer.detail,
+      // Spark only (null on the GSL path).
+      lodSplatCount: spark?.lodSplatCount ?? null,
+      sparkDefaultSplatTarget: spark?.defaultSplatTarget() ?? null,
+      lodSplatScale: spark?.lodSplatScale ?? null,
+      lodRenderScale: spark?.lodRenderScale ?? null,
+      maxStdDev: round(spark?.maxStdDev ?? gsl?.splatRenderer.maxStdDev, 4),
+      maxPagedSplats: spark?.maxPagedSplats ?? null,
+      pagedExtSplats: spark?.pagedExtSplats ?? null,
+      // GSL only: streaming options (unset = defaults) and each streamed part's current share of the budget.
+      gslOptions: gsl ? config.gsl : null,
+      gslPartBudgets: gsl ? gsl.streams.map((s) => s.splatBudget) : null,
     },
     models: viewer.models.map((m) => ({
       url: m.spec.url,
@@ -85,13 +92,25 @@ export function buildResults(viewer: Viewer) {
       bodyMB: round(net.bodyBytes / 1e6, 2),
     },
     splats: {
-      drawnNow: spark.activeSplats,
+      drawnNow: viewer.activeSplats,
       budget: viewer.budget,
-      pagerPoolSplats: spark.pager?.maxSplats ?? null,
+      pagerPoolSplats: spark?.pager?.maxSplats ?? null,
     },
     frames: {
       live: fr(live),
       measurement: { sinceMs: round(viewer.frames.measureStartMs), ...fr(measured) },
+    },
+    diagnostics: {
+      note: "Last 5 s unless stated. traverseMs = worker LoD traversal; sortMs = worker sort + ordering upload; readbackMs = depth readback before each sort; gpuMs = EXT_disjoint_timer_query_webgl2 around renderer.render().",
+      gpuTimerSupported: viewer.gpu.supported,
+      gpuMs: viewer.gpu.summary(),
+      spark: viewer.sparkStats?.summary() ?? null,
+      pager: viewer.sparkStats?.pagerState() ?? null,
+      gsl: gsl?.summary() ?? null,
+      memory: memorySnapshot(viewer),
+      parts: viewer.models.map((m) => ({ id: m.id, url: m.spec.url, visible: m.object.visible, lodSplats: viewer.modelSplats(m) })),
+      hitches: { total: viewer.hitches.total, recent: viewer.hitches.entries.slice(-50) },
+      benchmark: viewer.lastBenchmark,
     },
     camera: {
       position: viewer.camera.position.toArray().map((v) => round(v, 3)),
@@ -100,6 +119,21 @@ export function buildResults(viewer: Viewer) {
       controls: viewer.rig.mode,
     },
     errors: [...viewer.errors],
+  };
+}
+
+/**
+ * Memory, comparable across renderers only for the JS heap: Chrome's
+ * performance.memory (ArrayBuffers held by JS count, GPU memory doesn't).
+ * The GSL figures are its own estimates of retained CPU and GPU data.
+ */
+export function memorySnapshot(viewer: Viewer) {
+  const pm = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory;
+  const g = viewer.gsl?.summary();
+  return {
+    jsHeapUsedMB: pm ? round(pm.usedJSHeapSize / 1e6) : null,
+    gslResidentCpuMB: g?.residentCpuMB ?? null,
+    gslResidentGpuMB: g?.residentGpuMB ?? null,
   };
 }
 

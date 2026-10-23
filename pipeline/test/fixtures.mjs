@@ -33,6 +33,49 @@ export function writeGaussianPly(file, points, { shRest = 45, crlf = false, trun
   return { stride, headerBytes: Buffer.byteLength(header, 'latin1') };
 }
 
+/**
+ * Write a synthetic Spirula partition (partition.json + partition.bin, same
+ * layout as the real files) with the given labelled points. Returns the json path.
+ */
+export function writePartition(folder, points, labels, numParts, { magic = 'SSPT', nodes = 3, extra = {} } = {}) {
+  fs.mkdirSync(folder, { recursive: true });
+  const n = points.length;
+  const head = Buffer.alloc(32);
+  head.write(magic, 0, 'latin1');
+  head.writeUInt32LE(2, 4);
+  head.write('SSLF', 8, 'latin1');
+  head.writeUInt32LE(1, 12);
+  head.writeBigUInt64LE(BigInt(n), 16);
+  head.writeUInt32LE(nodes, 24);
+  const pts = Buffer.alloc(n * 16);
+  points.forEach(([x, y, z], i) => {
+    pts.writeFloatLE(x, i * 16);
+    pts.writeFloatLE(y, i * 16 + 4);
+    pts.writeFloatLE(z, i * 16 + 8);
+    pts[i * 16 + 12] = labels[i];
+    pts[i * 16 + 13] = 200; // the 3 unknown bytes (colour?)
+  });
+  const tree = Buffer.alloc(nodes * 32);
+  const tail = Buffer.alloc(16);
+  tail.writeBigUInt64LE(5n, 0);
+  fs.writeFileSync(path.join(folder, 'partition.bin'), Buffer.concat([head, pts, tree, tail]));
+  const json = {
+    format: 'spirula-scene-partition', version: 1, num_parts: numParts, num_frames: 0, num_points: n,
+    options: { method: 'viewgraph', parts: numParts }, binary: 'partition.bin', frame_names: [], frame_parts: [],
+    parts: Array.from({ length: numParts }, () => ({ core: 0, points: 0, ring: [] })), ...extra,
+  };
+  fs.writeFileSync(path.join(folder, 'partition.json'), JSON.stringify(json));
+  return path.join(folder, 'partition.json');
+}
+
+/** Partition points on a 0.1 grid over x -3..3, y/z 0..2, labelled by thirds of x (<-1, <1, else). */
+export function gridPartition(folder) {
+  const pts = [];
+  for (let x = -2.95; x < 3; x += 0.1) for (let y = 0.05; y < 2; y += 0.1) for (let z = 0.05; z < 2; z += 0.1) pts.push([x, y, z]);
+  const labels = pts.map((p) => (p[0] < -1 ? 0 : p[0] < 1 ? 1 : 2));
+  return writePartition(folder, pts, labels, 3);
+}
+
 export function writeAsciiPly(file, points) {
   const lines = ['ply', 'format ascii 1.0', `element vertex ${points.length}`,
     'property float x', 'property float y', 'property float z', 'property float opacity', 'end_header',

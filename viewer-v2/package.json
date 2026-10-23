@@ -9,10 +9,13 @@
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.node.json",
     "preview": "vite preview",
     "test": "vitest run",
-    "make:nav-test": "node scripts/make-nav-test-room.ts"
+    "make:nav-test": "node scripts/make-nav-test-room.ts",
+    "publish:static": "node scripts/publish-static.mjs",
+    "deploy:static": "npx --yes wrangler deploy --config scripts/deploy.wrangler.jsonc"
   },
   "dependencies": {
     "@sparkjsdev/spark": "2.3.1",
+    "gaussian-splat-lite": "1.4.0",
     "three": "0.186.1",
     "three-mesh-bvh": "0.9.15"
   },

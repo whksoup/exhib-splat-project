@@ -20,6 +20,19 @@
 // Schema 1 files (single `source`) are migrated on read (migrateScene): the
 // source becomes `parts: [{ id: "main", source }]` and the v1 build record
 // becomes that part's build. Files are only rewritten when saved or built.
+//
+// Partition crop (optional): `partition` names a Spirula partition.json and a
+// part's `partitionPart` is the partition part it was trained for. Such a part
+// is cropped to its own region before the build (splats whose nearest partition
+// point has another label are dropped): a Spirula part also reconstructs the
+// other parts' regions at low detail, which blurs them when parts are overlaid.
+// Region-of-interest crop (optional): the scene's `roi` names a Spirula ROI
+// region file (a part's own `roi` overrides it) and a part's `roiOutlines` the
+// outlines saved in it that the part was trained on; only splats inside their
+// union are built. A part with its own `roi` and no outlines uses the file's
+// top-level region; a part with no outlines and no own `roi` is not cropped.
+// (`roiOutline`, a single name, is read as `roiOutlines: [name]`.) Both crops
+// can apply to one part (a splat must pass both).
 
 export const SCENE_SCHEMA_VERSION = 2;
 /** Part id given to the single source of a migrated schema-1 scene. */
@@ -30,7 +43,7 @@ export const PART_ID_RE = /^[A-Za-z0-9][A-Za-z0-9_-]{0,47}$/;
  * Unbuilt preview loads source files WHOLE into the browser (no LoD paging).
  * Above this total the viewer does not auto-load them (configurable in the viewer).
  */
-export const PREVIEW_SOURCE_CAP_BYTES = 1.5e9;
+export const PREVIEW_SOURCE_CAP_BYTES = 3e9;
 export const SCENE_FILE = 'scene.json';
 export const SCENE_NAV_DIR = 'nav';
 export const SCENE_BUILD_DIR = 'build';
@@ -62,6 +75,22 @@ export const SOURCE_EXTS = ['.ply', '.sog', '.spz', '.splat', '.ksplat'];
  * @property {string} source  repo-relative path of the original source (never modified)
  * @property {string} [label]  free text for people
  * @property {boolean} enabled  disabled parts are neither built nor shown
+ * @property {number} [partitionPart]  partition part (label) this source was trained for; cropped to it when the scene has a `partition`
+ * @property {string} [roi]  repo-relative Spirula ROI region file for this part (default: the scene's `roi`)
+ * @property {string[]} [roiOutlines]  outlines of that file this part was trained on; only splats inside their union are built
+ */
+
+/**
+ * @typedef {object} PartCrop  Crop applied before a part's build (partition part and/or ROI).
+ * @property {string} [partition]  repo-relative partition.json
+ * @property {number} [part]  partition part (label) kept
+ * @property {string} [roi]  repo-relative ROI region file
+ * @property {string[]} [roiOutlines]  outlines of that file, sorted (absent: its top-level region)
+ * @property {number} [partitionBytes]  partition.bin size when built (incremental builds compare it)
+ * @property {string} [roiDigest]  hash of the region geometry when built (incremental builds compare it)
+ * @property {number} [keptSplats]
+ * @property {number} [droppedSplats]
+ * @property {number} [seconds]
  */
 
 /**
@@ -84,6 +113,7 @@ export const SOURCE_EXTS = ['.ply', '.sog', '.spz', '.splat', '.ksplat'];
  * @property {number} [chunkCount]
  * @property {number} [totalBytes]
  * @property {object|null} [transformStep]
+ * @property {PartCrop|null} [crop]  crop applied to the source before the transform (null: none)
  * @property {string} [reusedFrom]  set when an incremental build carried this output over unchanged (finishedAt of the build that made it)
  */
 
@@ -125,12 +155,14 @@ export const SOURCE_EXTS = ['.ply', '.sog', '.spz', '.splat', '.ksplat'];
  * @property {2} schemaVersion
  * @property {string} name
  * @property {ScenePart[]} parts  source files (all in one coordinate frame)
+ * @property {string|null} [partition]  repo-relative Spirula partition.json; parts with a `partitionPart` are cropped to it
+ * @property {string|null} [roi]  repo-relative Spirula ROI region file whose outlines parts pick in `roiOutlines`
  * @property {SceneTransform} transform  applies identically to every part
  * @property {number|null} floorY  floor height in scene (aligned) coordinates
  * @property {Record<string, any>} navigation  v1 navigation block; `collision` is relative to the scene folder
  * @property {SceneCamera|null} camera  start viewpoint
  * @property {number[]|null} navTransformMatrix  scene transform when nav assets were last authored
- * @property {{ extraFlags?: string[] }} buildOptions
+ * @property {{ extraFlags?: string[], maxSh?: number }} buildOptions  maxSh: SH degree build-lod keeps (default 1; Spirula trains 3)
  * @property {SceneBuild|null} build
  * @property {SceneBuildAttempt|null} buildAttempt
  * @property {any[]} hotspots
@@ -392,6 +424,16 @@ export function isSafeSourcePath(p) {
   return SOURCE_EXTS.some((e) => lower.endsWith(e));
 }
 
+/** Folder region files are copied to: assets/roi/<scene>/<file>.json. */
+export const ROI_DIR = 'assets/roi';
+
+/** Validate a region file path as the editor writes it: assets/roi/<scene>/<file>.json. */
+export function isSafeRoiPath(p) {
+  if (typeof p !== 'string' || p.length > 300) return false;
+  const segs = p.split('/');
+  return segs.length === 4 && `${segs[0]}/${segs[1]}` === ROI_DIR && isValidSceneName(segs[2]) && /^[A-Za-z0-9_-][A-Za-z0-9._ -]{0,99}\.json$/.test(segs[3]) && !segs[3].includes('..');
+}
+
 // --- parts ------------------------------------------------------------------
 
 export function isValidPartId(id) {
@@ -444,7 +486,7 @@ export function partBuild(scene, id) {
  * Build state of one part, for lists and badges:
  *   disabled   part is switched off (not built, not shown)
  *   not-built  no output in build/
- *   outdated   built, but with a different scene transform (or another source file)
+ *   outdated   built, but with a different scene transform, source file or partition crop
  *   built      up to date as far as scene.json can tell (the pipeline also checks the source's size/mtime)
  * @returns {'disabled'|'not-built'|'outdated'|'built'}
  */
@@ -453,7 +495,47 @@ export function partState(scene, part) {
   const b = partBuild(scene, part.id);
   if (!b) return 'not-built';
   if (b.source !== part.source || !matricesEqual(scene.transform.matrix, b.transformMatrix)) return 'outdated';
+  if (!sameCrop(partCrop(scene, part), b.crop ?? null)) return 'outdated';
   return 'built';
+}
+
+/** Outline names sorted naturally ("Outline 2" before "Outline 10"), duplicates removed. */
+export function sortOutlines(names) {
+  return [...new Set(names)].sort((a, b) => a.localeCompare(b, 'en', { numeric: true }));
+}
+
+/** A part's (or crop record's) outlines; the single-name `roiOutline` of older files counts as one. */
+export function outlinesOf(x) {
+  if (Array.isArray(x?.roiOutlines)) return sortOutlines(x.roiOutlines);
+  return typeof x?.roiOutline === 'string' && x.roiOutline ? [x.roiOutline] : [];
+}
+
+/**
+ * The crop a part's build should apply: { partition, part } when the scene has
+ * a partition and the part a partitionPart; { roi, roiOutlines? } when the part
+ * has outlines (in its own `roi` or the scene's) or its own `roi` (top-level
+ * region); both; or null.
+ * @returns {{ partition?: string, part?: number, roi?: string, roiOutlines?: string[] } | null}
+ */
+export function partCrop(scene, part) {
+  const c = {};
+  if (scene.partition && Number.isInteger(part.partitionPart)) {
+    c.partition = scene.partition;
+    c.part = part.partitionPart;
+  }
+  const file = part.roi || scene.roi || null;
+  const outlines = outlinesOf(part);
+  if (file && (part.roi || outlines.length)) {
+    c.roi = file;
+    if (outlines.length) c.roiOutlines = outlines;
+  }
+  return Object.keys(c).length ? c : null;
+}
+
+/** Same partition file, partition part, ROI file and outlines (other recorded fields are ignored). */
+export function sameCrop(a, b) {
+  if (!a || !b) return !a && !b;
+  return ['partition', 'part', 'roi'].every((k) => (a[k] ?? null) === (b[k] ?? null)) && outlinesOf(a).join('\n') === outlinesOf(b).join('\n');
 }
 
 // --- scene documents --------------------------------------------------------
@@ -519,13 +601,44 @@ export function validateScene(raw) {
       if (typeof p.source !== 'string' || !p.source) errors.push(`parts[${i}].source must be a path`);
       if (p.enabled !== undefined && typeof p.enabled !== 'boolean') errors.push(`parts[${i}].enabled must be true or false`);
       if (p.label !== undefined && p.label !== null && (typeof p.label !== 'string' || p.label.length > 200)) errors.push(`parts[${i}].label must be a short string`);
+      if (p.partitionPart !== undefined && p.partitionPart !== null && !(Number.isInteger(p.partitionPart) && p.partitionPart >= 0 && p.partitionPart < 255)) {
+        errors.push(`parts[${i}].partitionPart must be a partition part number (0..254) or null`);
+      }
+      if (p.roi !== undefined && p.roi !== null && (typeof p.roi !== 'string' || !p.roi.toLowerCase().endsWith('.json'))) {
+        errors.push(`parts[${i}].roi must be the path of a Spirula ROI region .json or null`);
+      }
+      if (p.roiOutline !== undefined && p.roiOutline !== null && (typeof p.roiOutline !== 'string' || !p.roiOutline || p.roiOutline.length > 200)) {
+        errors.push(`parts[${i}].roiOutline must be an outline name or null`);
+      }
+      if (p.roiOutlines !== undefined && p.roiOutlines !== null
+        && (!Array.isArray(p.roiOutlines) || p.roiOutlines.length > 64 || !p.roiOutlines.every((n) => typeof n === 'string' && n && n.length <= 200))) {
+        errors.push(`parts[${i}].roiOutlines must be a list of outline names or null`);
+      }
     });
     parts = raw.parts.map((p) => {
       const out = { ...p, enabled: p?.enabled !== false };
       if (out.label === null || out.label === '') delete out.label;
+      if (out.partitionPart === null) delete out.partitionPart;
+      if (out.roi === null || out.roi === '') delete out.roi;
+      const outlines = outlinesOf(out);
+      delete out.roiOutline;
+      if (outlines.length) out.roiOutlines = outlines;
+      else delete out.roiOutlines;
       return out;
     });
     if (!errors.length && parts.every((p) => !p.enabled)) warnings.push('every part is disabled');
+  }
+  const partition = raw.partition ?? null;
+  if (partition !== null && (typeof partition !== 'string' || !partition.toLowerCase().endsWith('.json'))) {
+    errors.push('"partition" must be the path of a Spirula partition.json or null');
+  } else if (partition === null && parts.some((p) => Number.isInteger(p.partitionPart))) {
+    warnings.push('parts have a partitionPart but the scene has no "partition": they are built uncropped');
+  }
+  const roi = raw.roi ?? null;
+  if (roi !== null && (typeof roi !== 'string' || !roi.toLowerCase().endsWith('.json'))) {
+    errors.push('"roi" must be the path of a Spirula ROI region .json or null');
+  } else if (roi === null && parts.some((p) => !p.roi && outlinesOf(p).length)) {
+    warnings.push('parts have roiOutlines but neither they nor the scene have a "roi" file: they are built uncropped');
   }
   let transform = null;
   try {
@@ -558,8 +671,11 @@ export function validateScene(raw) {
     if (!Array.isArray(buildOptions.extraFlags) || !buildOptions.extraFlags.every((f) => typeof f === 'string' && /^--[a-z][a-z0-9-]*(=[A-Za-z0-9.,_-]*)?$/.test(f))) {
       errors.push('buildOptions.extraFlags must be build-lod flags like "--within-dist=0,0,0,40"');
     } else {
-      for (const f of buildOptions.extraFlags) if (RESERVED_EXTRA.some((re) => re.test(f))) errors.push(`buildOptions.extraFlags: ${f} conflicts with the fixed scope flags`);
+      for (const f of buildOptions.extraFlags) if (RESERVED_EXTRA.some((re) => re.test(f))) errors.push(`buildOptions.extraFlags: ${f} conflicts with the fixed scope flags (set buildOptions.maxSh for the SH degree)`);
     }
+  }
+  if (buildOptions.maxSh !== undefined && !(Number.isInteger(buildOptions.maxSh) && buildOptions.maxSh >= 0 && buildOptions.maxSh <= 3)) {
+    errors.push('buildOptions.maxSh must be 0, 1, 2 or 3 (spherical-harmonics degree kept by build-lod)');
   }
 
   const build = raw.build ?? null;

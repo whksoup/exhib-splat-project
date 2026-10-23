@@ -38,6 +38,7 @@ import { PartsPanel } from "./partsPanel";
 import { previewCapBytes, sceneCamera, sceneModels, sceneNavigation, type PartFileInfo, type SceneModels } from "./sceneConfig";
 import { meshTRSFor, sceneTransformFromTRS } from "./sceneMath";
 import { SceneStore } from "./store";
+import { viewSliders } from "./viewSliders";
 
 const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
 
@@ -98,7 +99,7 @@ export class SceneEditor {
     // The scene transform lives on the root, from the first frame; hidden parts stay hidden when reloaded.
     this.applyPreview();
     viewer.onMeshCreated = (m) => {
-      if (m.id && this.hidden.has(m.id)) m.mesh.visible = false;
+      if (m.id && this.hidden.has(m.id)) m.object.visible = false;
     };
 
     // --- top bar
@@ -126,6 +127,7 @@ export class SceneEditor {
         if (this.align.active && viewer.rig.mode === "fly") this.align.setActive(false);
         viewer.rig.toggleMode();
       }),
+      viewSliders(viewer),
       el("span", { className: "spacer" }),
       this.buildPill,
       this.saveButton,
@@ -643,7 +645,8 @@ export class SceneEditor {
       ["Shift+N", "Show / hide colliders"],
       ["F", "Walk: toggle fly (if allowed)"],
       ["P", "Performance overlay"],
-      ["R", "Reset fps measurement"],
+      ["R", "Reset fps measurement and hitch log"],
+      ["K", "Orbit benchmark (10 s)"],
       ["Esc", "Leave a text field / release the mouse"],
     ];
     return dialog({

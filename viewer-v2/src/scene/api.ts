@@ -65,6 +65,29 @@ export interface BuildStatus {
   external: { scene: string; pid: number; startedAt: string } | null;
 }
 
+/** One outline saved in a Spirula ROI region file (its editor block). */
+export interface RoiOutline {
+  name: string;
+  /** Enabled in the ROI editor when the file was saved. */
+  enabled: boolean;
+  /** A build can crop to it; otherwise `error` says why. */
+  usable: boolean;
+  error?: string;
+}
+
+/** A region file in assets/roi/<scene>/ as the dev server reads it. */
+export interface RoiFileInfo {
+  path: string;
+  bytes: number;
+  type: string | null;
+  /** Why the top-level region does not read (null: it does). */
+  topLevel: string | null;
+  outlines: RoiOutline[];
+  /** Upload only: a previous copy was replaced, and these outlines' geometry changed. */
+  replaced?: boolean;
+  changedOutlines?: string[];
+}
+
 async function call<T>(url: string, init?: RequestInit): Promise<T> {
   let res: Response;
   try {
@@ -101,6 +124,11 @@ export const api = {
   navFiles: (name: string) => call<{ files: NavFile[] }>(`/__scenes/nav?${q({ name })}`).then((r) => r.files),
   uploadNavFile: (name: string, file: string, blob: Blob) =>
     call<{ file: string; bytes: number }>(`/__scenes/nav-file?${q({ name, file })}`, { method: "POST", body: blob }),
+  /** Outlines of a region file (path = assets/roi/<scene>/<file>.json). */
+  roi: (name: string, path: string) => call<RoiFileInfo>(`/__scenes/roi?${q({ name, path })}`),
+  /** Copy a dropped region file to assets/roi/<scene>/<file> (scene.json is not touched). */
+  uploadRoi: (name: string, file: string, blob: Blob) =>
+    call<RoiFileInfo>(`/__scenes/roi?${q({ name, file })}`, { method: "POST", body: blob }),
   build: (name: string, o: { force?: boolean; parts?: string[] } = {}) => post<BuildStatus>("/__build", { name, ...o }),
   buildStatus: () => call<BuildStatus>("/__build/status"),
   cancelBuild: () => post<{ ok: boolean }>("/__build/cancel", {}),

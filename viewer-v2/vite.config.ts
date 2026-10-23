@@ -12,12 +12,16 @@ const repoRoot = path.resolve(here, "..");
 const sparkPkg = JSON.parse(
   fs.readFileSync(path.join(here, "node_modules", "@sparkjsdev", "spark", "package.json"), "utf8"),
 ) as { version: string };
+const gslPkg = JSON.parse(
+  fs.readFileSync(path.join(here, "node_modules", "gaussian-splat-lite", "package.json"), "utf8"),
+) as { version: string };
 
 export default defineConfig({
   // Relative base so the built viewer works from any CDN sub-path.
   base: "./",
   define: {
     __SPARK_VERSION__: JSON.stringify(sparkPkg.version),
+    __GSL_VERSION__: JSON.stringify(gslPkg.version),
   },
   plugins: [
     modelFilesPlugin({
@@ -47,6 +51,8 @@ export default defineConfig({
       allow: [here, path.join(repoRoot, "shared")],
     },
   },
+  // GSL loads its worker and WASM by URL relative to its own modules; pre-bundling would move them.
+  optimizeDeps: { exclude: ["gaussian-splat-lite"] },
   preview: {
     host: true,
     port: 4174,

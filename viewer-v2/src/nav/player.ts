@@ -85,6 +85,8 @@ export class PlayerController {
   private spawn: NavPose;
   /** Set when the player fell below killY and was respawned (for the HUD). */
   respawnCount = 0;
+  /** Multiplies walk / run / fly speeds (the camera speed slider); jumps and gravity are not scaled. */
+  speedScale = 1;
 
   constructor(
     public world: CollisionWorld,
@@ -229,12 +231,12 @@ export class PlayerController {
     _wish.set(-Math.sin(yawR) * my + Math.cos(yawR) * mx, 0, -Math.cos(yawR) * my - Math.sin(yawR) * mx);
 
     if (this._mode === "fly") {
-      const speed = this.cfg.flySpeed * (input.run ? this.cfg.flyRunMultiplier : 1);
+      const speed = this.cfg.flySpeed * (input.run ? this.cfg.flyRunMultiplier : 1) * this.speedScale;
       _wish.multiplyScalar(speed);
       _wish.y = THREE.MathUtils.clamp(input.moveUp, -1, 1) * speed;
       this.velocity.lerp(_wish, 1 - Math.exp(-dt * 10));
     } else {
-      const speed = input.run ? this.cfg.runSpeed : this.cfg.walkSpeed;
+      const speed = (input.run ? this.cfg.runSpeed : this.cfg.walkSpeed) * this.speedScale;
       _wish.multiplyScalar(speed);
       const k = 1 - Math.exp(-dt * (this.grounded ? 14 : 2));
       this.velocity.x += (_wish.x - this.velocity.x) * k;

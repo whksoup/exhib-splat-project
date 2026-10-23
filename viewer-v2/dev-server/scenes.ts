@@ -14,6 +14,10 @@
  *   GET  /__scenes/info?name=<n>            per part: source size, splat count (.ply header), .rad on disk
  *   GET  /__scenes/nav?name=<n>             files in scenes/<n>/nav/
  *   POST /__scenes/nav-file?name=<n>&file=<f>  raw body -> scenes/<n>/nav/<f> (plan exports)
+ *   GET  /__scenes/roi?name=<n>&path=<p>    a region file's outlines (p = assets/roi/<n>/<file>.json)
+ *   POST /__scenes/roi?name=<n>&file=<f>    raw body = Spirula ROI region .json -> assets/roi/<n>/<f>
+ *                                           (validated; replaces a previous copy and reports which
+ *                                           outlines changed). scene.json is not touched: the client sets `roi`.
  *   GET  /__scene-source/<n>/<part>/<file>  a part's source file, Range-served (unbuilt preview)
  *   POST /__build             {name, force?, parts?}  run pipeline/build-scene.mjs (one at a time)
  *   GET  /__build/status                    {running, name, progress, parts, result, external, ...}
@@ -32,10 +36,12 @@ import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Plugin } from "vite";
 import {
+  ROI_DIR,
   SCENE_FILE,
   SOURCE_EXTS,
   buildSummary,
   createScene,
+  isSafeRoiPath,
   isSafeSceneRelPath,
   isSafeSourcePath,
   isValidPartId,
@@ -47,6 +53,7 @@ import {
   transformChangedSinceBuild,
   validateScene,
 } from "../../shared/scene-schema.mjs";
+import { parseRoi } from "../../pipeline/lib/roi.mjs";
 import { serveFile } from "./modelFiles.ts";
 
 type Next = (err?: unknown) => void;
@@ -55,6 +62,7 @@ type Json = Record<string, unknown>;
 const NAV_FILE_RE = /^[A-Za-z0-9_-][A-Za-z0-9._-]{0,99}\.(png|json|glb)$/;
 const MAX_SCENE_BYTES = 2 * 1024 * 1024;
 const MAX_NAV_BYTES = 512 * 1024 * 1024;
+const MAX_ROI_BYTES = 4 * 1024 * 1024;
 const MAX_LOG_LINES = 4000;
 /** Global build lock written by pipeline/lib/scene-files.mjs acquireBuildLock (keep in sync). */
 const BUILD_LOCK_FILE = ".build.lock";
@@ -95,6 +103,43 @@ async function readJson(req: IncomingMessage, max = MAX_SCENE_BYTES): Promise<Js
 
 function httpError(status: number, message: string): Error {
   return Object.assign(new Error(message), { status });
+}
+
+interface RoiOutlineInfo {
+  name: string;
+  /** Enabled in the ROI editor when the file was saved (part of its top-level region). */
+  enabled: boolean;
+  /** Can be cropped to (a prism with op "add"); otherwise `error` says why. */
+  usable: boolean;
+  error?: string;
+  digest?: string;
+}
+
+/**
+ * What the editor needs from a Spirula ROI region file: its outlines (each
+ * checked with the pipeline's own reader, so the editor offers exactly what a
+ * build can crop to) and whether the top-level region reads.
+ */
+function describeRoi(json: unknown, name: string): { type: string | null; topLevel: string | null; outlines: RoiOutlineInfo[] } {
+  const j = json as { type?: unknown; editor?: { shapes?: { name?: unknown; enabled?: unknown }[] } };
+  const shapes = Array.isArray(j?.editor?.shapes) ? j.editor.shapes : [];
+  const outlines = shapes
+    .filter((s) => typeof s?.name === "string" && s.name)
+    .map((s): RoiOutlineInfo => {
+      const outlineName = s.name as string;
+      try {
+        return { name: outlineName, enabled: s.enabled === true, usable: true, digest: parseRoi(json as object, name, [outlineName]).digest };
+      } catch (e) {
+        return { name: outlineName, enabled: s.enabled === true, usable: false, error: (e as Error).message };
+      }
+    });
+  let topLevel: string | null = null;
+  try {
+    parseRoi(json as object, name);
+  } catch (e) {
+    topLevel = (e as Error).message;
+  }
+  return { type: typeof j?.type === "string" ? j.type : null, topLevel, outlines };
 }
 
 function writeAtomic(file: string, text: string): void {
@@ -223,6 +268,15 @@ export function scenesPlugin(options: ScenesPluginOptions): Plugin {
     } catch {
       return null;
     }
+  }
+
+  /** assets/roi/<scene>/<file>.json -> absolute path (throws 400 for anything else). */
+  function resolveRoi(rp: string): string {
+    if (!isSafeRoiPath(rp)) throw httpError(400, `invalid region path "${rp}" (expected ${ROI_DIR}/<scene>/<file>.json)`);
+    const root = path.resolve(repoRoot, ...ROI_DIR.split("/"));
+    const abs = path.resolve(repoRoot, ...rp.split("/"));
+    if (!abs.startsWith(root + path.sep)) throw httpError(400, "path escapes the roi folder");
+    return abs;
   }
 
   /** A part's built .rad inside scenes/<n>/build/, if it is really there. */
@@ -503,6 +557,13 @@ export function scenesPlugin(options: ScenesPluginOptions): Plugin {
         const bad = added.find((p) => !known.has(p.source));
         if (bad) throw httpError(400, `part "${bad.id}": source must be one of the files under ${rel(sourcesRoot)}/ (got "${bad.source}")`);
       }
+      // A region file set or changed here must be one the editor uploaded (assets/roi/<scene>/...).
+      const roiPaths = (s: Scene) => new Set([s.roi, ...s.parts.map((x) => x.roi)].filter((x): x is string => typeof x === "string"));
+      const oldRoi = roiPaths(current);
+      for (const rp of roiPaths(scene)) {
+        if (oldRoi.has(rp)) continue;
+        if (!fs.existsSync(resolveRoi(rp))) throw httpError(400, `region file not found: ${rp}`);
+      }
       // Build info is written by build-scene.mjs only; never let a stale client overwrite it.
       const saved = { ...scene, build: current.build, buildAttempt: current.buildAttempt, updatedAt: new Date().toISOString() };
       writeAtomic(path.join(dir, SCENE_FILE), stringifyScene(saved));
@@ -532,6 +593,59 @@ export function scenesPlugin(options: ScenesPluginOptions): Plugin {
       fs.mkdirSync(nav, { recursive: true });
       fs.writeFileSync(target, buf);
       reply(res, 200, { ok: true, file: rel(target), bytes: buf.length });
+      return true;
+    }
+    if (p === "/__scenes/roi" && m === "GET") {
+      sceneDir(q.get("name"));
+      const rp = q.get("path") ?? "";
+      const abs = resolveRoi(rp);
+      if (!fs.existsSync(abs)) throw httpError(404, `region file not found: ${rp}`);
+      let json: unknown;
+      try {
+        json = JSON.parse(fs.readFileSync(abs, "utf8"));
+      } catch (e) {
+        throw httpError(422, `${rp} is not valid JSON: ${(e as Error).message}`);
+      }
+      reply(res, 200, { ok: true, path: rp, bytes: fs.statSync(abs).size, ...describeRoi(json, path.basename(abs)) });
+      return true;
+    }
+    if (p === "/__scenes/roi" && m === "POST") {
+      const name = q.get("name");
+      const dir = sceneDir(name);
+      if (!fs.existsSync(path.join(dir, SCENE_FILE))) throw httpError(404, "scene not found");
+      // Keep the dropped file's name (readable in scene.json), made safe.
+      const file = (q.get("file") ?? "").replace(/^.*[\\/]/, "").replace(/[^A-Za-z0-9._ -]+/g, "_").replace(/^[._ -]+/, "");
+      const rp = `${ROI_DIR}/${name}/${file}`;
+      if (!isSafeRoiPath(rp)) throw httpError(400, "invalid file name (expected <name>.json)");
+      const buf = await readBody(req, MAX_ROI_BYTES);
+      let json: unknown;
+      try {
+        json = JSON.parse(buf.toString("utf8"));
+      } catch (e) {
+        throw httpError(400, `${file} is not valid JSON: ${(e as Error).message}`);
+      }
+      if (!json || typeof json !== "object" || Array.isArray(json)) throw httpError(400, `${file} is not a JSON object`);
+      const info = describeRoi(json, file);
+      if (!info.outlines.some((o) => o.usable) && info.topLevel) throw httpError(422, `${file} holds no usable region: ${info.topLevel}`);
+      const abs = resolveRoi(rp);
+      // Which outlines the replaced copy had with other geometry (parts using them rebuild).
+      let replaced = false;
+      const changedOutlines: string[] = [];
+      if (fs.existsSync(abs)) {
+        replaced = true;
+        try {
+          const before = describeRoi(JSON.parse(fs.readFileSync(abs, "utf8")), file);
+          for (const o of info.outlines) {
+            const b = before.outlines.find((x) => x.name === o.name);
+            if (b && b.digest !== o.digest) changedOutlines.push(o.name);
+          }
+        } catch {
+          /* the old copy was unreadable: nothing to compare */
+        }
+      }
+      fs.mkdirSync(path.dirname(abs), { recursive: true });
+      writeAtomic(abs, buf.toString("utf8"));
+      reply(res, 200, { ok: true, path: rp, bytes: buf.length, replaced, changedOutlines, ...info });
       return true;
     }
     if (p.startsWith("/__scene-source/") && (m === "GET" || m === "HEAD")) {

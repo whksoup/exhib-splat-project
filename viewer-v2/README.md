@@ -84,7 +84,7 @@ Esc leaves the field. The browser warns before you leave with unsaved changes.
 **Start to finish**
 
 0. **Parts.** Put Spirula Studio's part exports in a folder such as `assets/source_ply/parts/<scan>/`. If only the merged file exists, split it with the scan's partition: `node pipeline/partition-split.mjs <merged.ply> --partition assets/partitions/<scan>/partition.json --out-dir assets/source_ply/parts/<scan>` (see `../pipeline/README.md`).
-1. **New scene.** On the scene list click **+ New scene**, tick one file or every part of the scan (files under `assets/source_ply/`, subfolders included) and enter a name (letters, digits, `_`, `-`; checked as you type; several parts in one folder suggest the folder name). Each file becomes a part. The editor opens it. An unbuilt scene previews the source files themselves, loaded whole (no LoD streaming), but only while the unbuilt sources add up to at most **1.5 GB** (`?previewCapGB=<n>` changes it). Above that nothing is auto-loaded: a banner says "Build to preview", and **Parts** (`L`) can preview single parts that fit. This applies to single-source scenes too (the 4.9 GB merged file is never pulled into the browser).
+1. **New scene.** On the scene list click **+ New scene**, tick one file or every part of the scan (files under `assets/source_ply/`, subfolders included) and enter a name (letters, digits, `_`, `-`; checked as you type; several parts in one folder suggest the folder name). Each file becomes a part. The editor opens it. An unbuilt scene previews the source files themselves, loaded whole (no LoD streaming), but only while the unbuilt sources add up to at most **3 GB** (`?previewCapGB=<n>` changes it). Above that nothing is auto-loaded: a banner says "Build to preview", and **Parts** (`L`) can preview single parts that fit. This applies to single-source scenes too (the 4.9 GB merged file is never pulled into the browser).
 2. **Align.** Press `G`. Rotate (for a Z-up scan: X **−90°**), scale, then fly to the floor spot that should become the origin and press `O` (details under Align mode). The transform you edit is always relative to the original sources and applies to every part; bounds, **Centre on origin** and the floor guess sample all loaded parts.
 3. **Save.** `Ctrl+S` writes `scene.json` (`POST /__scenes/save`; the server keeps the build fields, which only the pipeline writes).
 4. **Build.** Click **Build**. With unsaved changes it offers **Save and build**. Parts are built one after another (one `build-lod` at a time, so RAM follows the largest part); parts whose source, transform and flags are unchanged are reused, and a build with nothing to do finishes at once (the editor then offers **Rebuild all**). The build panel (`B`) shows the overall progress bar, one row per part (queued / building with its percentage / built with time and `build-lod` peak memory / unchanged / failed) and the live log, with **Cancel**. When it finishes the editor loads the new `.rad` files in place (unchanged parts are not reloaded) and the "Transform changed since last build" banner goes away. A failure keeps the previous build. The same build runs from a terminal: `build-scene.bat <name> [--force] [--part <id>]` (repo root) or `node pipeline/build-scene.mjs <name>`; the editor notices command-line builds (through `scenes/.build.lock`) and reloads when they finish. One build runs at a time.
@@ -149,23 +149,28 @@ inside `scenes/<name>/` or `assets/source_ply/`.
 
 | Param | Example | Meaning |
 | --- | --- | --- |
+| `renderer` | `spark` / `gsl` / `gsl-webgl` | Splat renderer. **Default `spark`.** `gsl` uses [Gaussian Splat Lite](https://github.com/WilliamLiu-1997/Gaussian-Splat-Lite) on three's `WebGPURenderer` (GPU sorting; it falls back to WebGL2 without WebGPU), and `gsl-webgl` forces that renderer's WebGL2 backend. GSL streams the same `.rad` + `.radc` builds, one `RadStreamScheduler` per part. The total budget (`budget` × `lodScale`, with the same defaults as Spark) is re-split between parts 4 times a second: a part that draws well under its share keeps what it uses plus 25%, and the rest goes to the parts that are capped, by how much of the screen their bounds cover (`src/gsl.ts`). On the GSL path, Align and Plan are off, plain files load whole without LoD, and `pages`, `extSplats`, `lodRenderScale` and `meshLodScale` don't apply. |
+| `gslCooldown`, `gslLoads`, `gslFade`, `gslMemMB`, `gslShare` | `gslCooldown=10000&gslMemMB=4000` | GSL streaming, per part: how long unused detail stays cached in ms (**default 10000**, against GSL's own 2000: on HighRezOculus it cut orbit hitches by a quarter to a third and re-downloads by ~0.4 GB, for ~0.5 GB more GPU memory; see `../reports/benchmarks/2026-10-23-spark-vs-gsl/`), simultaneous loads (4), detail cross-fade in ms (200; 0 switches instantly), the CPU and GPU cache cap in MB (default: room for the whole budget, at least 1 GiB; it also caps how many pages stay resident), and `coverage` to split the budget by screen coverage only. In a `config` file: `gsl: {cooldownMs, maxConcurrentLoads, fadeDurationMs, memMB, share}`. |
 | `model` | `/models/office/v1/office-lod.rad` | Model URL. Repeat it to load several zones, one `SplatMesh` each. |
 | `paged` | `0` / `1` | Paged streaming. On by default for `.rad`. `0` loads the whole `.rad` at once. |
 | `lod` | `1` / `quality` | Plain files only. Builds an LoD tree in the browser so budgets apply. Rough cost: 1â€“3 s per 1M splats. |
 | `type` | `ply`, `spz`, `pcsogszip`, `rad` | Forces the file type when the extension is misleading. |
 | `budget` | `1500000`, `1.5M`, `500k` | Base splat budget, sent to `SparkRenderer.lodSplatCount`. Leave it unset to get Spark's platform default. |
-| `lodScale` | `0.8` | Budget multiplier, sent to `SparkRenderer.lodSplatScale`. This is the main tuning knob. |
+| `lodScale` | `0.8` | Budget multiplier, sent to `SparkRenderer.lodSplatScale`. This is the main tuning knob. **Default 2 on desktop (5M splats), 1 on phones.** In the editor the top bar's **Detail** slider sets it live and remembers it per browser; this URL parameter overrides the remembered value. |
+| `speed` | `0.5` | Camera movement multiplier: fly and walk speeds, plus orbit pan and zoom. Turning is not scaled. **Default 0.2.** In the editor the top bar's **Speed** slider (0.02–2×) sets it live and remembers it per browser. |
+| `pages` | `768` | Size of Spark's streaming pool in 65,536-splat pages (`SparkRenderer.maxPagedSplats`). It is allocated once, when the first streamed part loads. Chunks stream whole, so far more splats are resident than drawn (HighRezOculus used 201 of 256 pages for a 2.5M frontier). **Default on desktop: 256 × Detail, from 256 to 768 pages** (512 at the default 2×); phones keep Spark's default. With full-precision splats each splat takes 48 B at SH 1 and 96 B at SH 3. A Detail that needs a bigger pool shows "reload" in the top bar. |
 | `device` | `desktop`, `iphone`, `android`, `quest`, `visionpro` | Forces a profile: that profile's budget and pixel-ratio cap. |
 | `pixelRatio` | `1` | Renderer pixel ratio. By default it is `devicePixelRatio`, capped at 2 on desktop, 1.5 on phones and 1 on Quest. |
 | `maxStdDev` | `sqrt5`, `2.236` | `SparkRenderer.maxStdDev`. The default is âˆš8. The scope suggests âˆš5 for Quest. |
 | `lodRenderScale` | `2` | `SparkRenderer.lodRenderScale`, the minimum splat size in pixels. |
-| `extSplats` | `1` | `pagedExtSplats` for paged meshes, `extSplats` for plain files. Fixes striping on large coordinates. |
+| `extSplats` | `0` / `1` | `pagedExtSplats` for paged meshes, `extSplats` for plain files: 32-byte splats with float32 centres. **On by default on desktop, off on phones.** The compact 16-byte format stores centres as float16, at 1/1024 relative steps. Spirula scans have splats of about 0.0002 units at coordinates of 1–2, smaller than that step, so with `extSplats=0` surfaces show diagonal striping. Costs twice the GPU memory per splat. |
 | `meshLodScale` | `1.5` | `SplatMesh.lodScale` for each mesh. |
 | `cam`, `target`, `fov` | `cam=0,1.6,4&target=0,1.2,0&fov=60` | Start viewpoint. With no viewpoint, plain files are auto-framed. Paged files start at `0,0,3` and look at the origin. |
 | `controls` | `orbit` / `fly` / `walk` | Starting camera mode. Press `C` to cycle. `walk` is first-person collision navigation (see Navigation). |
 | `nav`, `collision`, `allowFly`, … | `nav=walk&collision=/nav/x/collision.glb` | Navigation overrides. See Navigation. |
 | `overlay` | `0` | Hides the performance overlay at start. Press `P` to toggle it. |
 | `settleMs` | `1500` | How long Spark must stay idle before LoD counts as "settled". |
+| `bench` | `10` | Runs the orbit benchmark for this many seconds once LoD first settles. See Performance overlay. |
 | `config` | `configs/example.json` | JSON file holding any of the above, plus `models: [{url, paged, lod, fileType, lodScale}]`. URL params override it. |
 
 Models are rendered exactly in their file coordinates: no flip, rotation, offset or scale. Orientation and origin are set in LichtFeld before export, or with [Align mode](#align-mode-rotation-scale-origin) and a bake, so collision meshes and plan exports line up 1:1 with the splats.
@@ -176,7 +181,7 @@ Example: `?config=configs/example.json&lodScale=0.7`.
 
 - **Orbit** (default). Mouse: left-drag rotates, right-drag pans, wheel zooms. Touch: one finger rotates, two fingers pinch and pan.
 - **Fly** (Spark's `SparkControls`). Move with WASD/arrows, Q/E or PageUp/PageDown for down/up. Drag to look. On touch, drag to look and use two fingers to slide. Gamepads also work.
-- Keys: `P` toggles the overlay, `C` cycles orbit / fly / walk, `R` resets the fps measurement window, `V` returns to the start view, `M` plan mode, `G` Align mode, `L` parts panel, `N` navigation panel, `B` build panel, `Shift+N` colliders, `Ctrl+S` save, `?` shortcut list. Shortcuts are ignored while typing in a field.
+- Keys: `P` toggles the overlay, `C` cycles orbit / fly / walk, `R` resets the fps measurement window and hitch log, `K` runs the orbit benchmark, `V` returns to the start view, `M` plan mode, `G` Align mode, `L` parts panel, `N` navigation panel, `B` build panel, `Shift+N` colliders, `Ctrl+S` save, `?` shortcut list. Shortcuts are ignored while typing in a field.
 
 ## Plan export
 
@@ -402,15 +407,39 @@ The player only advances while `walk` controls are active.
 | Line | What it shows |
 | --- | --- |
 | FPS / Frame | Rolling window of about 240 frames: average fps, 1% low (average of the slowest 1% of frames), frame time. |
+| GPU | GPU time of `renderer.render()` over the last 5 s (median, p95), from `EXT_disjoint_timer_query_webgl2`. Shows headroom while fps is pinned at the refresh rate. `n/a` where the extension is missing (Safari, most phones). |
 | Measured | Same stats since the last **Reset fps stats** (`R`). Press it once LoD has settled, then walk the test route. |
+| Hitches | Frames at least twice the typical frame time and 20 ms over it (at 60 Hz one dropped frame is not a hitch, two are), counted since the last reset. The last one is tagged with what was going on: `upload Np Xms` (streamed pages uploaded on the main thread just before it), `fetching`, `lod` (traversal in flight), `sort`, `moving`. The last 50 are in the results JSON. |
 | Splats | `SparkRenderer.activeSplats` (splats drawn this frame) against the effective budget, `(lodSplatCount ?? defaultSplatTarget()) * lodSplatScale`, and where that budget came from. |
+| Parts | Splats each part draws from its current LoD selection (0 when hidden). Sums can exceed `Splats`, which counts after the sort drops splats behind the camera. |
+| LoD upd | LoD updates per second and the worker-side traversal time (`SparkRenderer.lastTraverseTime`). Detail can only follow the camera this often: a 200 ms traversal means detail lags motion by at least that much. |
+| Sort | Sorts per second, worker sort + ordering upload time, and the GPU depth readback that precedes each sort. |
+| Pager / Upload | Paged (.rad) streaming: pages resident out of the pool, chunk fetches in flight, chunks waiting to upload, chunks the current LoD selection wants but doesn't have yet (`missing`, the streaming backlog), and main-thread page-upload time. |
+| Bench | Summary of the last orbit benchmark (below). |
 | Device | Detected or forced profile and the pixel ratio in use. |
 | 1st splat | Time from navigation start to the first rendered frame with `activeSplats > 0`. |
 | LoD settled | Start of the first stretch of at least `settleMs` with no outstanding LoD work. See below. `(moved first)` means the camera moved before settling, so the number isn't "at the start viewpoint". |
 | Network / Range | Model requests and MB. Range shows `ok` (206) or `ignored` (200): a streaming problem. |
 
+**Orbit bench** (`K`, or `?bench=<seconds>` to run once after LoD first
+settles) circles the camera around the current look-at point at a constant
+radius and height for 10 s, then puts the view back. Hand-driven orbits vary
+in speed and path, so use this to compare knobs, e.g. the same scene with
+`&bench=10&pixelRatio=1` against `&bench=10&budget=1M`. The result (fps,
+1% low, GPU ms, traverse and sort times, LoD update rate, splats, hitches)
+shows in the overlay and the results JSON (`diagnostics.benchmark`), and is
+logged to the console. From the console: `await bench({ seconds: 20, turns: 2 })`.
+`window.viewer` is the live `Viewer` for anything else.
+
+The Spark timings come from wrapping a few private `SparkRenderer` /
+`SplatPager` methods (`updateLodInstances`, `driveSort`, `readbackDepth`,
+`processUploads`), because Spark 2.3.1 has no timing API. If a Spark upgrade
+renames them, the overlay prints `! Spark internals not found: ...` and those
+lines stay empty.
+
 **Copy results JSON** copies a full snapshot for `reports/`: device, GPU, UA,
-budget settings, timings, network, fps windows and camera pose. On plain-http
+budget settings, timings, network, fps windows, the diagnostics above
+(`diagnostics`: GPU, Spark, pager, parts, recent hitches, last benchmark) and camera pose. On plain-http
 LAN pages the Clipboard API is unavailable, so it falls back to
 `execCommand('copy')` and, failing that, opens a text box you can select from.
 **Save to reports/** only appears on the dev server. It writes
@@ -428,8 +457,35 @@ LoD is "settled" once this has held for `settleMs`.
 **Caveats.**
 
 - Plain files are downloaded inside a Spark worker, so their bytes come from `SplatMesh` `onProgress`, not Resource Timing.
-- fps is capped at the display refresh rate.
+- fps is capped at the display refresh rate. Use the GPU line for headroom.
 - Background or hidden tabs throttle `requestAnimationFrame`, which makes their numbers meaningless.
+
+## Publishing online (Cloudflare)
+
+The online copy is a static site: the viewer built with `VITE_STATIC=1` (view-only,
+no editor, Gaussian Splat Lite by default; `?renderer=spark` switches back) plus
+the built scenes. It lives at
+https://oculussplat-test.exhib-splat-project.workers.dev/?scene=HighRezOculus.
+
+To update it after changing the model or the code:
+
+1. Rebuild the scene if the model changed: **Build** in the editor
+   (`?scene=<name>`), or `build-scene.bat` / `node ../pipeline/build-scene.mjs`.
+   Wait for the build to finish with status ok (the scene must have no unbuilt parts).
+2. Assemble the site (in `viewer-v2/`), naming every scene that should be online;
+   scenes not named are dropped from the site:
+   `npm run publish:static -- --scene HighRezOculus` (add `--scene <name>` per scene;
+   `--skip-build` reuses the last viewer build when only the scene changed).
+   This writes `../publish/site/` (hard links, no extra disk).
+3. Deploy: `npm run deploy:static`. It runs `npx wrangler login` the first time.
+   Only changed files upload: a code-only change is a few files and takes seconds,
+   while a rebuilt scene re-uploads every chunk (~2.8 GB for HighRezOculus, ~5 min).
+4. Open the page and check it with the stats overlay (`P`): `Renderer` shows
+   GSL and the error list is empty.
+
+Chunk files (`.radc`) keep their names across rebuilds, so the viewer adds the
+scene's build time (`?v=`) to every scene file URL; a returning visitor never
+mixes a new header with chunks cached from the previous build.
 
 ## Testing on a phone or Quest over the LAN
 
@@ -461,6 +517,8 @@ src/device.ts             device detection (Spark's isOculus/isAndroid/isIos hel
 src/viewer.ts             WebGLRenderer(antialias:false) + SparkRenderer + SplatMesh(es), render loop, settle signal
 src/controls.ts           orbit (three OrbitControls) / fly (SparkControls) camera rig
 src/metrics.ts            frame stats, load timeline, Resource Timing network tracker
+src/diagnostics.ts        Spark internals (traverse/sort/readback/uploads, pager), GPU timer, hitch log
+src/bench.ts              scripted orbit benchmark (K, ?bench=, window.bench)
 src/preflight.ts          per-model reachability + Range check before Spark sees the URL
 src/overlay.ts            perf overlay, copy/save results, model picker
 src/results.ts            results JSON schema

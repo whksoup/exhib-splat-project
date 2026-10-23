@@ -43,7 +43,16 @@ fs.writeFileSync(tagFile, SPARK_TAG + '\n');
 
 const cargo = checkDeps().find((d) => d.name === 'cargo');
 const cargoCmd = /found at (.+), not on PATH/.exec(cargo.detail)?.[1] || 'cargo';
-sh(cargoCmd, ['build', '--release', '--manifest-path', BUILD_LOD_MANIFEST]);
+// build-lod builds its LoD tree recursively on the main thread. Windows gives
+// the main thread a 1 MB stack, which a ~10M-splat input overflows
+// (exit 0xC00000FD), so reserve 1 GB there (address space only, committed as used).
+const STACK_FLAGS = '-C link-arg=/STACK:1073741824';
+const env = { ...process.env };
+if (process.platform === 'win32') {
+  const key = 'CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_RUSTFLAGS';
+  env[key] = [env[key], STACK_FLAGS].filter(Boolean).join(' ');
+}
+sh(cargoCmd, ['build', '--release', '--manifest-path', BUILD_LOD_MANIFEST], { env });
 
 if (!fs.existsSync(BUILD_LOD_BIN)) {
   console.error(`Build finished but ${BUILD_LOD_BIN} was not found.`);

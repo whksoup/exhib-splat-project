@@ -169,6 +169,59 @@ of the part bounds equals the merged build's bounds exactly; final splat
 counts 3,939,331 vs 3,939,655. The transform bake (splat-transform, a Node
 process) now has the higher peak, about 0.56 GB almost regardless of part size.
 
+## Cropping Spirula part exports to their region (`scene-partition.mjs`)
+
+Spirula trains each partition part with its own cameras plus a ring of
+neighbouring ones. Those cameras also see the other parts' regions (across
+the room, through glass), so every part export holds a **low-detail copy of
+the other parts**. Overlaid in one scene, those large splats sit on top of the
+other parts' sharp ones and blur them. On OculusV2, about 1.1–1.5% of each
+part's splats lie in another part's region, and they are 5–10× larger than
+the part's own splats.
+
+A scene can name the partition the parts were trained with. The build then
+crops each part to its own region before the transform bake and build-lod. A
+splat is kept only when its nearest partition point carries the part's own
+label, which is the same rule `partition-split.mjs` uses (below).
+
+```sh
+node pipeline/scene-partition.mjs <scene> --partition assets/partitions/<scan>/partition.json [--part <id>=<n>]... [--dry-run]
+node pipeline/scene-partition.mjs <scene> --off
+node pipeline/new-scene.mjs <name> --source ... --partition assets/partitions/<scan>/partition.json
+```
+
+- **scene.json** gets `partition` (the repo-relative partition.json) and a `partitionPart` for each part.
+- **Detecting the part number.** Each part's number is detected by labelling 20,000 sampled splats; a file that is not clearly one part (under 80%) is refused. Use `--part <id>=<n>` to set a part's number by hand. This is the `partition_part` in Spirula's training log.
+- **Crop step.** The crop is a streaming pass into `.build-tmp/_cropped-<part>.ply`, deleted after its part.
+- **Build record.** Each part's build records `crop: { partition, part, partitionBytes, keptSplats, droppedSplats, seconds }`.
+- **Rebuilds.** Changing the partition, a part's number or the `partition.bin` size rebuilds that part. The viewer shows the part as outdated until then.
+- **Seams.** The cut is hard (no overlap margin), as in Spirula's own merge.
+
+## Cropping to a region of interest (`scene-roi.mjs`)
+
+A Spirula ROI training (`--roi-region <dataset>/roi/<name>.json`) reconstructs
+that region, but its export still holds the rest of the scene, faded and at low
+detail. Spirula keeps no per-run copy of the region; the region file is
+overwritten when it is edited.
+
+```sh
+node pipeline/scene-roi.mjs <scene> --roi <dataset>/roi/region6.json [--part <id>]... [--overwrite] [--dry-run]
+node pipeline/scene-roi.mjs <scene> --off [--part <id>]...
+```
+
+- **Snapshot.** A region file outside the repo is copied to `assets/roi/<scene>/` first, and each selected part (all by default) gets `roi` pointing at the copy.
+- **Sanity check.** The command prints the share of each part's sampled splats inside the region.
+- **Crop rule.** The build keeps only splats whose centre is inside the region's top-level prism. That is the outline extruded over `center ± half_height`, read by `lib/roi.mjs`. The `editor` outlines are ignored.
+- **Rotation.** Only near-identity rotations have been seen, so the direction of the rotation is unverified. A rotated region prints a warning.
+- **With a partition.** A part can also have a `partitionPart`. A splat then has to pass both crops.
+- **Rebuilds.** The build records a digest of the region geometry, so editing the region rebuilds the part, while changes to editor-only data do not.
+
+- **Picking outlines.** One region file often holds every variant drawn, as the outlines of its `editor` block, with different ones enabled for each training. `--outline "<name>"` (repeatable) crops to those outlines' union instead of the top-level region. The part records them as `roiOutlines`; an older single `roiOutline` is read as a one-item list. A top-level `union` region (several outlines enabled at once) is read too. Copying a re-saved file compares the whole file, outlines included.
+- **In the editor.** Drop the region `.json` on the Parts panel, or use **Load regions…**. It is copied to `assets/roi/<scene>/` and becomes the scene's `roi`. Each part row then shows the file's outlines as numbered **Areas** checkboxes: tick the ones the part was trained on. A part with none ticked is built whole, and a part's own `roi` overrides the scene's. Dropping a newer save of the same file replaces the copy and names the outlines whose shape changed; parts using those outlines rebuild. A chip outlined in yellow is ticked for more than one part, so that area draws twice.
+- **Splat size reveals the training region, opacity doesn't.** Splats outside the region are drawn with a training weight of 0.0001, so they keep large sizes. In roiTest the median splat size inside vs outside its own outline was 0.1 vs 1.6 mm for ROI1, 0.4 vs 1.6 mm for ROI2 and 0.7 vs 2.0 mm for ROI3. Opacity was misleading.
+
+roiTest: ROI1/2/3 use region6.json Outlines 1/2/3. Kept 480,358 of 970,967, 609,850 of 997,535 and 864,660 of 998,526 splats; 0.2 s of crop per part.
+
 ## Splitting a merged file (`partition-split.mjs`)
 
 Fallback for when only Spirula's merged `.ply` exists. It needs the scan's
@@ -249,7 +302,10 @@ The tests use synthetic files written to the OS temp directory and never touch t
 - **Memory.** `build-lod` decodes the whole input into memory before building the tree. This happens in `process_file_lod_tsplat`, and there is no streaming or out-of-core mode (about 400 B/splat at peak: 2.8M splats peaked at 1.1 GB; the 19.7M-splat `mergedOpenSiliconLab.ply` crashed). Use multi-part scenes (above): each part is built on its own, so peak memory follows the largest part.
 - **Peak memory is best-effort.** On Windows a PowerShell loop samples the kernel's `PeakWorkingSet64` and `PeakPagedMemorySize64` once a second. On Linux the pipeline reads `VmHWM`; on macOS it polls `ps` RSS. Because the Windows counters are peaks kept by the OS, only growth in the final second can be missed. A process that exits in under about 1 second, before PowerShell starts, records `null`.
 - **Recentring** is not automatic. `build-lod` can crop but has no translate option. Use Align mode + `transform.mjs` (above) before the build. In v2.3.1 the RAD file stores centres as f32, but Spark's default paged pool stores them at half precision at runtime, so far-off coordinates stripe. The pipeline only warns about this for now (using the f16 step at the farthest coordinate). The Phase 2 cleanup step must recentre the model before the build.
-- **`--max-sh=1`** drops SH degrees 2 and 3. Whether that is acceptable is still an open visual-check question in the scope.
+- **`--max-sh=1`** (the default) drops SH degrees 2 and 3. Whether that is acceptable is still an open visual-check question in the scope.
+  - **Keeping more SH.** A scene can keep more with `buildOptions.maxSh` (0–3) in `scene.json`, or the **SH** selector at the bottom of the editor's Parts panel. Spirula trains degree 3. Changing it rebuilds every part, because the build-lod flags are part of the reuse check.
+  - **Cost.** SH 3 stores 45 SH values per splat instead of 9, so the SH data on disk grows about 5×. In the viewer's streaming pool each splat takes 96 B instead of 48 B with full-precision splats, about 3.2 GB for the 512-page desktop default.
+  - **What it changes.** SH only adds view-dependent colour (sheen, reflections), not geometric sharpness.
 - **SOG input** works directly, but its quality is capped by PlayCanvas's quantisation. If the source `.ply` is lost and conversion is needed, PlayCanvas `splat-transform` can turn SOG back into `.ply`, but nothing is gained compared with feeding the `.sog` directly.
 - **Windows long paths.** `setup` clones with `core.longpaths=true`. Keep the project path short.
 - **`build-lod` GPU feature.** The default build enables `wgpu`, which is only used by the optional `--cluster-sh`. It compiles on a standard MSVC toolchain, and the pipeline does not use that flag.

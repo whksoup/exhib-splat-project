@@ -1,0 +1,6343 @@
+[
+ {
+  "name": "gsl 5M demand (defaults)",
+  "url": "http://localhost:5174/?scene=HighRezOculus&cam=0,1.6,4&target=0,1.2,0&pixelRatio=1&renderer=gsl",
+  "load": {
+   "status": "settled",
+   "modelRequestMs": 613.5,
+   "firstSplatFrameMs": 800.6000000238419,
+   "settledMs": 4627.399999976158,
+   "activeSplats": 4714712,
+   "budget": 5000000,
+   "networkMB": 0.1,
+   "requests": 12,
+   "errors": [],
+   "gpu": "WebGPU: nvidia blackwell",
+   "parts": [
+    [
+     "Oculus12",
+     159881
+    ],
+    [
+     "Oculus34",
+     837797
+    ],
+    [
+     "Oculus56",
+     1861001
+    ],
+    [
+     "Oculus78",
+     1856033
+    ]
+   ]
+  },
+  "memSettled": {
+   "workingSetMB": 5227,
+   "privateMB": 7345,
+   "gpuDedicatedMB": 2475
+  },
+  "memAfter": {
+   "workingSetMB": 6720,
+   "privateMB": 9785,
+   "gpuDedicatedMB": 3382
+  },
+  "bench": {
+   "kind": "orbit",
+   "renderer": "gsl",
+   "startedAtMs": 12291.899999976158,
+   "seconds": 20,
+   "turns": 1,
+   "target": [
+    0,
+    1.2,
+    0
+   ],
+   "radius": 3.9999999999999996,
+   "height": 0.40000000000000036,
+   "pixelRatio": 1,
+   "drawingBuffer": [
+    1584,
+    805
+   ],
+   "budget": 5000000,
+   "frames": {
+    "frames": 2823,
+    "durationS": 20.004300000000015,
+    "avgFps": 141.11965927325613,
+    "onePctLowFps": 2.8543307086614154,
+    "avgFrameMs": 7.0861849096705685,
+    "p99FrameMs": 144,
+    "maxFrameMs": 1450.2999999999993
+   },
+   "gpuMs": {
+    "n": 161,
+    "median": 0.6494021818181818,
+    "p95": 3.637248,
+    "max": 6.750208000000001
+   },
+   "spark": null,
+   "gsl": {
+    "visibleSplats": 4203260,
+    "residentCpuMB": 3030.2,
+    "residentGpuMB": 2649.5,
+    "downloadedMB": 2091.2,
+    "loadingChunks": 4,
+    "loadProgress": 0.9014084507042254,
+    "peakWasmMB": 1105.3,
+    "lodTimeMs": {
+     "n": 930,
+     "median": 16.399999976158142,
+     "p95": 352.89999997615814,
+     "max": 1484.5
+    }
+   },
+   "memory": {
+    "jsHeapUsedMB": 3505.3,
+    "gslResidentCpuMB": 3030.2,
+    "gslResidentGpuMB": 2649.5
+   },
+   "activeSplats": {
+    "min": 3407125,
+    "avg": 4743200,
+    "max": 7943826
+   },
+   "hitches": 91,
+   "worstHitchMs": 644.2999999999993
+  },
+  "stalls": [],
+  "trace": [
+   {
+    "t": 8,
+    "answerMs": 7,
+    "v": null
+   },
+   {
+    "t": 1016,
+    "answerMs": 4,
+    "v": [
+     240,
+     199354,
+     471,
+     "loading"
+    ]
+   },
+   {
+    "t": 2035,
+    "answerMs": 3,
+    "v": [
+     240,
+     3857809,
+     1834,
+     "loading"
+    ]
+   },
+   {
+    "t": 3041,
+    "answerMs": 25,
+    "v": [
+     240,
+     3504311,
+     2127,
+     "loading"
+    ]
+   },
+   {
+    "t": 4071,
+    "answerMs": 58,
+    "v": [
+     240,
+     4713275,
+     2516,
+     "loading"
+    ]
+   },
+   {
+    "t": 5138,
+    "answerMs": 1,
+    "v": [
+     240,
+     4714712,
+     2527,
+     "loading"
+    ]
+   },
+   {
+    "t": 6145,
+    "answerMs": 1,
+    "v": [
+     240,
+     4714712,
+     2539,
+     "loading"
+    ]
+   },
+   {
+    "t": 7152,
+    "answerMs": 4,
+    "v": [
+     240,
+     4714712,
+     2516,
+     "settled"
+    ]
+   },
+   {
+    "t": 8156,
+    "answerMs": 5,
+    "v": [
+     240,
+     4714712,
+     2526,
+     "settled"
+    ]
+   },
+   {
+    "t": 9163,
+    "answerMs": 3,
+    "v": [
+     240,
+     4714712,
+     2535,
+     "settled"
+    ]
+   },
+   {
+    "t": 10169,
+    "answerMs": 2,
+    "v": [
+     240,
+     4714712,
+     2545,
+     "settled"
+    ]
+   },
+   {
+    "t": 12376,
+    "answerMs": 2,
+    "v": [
+     240,
+     4714712,
+     2533,
+     "settled"
+    ]
+   },
+   {
+    "t": 13384,
+    "answerMs": 660,
+    "v": [
+     240,
+     4768570,
+     2471,
+     "loading"
+    ]
+   },
+   {
+    "t": 15049,
+    "answerMs": 48,
+    "v": [
+     240,
+     4888579,
+     2904,
+     "loading"
+    ]
+   },
+   {
+    "t": 16101,
+    "answerMs": 13,
+    "v": [
+     240,
+     3564145,
+     2981,
+     "loading"
+    ]
+   },
+   {
+    "t": 17120,
+    "answerMs": 142,
+    "v": [
+     240,
+     3623999,
+     2881,
+     "loading"
+    ]
+   },
+   {
+    "t": 18276,
+    "answerMs": 125,
+    "v": [
+     240,
+     3950137,
+     2910,
+     "loading"
+    ]
+   },
+   {
+    "t": 19411,
+    "answerMs": 302,
+    "v": [
+     240,
+     4442796,
+     3070,
+     "loading"
+    ]
+   },
+   {
+    "t": 20715,
+    "answerMs": 2,
+    "v": [
+     240,
+     5002204,
+     2850,
+     "loading"
+    ]
+   },
+   {
+    "t": 21723,
+    "answerMs": 1,
+    "v": [
+     240,
+     6024837,
+     3238,
+     "loading"
+    ]
+   },
+   {
+    "t": 22726,
+    "answerMs": 374,
+    "v": [
+     240,
+     7099269,
+     3804,
+     "loading"
+    ]
+   },
+   {
+    "t": 24106,
+    "answerMs": 169,
+    "v": [
+     240,
+     5039017,
+     4163,
+     "loading"
+    ]
+   },
+   {
+    "t": 25287,
+    "answerMs": 200,
+    "v": [
+     240,
+     5042542,
+     4162,
+     "loading"
+    ]
+   },
+   {
+    "t": 26502,
+    "answerMs": 33,
+    "v": [
+     240,
+     5211697,
+     3967,
+     "loading"
+    ]
+   },
+   {
+    "t": 27539,
+    "answerMs": 57,
+    "v": [
+     240,
+     5047154,
+     3659,
+     "loading"
+    ]
+   },
+   {
+    "t": 28604,
+    "answerMs": 91,
+    "v": [
+     240,
+     5157014,
+     3663,
+     "loading"
+    ]
+   },
+   {
+    "t": 29702,
+    "answerMs": 19,
+    "v": [
+     240,
+     5026252,
+     3643,
+     "loading"
+    ]
+   },
+   {
+    "t": 30726,
+    "answerMs": 178,
+    "v": [
+     240,
+     5429026,
+     3678,
+     "loading"
+    ]
+   },
+   {
+    "t": 31905,
+    "answerMs": 259,
+    "v": [
+     240,
+     4747873,
+     3373,
+     "loading"
+    ]
+   }
+  ]
+ },
+ {
+  "name": "gsl 5M coverage split (old)",
+  "url": "http://localhost:5174/?scene=HighRezOculus&cam=0,1.6,4&target=0,1.2,0&pixelRatio=1&renderer=gsl&gslShare=coverage",
+  "load": {
+   "status": "settled",
+   "modelRequestMs": 699,
+   "firstSplatFrameMs": 886.2999999523163,
+   "settledMs": 3190.6999999284744,
+   "activeSplats": 3511003,
+   "budget": 5000000,
+   "networkMB": 0.1,
+   "requests": 12,
+   "errors": [],
+   "gpu": "WebGPU: nvidia blackwell",
+   "parts": [
+    [
+     "Oculus34",
+     837797
+    ],
+    [
+     "Oculus56",
+     1256613
+    ],
+    [
+     "Oculus12",
+     159881
+    ],
+    [
+     "Oculus78",
+     1256712
+    ]
+   ]
+  },
+  "memSettled": {
+   "workingSetMB": 4280,
+   "privateMB": 6002,
+   "gpuDedicatedMB": 1994
+  },
+  "memAfter": {
+   "workingSetMB": 6366,
+   "privateMB": 9366,
+   "gpuDedicatedMB": 3272
+  },
+  "bench": {
+   "kind": "orbit",
+   "renderer": "gsl",
+   "startedAtMs": 10337.199999928474,
+   "seconds": 20,
+   "turns": 1,
+   "target": [
+    0,
+    1.2,
+    0
+   ],
+   "radius": 3.9999999999999996,
+   "height": 0.40000000000000036,
+   "pixelRatio": 1,
+   "drawingBuffer": [
+    1584,
+    805
+   ],
+   "budget": 5000000,
+   "frames": {
+    "frames": 2963,
+    "durationS": 20.185999999999787,
+    "avgFps": 146.7849004260394,
+    "onePctLowFps": 2.9687097987214734,
+    "avgFrameMs": 6.81268984137691,
+    "p99FrameMs": 164.10000000000218,
+    "maxFrameMs": 1467
+   },
+   "gpuMs": {
+    "n": 170,
+    "median": 0.5696590769230769,
+    "p95": 2.850816,
+    "max": 3.5717119999999998
+   },
+   "spark": null,
+   "gsl": {
+    "visibleSplats": 4590185,
+    "residentCpuMB": 3093.5,
+    "residentGpuMB": 2701.6,
+    "downloadedMB": 1865.6,
+    "loadingChunks": 1,
+    "loadProgress": 0.8648648648648649,
+    "peakWasmMB": 938.7,
+    "lodTimeMs": {
+     "n": 1117,
+     "median": 20.59999990463257,
+     "p95": 332.7000000476837,
+     "max": 1497.5
+    }
+   },
+   "memory": {
+    "jsHeapUsedMB": 3334.2,
+    "gslResidentCpuMB": 3093.5,
+    "gslResidentGpuMB": 2701.6
+   },
+   "activeSplats": {
+    "min": 2791819,
+    "avg": 4175878,
+    "max": 5511050
+   },
+   "hitches": 102,
+   "worstHitchMs": 643.0999999999985
+  },
+  "stalls": [],
+  "trace": [
+   {
+    "t": 7,
+    "answerMs": 7,
+    "v": null
+   },
+   {
+    "t": 1021,
+    "answerMs": 7,
+    "v": [
+     240,
+     199354,
+     531,
+     "loading"
+    ]
+   },
+   {
+    "t": 2039,
+    "answerMs": 1,
+    "v": [
+     240,
+     3881070,
+     1679,
+     "loading"
+    ]
+   },
+   {
+    "t": 3043,
+    "answerMs": 41,
+    "v": [
+     240,
+     3531552,
+     1926,
+     "loading"
+    ]
+   },
+   {
+    "t": 4097,
+    "answerMs": 1,
+    "v": [
+     240,
+     3511003,
+     1920,
+     "loading"
+    ]
+   },
+   {
+    "t": 5105,
+    "answerMs": 2,
+    "v": [
+     240,
+     3511003,
+     1929,
+     "settled"
+    ]
+   },
+   {
+    "t": 6108,
+    "answerMs": 1,
+    "v": [
+     240,
+     3511003,
+     1939,
+     "settled"
+    ]
+   },
+   {
+    "t": 7110,
+    "answerMs": 3,
+    "v": [
+     240,
+     3511003,
+     1918,
+     "settled"
+    ]
+   },
+   {
+    "t": 8114,
+    "answerMs": 3,
+    "v": [
+     240,
+     3511003,
+     1928,
+     "settled"
+    ]
+   },
+   {
+    "t": 10338,
+    "answerMs": 2,
+    "v": [
+     240,
+     3511003,
+     1859,
+     "settled"
+    ]
+   },
+   {
+    "t": 11353,
+    "answerMs": 615,
+    "v": [
+     240,
+     3545092,
+     2005,
+     "loading"
+    ]
+   },
+   {
+    "t": 12972,
+    "answerMs": 9,
+    "v": [
+     240,
+     3142085,
+     2129,
+     "loading"
+    ]
+   },
+   {
+    "t": 13996,
+    "answerMs": 18,
+    "v": [
+     240,
+     3093620,
+     2351,
+     "loading"
+    ]
+   },
+   {
+    "t": 15015,
+    "answerMs": 4,
+    "v": [
+     240,
+     3129464,
+     2451,
+     "loading"
+    ]
+   },
+   {
+    "t": 16033,
+    "answerMs": 1,
+    "v": [
+     240,
+     3118773,
+     2708,
+     "loading"
+    ]
+   },
+   {
+    "t": 17035,
+    "answerMs": 9,
+    "v": [
+     240,
+     3098574,
+     2530,
+     "loading"
+    ]
+   },
+   {
+    "t": 18054,
+    "answerMs": 2,
+    "v": [
+     240,
+     3201321,
+     2442,
+     "loading"
+    ]
+   },
+   {
+    "t": 19059,
+    "answerMs": 10,
+    "v": [
+     240,
+     3725199,
+     2652,
+     "loading"
+    ]
+   },
+   {
+    "t": 20077,
+    "answerMs": 13,
+    "v": [
+     240,
+     4567191,
+     3059,
+     "loading"
+    ]
+   },
+   {
+    "t": 21090,
+    "answerMs": 104,
+    "v": [
+     240,
+     5057919,
+     3234,
+     "loading"
+    ]
+   },
+   {
+    "t": 22206,
+    "answerMs": 131,
+    "v": [
+     240,
+     5206826,
+     3480,
+     "loading"
+    ]
+   },
+   {
+    "t": 23338,
+    "answerMs": 169,
+    "v": [
+     240,
+     5034315,
+     3643,
+     "loading"
+    ]
+   },
+   {
+    "t": 24517,
+    "answerMs": 15,
+    "v": [
+     240,
+     5188816,
+     3686,
+     "loading"
+    ]
+   },
+   {
+    "t": 25538,
+    "answerMs": 2,
+    "v": [
+     240,
+     5234628,
+     3732,
+     "loading"
+    ]
+   },
+   {
+    "t": 26541,
+    "answerMs": 315,
+    "v": [
+     240,
+     5037518,
+     3592,
+     "loading"
+    ]
+   },
+   {
+    "t": 27862,
+    "answerMs": 100,
+    "v": [
+     240,
+     5039607,
+     3407,
+     "loading"
+    ]
+   },
+   {
+    "t": 28965,
+    "answerMs": 11,
+    "v": [
+     240,
+     5030699,
+     3487,
+     "loading"
+    ]
+   },
+   {
+    "t": 29990,
+    "answerMs": 124,
+    "v": [
+     240,
+     5110633,
+     3543,
+     "loading"
+    ]
+   }
+  ]
+ },
+ {
+  "name": "gsl 5M cooldown 10s",
+  "url": "http://localhost:5174/?scene=HighRezOculus&cam=0,1.6,4&target=0,1.2,0&pixelRatio=1&renderer=gsl&gslCooldown=10000",
+  "load": {
+   "status": "settled",
+   "modelRequestMs": 495.89999997615814,
+   "firstSplatFrameMs": 691.5,
+   "settledMs": 5129,
+   "activeSplats": 4714712,
+   "budget": 5000000,
+   "networkMB": 0.1,
+   "requests": 12,
+   "errors": [],
+   "gpu": "WebGPU: nvidia blackwell",
+   "parts": [
+    [
+     "Oculus12",
+     159881
+    ],
+    [
+     "Oculus56",
+     1861001
+    ],
+    [
+     "Oculus34",
+     837797
+    ],
+    [
+     "Oculus78",
+     1856033
+    ]
+   ]
+  },
+  "memSettled": {
+   "workingSetMB": 5244,
+   "privateMB": 7441,
+   "gpuDedicatedMB": 2550
+  },
+  "memAfter": {
+   "workingSetMB": 6837,
+   "privateMB": 10543,
+   "gpuDedicatedMB": 3878
+  },
+  "bench": {
+   "kind": "orbit",
+   "renderer": "gsl",
+   "startedAtMs": 11861,
+   "seconds": 20,
+   "turns": 1,
+   "target": [
+    0,
+    1.2,
+    0
+   ],
+   "radius": 3.9999999999999996,
+   "height": 0.40000000000000036,
+   "pixelRatio": 1,
+   "drawingBuffer": [
+    1584,
+    805
+   ],
+   "budget": 5000000,
+   "frames": {
+    "frames": 2903,
+    "durationS": 20.00389999999995,
+    "avgFps": 145.12170126825308,
+    "onePctLowFps": 2.461982881012369,
+    "avgFrameMs": 6.890768170857715,
+    "p99FrameMs": 142.20000000000073,
+    "maxFrameMs": 1395.800000000001
+   },
+   "gpuMs": {
+    "n": 125,
+    "median": 0.4096,
+    "p95": 2.6651306666666668,
+    "max": 3.964928
+   },
+   "spark": null,
+   "gsl": {
+    "visibleSplats": 4714328,
+    "residentCpuMB": 3663.5,
+    "residentGpuMB": 3206.1,
+    "downloadedMB": 1662.5,
+    "loadingChunks": 0,
+    "loadProgress": 0.9818181818181818,
+    "peakWasmMB": 1122.8,
+    "lodTimeMs": {
+     "n": 874,
+     "median": 15.099999904632568,
+     "p95": 467.7999999523163,
+     "max": 1430.2999999523163
+    }
+   },
+   "memory": {
+    "jsHeapUsedMB": 4107.4,
+    "gslResidentCpuMB": 3663.5,
+    "gslResidentGpuMB": 3206.1
+   },
+   "activeSplats": {
+    "min": 3350322,
+    "avg": 4670964,
+    "max": 6436036
+   },
+   "hitches": 62,
+   "worstHitchMs": 609.7999999999993
+  },
+  "stalls": [],
+  "trace": [
+   {
+    "t": 9,
+    "answerMs": 9,
+    "v": null
+   },
+   {
+    "t": 1023,
+    "answerMs": 31,
+    "v": [
+     240,
+     1141481,
+     838,
+     "loading"
+    ]
+   },
+   {
+    "t": 2057,
+    "answerMs": 245,
+    "v": [
+     240,
+     3761849,
+     1815,
+     "loading"
+    ]
+   },
+   {
+    "t": 3314,
+    "answerMs": 7,
+    "v": [
+     240,
+     3788158,
+     2113,
+     "loading"
+    ]
+   },
+   {
+    "t": 4332,
+    "answerMs": 368,
+    "v": [
+     240,
+     4714644,
+     2592,
+     "loading"
+    ]
+   },
+   {
+    "t": 5714,
+    "answerMs": 1,
+    "v": [
+     240,
+     4714712,
+     2627,
+     "loading"
+    ]
+   },
+   {
+    "t": 6720,
+    "answerMs": 3,
+    "v": [
+     240,
+     4714712,
+     2643,
+     "settled"
+    ]
+   },
+   {
+    "t": 7727,
+    "answerMs": 5,
+    "v": [
+     240,
+     4714712,
+     2619,
+     "settled"
+    ]
+   },
+   {
+    "t": 8745,
+    "answerMs": 4,
+    "v": [
+     240,
+     4714712,
+     2629,
+     "settled"
+    ]
+   },
+   {
+    "t": 9764,
+    "answerMs": 1,
+    "v": [
+     240,
+     4714712,
+     2639,
+     "settled"
+    ]
+   },
+   {
+    "t": 11861,
+    "answerMs": 5,
+    "v": [
+     240,
+     4714712,
+     2262,
+     "settled"
+    ]
+   },
+   {
+    "t": 12868,
+    "answerMs": 613,
+    "v": [
+     240,
+     4763814,
+     2529,
+     "loading"
+    ]
+   },
+   {
+    "t": 14495,
+    "answerMs": 1,
+    "v": [
+     240,
+     4725419,
+     2577,
+     "loading"
+    ]
+   },
+   {
+    "t": 15498,
+    "answerMs": 187,
+    "v": [
+     240,
+     3733655,
+     2916,
+     "loading"
+    ]
+   },
+   {
+    "t": 16687,
+    "answerMs": 1,
+    "v": [
+     240,
+     3430337,
+     2845,
+     "loading"
+    ]
+   },
+   {
+    "t": 17691,
+    "answerMs": 231,
+    "v": [
+     240,
+     3822351,
+     3262,
+     "loading"
+    ]
+   },
+   {
+    "t": 18934,
+    "answerMs": 241,
+    "v": [
+     240,
+     4416151,
+     3454,
+     "loading"
+    ]
+   },
+   {
+    "t": 20181,
+    "answerMs": 40,
+    "v": [
+     240,
+     5164601,
+     3803,
+     "loading"
+    ]
+   },
+   {
+    "t": 21232,
+    "answerMs": 349,
+    "v": [
+     240,
+     4963505,
+     4122,
+     "loading"
+    ]
+   },
+   {
+    "t": 22593,
+    "answerMs": 47,
+    "v": [
+     240,
+     5206155,
+     4412,
+     "loading"
+    ]
+   },
+   {
+    "t": 23646,
+    "answerMs": 48,
+    "v": [
+     240,
+     5062015,
+     4136,
+     "loading"
+    ]
+   },
+   {
+    "t": 24697,
+    "answerMs": 309,
+    "v": [
+     240,
+     5099598,
+     4138,
+     "loading"
+    ]
+   },
+   {
+    "t": 26013,
+    "answerMs": 415,
+    "v": [
+     240,
+     5153731,
+     3942,
+     "loading"
+    ]
+   },
+   {
+    "t": 27435,
+    "answerMs": 308,
+    "v": [
+     240,
+     5149088,
+     3997,
+     "loading"
+    ]
+   },
+   {
+    "t": 28755,
+    "answerMs": 406,
+    "v": [
+     240,
+     5101147,
+     3979,
+     "loading"
+    ]
+   },
+   {
+    "t": 30172,
+    "answerMs": 208,
+    "v": [
+     240,
+     5026206,
+     4152,
+     "loading"
+    ]
+   },
+   {
+    "t": 31392,
+    "answerMs": 342,
+    "v": [
+     240,
+     4421949,
+     3976,
+     "loading"
+    ]
+   }
+  ]
+ },
+ {
+  "name": "gsl 5M cooldown 30s",
+  "url": "http://localhost:5174/?scene=HighRezOculus&cam=0,1.6,4&target=0,1.2,0&pixelRatio=1&renderer=gsl&gslCooldown=30000",
+  "load": {
+   "status": "settled",
+   "modelRequestMs": 690,
+   "firstSplatFrameMs": 883.1000000238419,
+   "settledMs": 9272.899999976158,
+   "activeSplats": 4184309,
+   "budget": 5000000,
+   "networkMB": 0.1,
+   "requests": 12,
+   "errors": [],
+   "gpu": "WebGPU: nvidia blackwell",
+   "parts": [
+    [
+     "Oculus12",
+     159881
+    ],
+    [
+     "Oculus34",
+     837797
+    ],
+    [
+     "Oculus56",
+     1233723
+    ],
+    [
+     "Oculus78",
+     1952908
+    ]
+   ]
+  },
+  "memSettled": {
+   "workingSetMB": 5192,
+   "privateMB": 7360,
+   "gpuDedicatedMB": 2492
+  },
+  "memAfter": {
+   "workingSetMB": 7338,
+   "privateMB": 10993,
+   "gpuDedicatedMB": 3956
+  },
+  "bench": {
+   "kind": "orbit",
+   "renderer": "gsl",
+   "startedAtMs": 16874.700000047684,
+   "seconds": 20,
+   "turns": 1,
+   "target": [
+    0,
+    1.2,
+    0
+   ],
+   "radius": 3.9999999999999996,
+   "height": 0.40000000000000036,
+   "pixelRatio": 1,
+   "drawingBuffer": [
+    1584,
+    805
+   ],
+   "budget": 5000000,
+   "frames": {
+    "frames": 3131,
+    "durationS": 20.008299999999995,
+    "avgFps": 156.48505870063926,
+    "onePctLowFps": 2.673059734531757,
+    "avgFrameMs": 6.390386458000638,
+    "p99FrameMs": 124.40000000000146,
+    "maxFrameMs": 1463.7999999999993
+   },
+   "gpuMs": {
+    "n": 125,
+    "median": 0.35792738461538465,
+    "p95": 3.211264,
+    "max": 3.997696
+   },
+   "spark": null,
+   "gsl": {
+    "visibleSplats": 4252504,
+    "residentCpuMB": 3774.7,
+    "residentGpuMB": 3303.8,
+    "downloadedMB": 1675.3,
+    "loadingChunks": 0,
+    "loadProgress": 0.9166666666666666,
+    "peakWasmMB": 1121.3,
+    "lodTimeMs": {
+     "n": 993,
+     "median": 18.100000023841858,
+     "p95": 413.2999999523163,
+     "max": 1500.3000000715256
+    }
+   },
+   "memory": {
+    "jsHeapUsedMB": 4374.1,
+    "gslResidentCpuMB": 3774.7,
+    "gslResidentGpuMB": 3303.8
+   },
+   "activeSplats": {
+    "min": 2685809,
+    "avg": 4000950,
+    "max": 6611104
+   },
+   "hitches": 71,
+   "worstHitchMs": 661.3999999999978
+  },
+  "stalls": [],
+  "trace": [
+   {
+    "t": 9,
+    "answerMs": 8,
+    "v": null
+   },
+   {
+    "t": 1017,
+    "answerMs": 2,
+    "v": [
+     240,
+     199354,
+     462,
+     "loading"
+    ]
+   },
+   {
+    "t": 2028,
+    "answerMs": 11,
+    "v": [
+     240,
+     3466190,
+     1782,
+     "loading"
+    ]
+   },
+   {
+    "t": 3050,
+    "answerMs": 121,
+    "v": [
+     240,
+     3815920,
+     2267,
+     "loading"
+    ]
+   },
+   {
+    "t": 4182,
+    "answerMs": 5,
+    "v": [
+     240,
+     3511003,
+     2329,
+     "loading"
+    ]
+   },
+   {
+    "t": 5200,
+    "answerMs": 750,
+    "v": [
+     240,
+     4257211,
+     2527,
+     "loading"
+    ]
+   },
+   {
+    "t": 6959,
+    "answerMs": 280,
+    "v": [
+     240,
+     4533648,
+     2459,
+     "loading"
+    ]
+   },
+   {
+    "t": 8250,
+    "answerMs": 848,
+    "v": [
+     240,
+     4623819,
+     2579,
+     "loading"
+    ]
+   },
+   {
+    "t": 10102,
+    "answerMs": 521,
+    "v": [
+     240,
+     4184312,
+     2639,
+     "loading"
+    ]
+   },
+   {
+    "t": 11630,
+    "answerMs": 4,
+    "v": [
+     240,
+     4184309,
+     2661,
+     "settled"
+    ]
+   },
+   {
+    "t": 12635,
+    "answerMs": 4,
+    "v": [
+     240,
+     4184309,
+     2638,
+     "settled"
+    ]
+   },
+   {
+    "t": 13651,
+    "answerMs": 2,
+    "v": [
+     240,
+     4184309,
+     2648,
+     "settled"
+    ]
+   },
+   {
+    "t": 14657,
+    "answerMs": 4,
+    "v": [
+     240,
+     4184309,
+     2658,
+     "settled"
+    ]
+   },
+   {
+    "t": 16873,
+    "answerMs": 6,
+    "v": [
+     240,
+     4184309,
+     2648,
+     "settled"
+    ]
+   },
+   {
+    "t": 17886,
+    "answerMs": 680,
+    "v": [
+     240,
+     4216307,
+     2533,
+     "loading"
+    ]
+   },
+   {
+    "t": 19570,
+    "answerMs": 5,
+    "v": [
+     240,
+     3169117,
+     2822,
+     "loading"
+    ]
+   },
+   {
+    "t": 20576,
+    "answerMs": 10,
+    "v": [
+     240,
+     2752665,
+     2847,
+     "loading"
+    ]
+   },
+   {
+    "t": 21593,
+    "answerMs": 34,
+    "v": [
+     240,
+     2815339,
+     2808,
+     "loading"
+    ]
+   },
+   {
+    "t": 22630,
+    "answerMs": 31,
+    "v": [
+     240,
+     2891201,
+     2961,
+     "loading"
+    ]
+   },
+   {
+    "t": 23669,
+    "answerMs": 7,
+    "v": [
+     240,
+     3337744,
+     3237,
+     "loading"
+    ]
+   },
+   {
+    "t": 24687,
+    "answerMs": 10,
+    "v": [
+     240,
+     3546776,
+     3557,
+     "loading"
+    ]
+   },
+   {
+    "t": 25707,
+    "answerMs": 27,
+    "v": [
+     240,
+     4706447,
+     3752,
+     "loading"
+    ]
+   },
+   {
+    "t": 26746,
+    "answerMs": 33,
+    "v": [
+     240,
+     4363102,
+     3647,
+     "loading"
+    ]
+   },
+   {
+    "t": 27784,
+    "answerMs": 2,
+    "v": [
+     240,
+     4533995,
+     3894,
+     "loading"
+    ]
+   },
+   {
+    "t": 28791,
+    "answerMs": 1,
+    "v": [
+     240,
+     4399230,
+     3959,
+     "loading"
+    ]
+   },
+   {
+    "t": 29795,
+    "answerMs": 224,
+    "v": [
+     240,
+     4386285,
+     3993,
+     "loading"
+    ]
+   },
+   {
+    "t": 31019,
+    "answerMs": 589,
+    "v": [
+     240,
+     4431729,
+     4055,
+     "loading"
+    ]
+   },
+   {
+    "t": 32619,
+    "answerMs": 628,
+    "v": [
+     240,
+     4558392,
+     4040,
+     "loading"
+    ]
+   },
+   {
+    "t": 34252,
+    "answerMs": 297,
+    "v": [
+     240,
+     6611104,
+     3971,
+     "loading"
+    ]
+   },
+   {
+    "t": 35552,
+    "answerMs": 8,
+    "v": [
+     240,
+     5260989,
+     4309,
+     "loading"
+    ]
+   },
+   {
+    "t": 36568,
+    "answerMs": 220,
+    "v": [
+     240,
+     4493229,
+     4298,
+     "loading"
+    ]
+   }
+  ]
+ },
+ {
+  "name": "gsl 5M loads 8",
+  "url": "http://localhost:5174/?scene=HighRezOculus&cam=0,1.6,4&target=0,1.2,0&pixelRatio=1&renderer=gsl&gslLoads=8",
+  "load": {
+   "status": "settled",
+   "modelRequestMs": 687.1999999284744,
+   "firstSplatFrameMs": 939,
+   "settledMs": 4415.199999928474,
+   "activeSplats": 4218550,
+   "budget": 5000000,
+   "networkMB": 0.1,
+   "requests": 12,
+   "errors": [],
+   "gpu": "WebGPU: nvidia blackwell",
+   "parts": [
+    [
+     "Oculus12",
+     159881
+    ],
+    [
+     "Oculus34",
+     837797
+    ],
+    [
+     "Oculus78",
+     1952908
+    ],
+    [
+     "Oculus56",
+     1267964
+    ]
+   ]
+  },
+  "memSettled": {
+   "workingSetMB": 5819,
+   "privateMB": 7780,
+   "gpuDedicatedMB": 2348
+  },
+  "memAfter": {
+   "workingSetMB": 7602,
+   "privateMB": 10793,
+   "gpuDedicatedMB": 3545
+  },
+  "bench": {
+   "kind": "orbit",
+   "renderer": "gsl",
+   "startedAtMs": 11344,
+   "seconds": 20,
+   "turns": 1,
+   "target": [
+    0,
+    1.2,
+    0
+   ],
+   "radius": 3.9999999999999996,
+   "height": 0.40000000000000036,
+   "pixelRatio": 1,
+   "drawingBuffer": [
+    1584,
+    805
+   ],
+   "budget": 5000000,
+   "frames": {
+    "frames": 2883,
+    "durationS": 20.00339999999995,
+    "avgFps": 144.12549866522727,
+    "onePctLowFps": 2.904705623109441,
+    "avgFrameMs": 6.93839750260144,
+    "p99FrameMs": 174.5,
+    "maxFrameMs": 1464.5
+   },
+   "gpuMs": {
+    "n": 162,
+    "median": 0.5315697777777778,
+    "p95": 3.538944,
+    "max": 4.063232
+   },
+   "spark": null,
+   "gsl": {
+    "visibleSplats": 3900131,
+    "residentCpuMB": 3135,
+    "residentGpuMB": 2750.2,
+    "downloadedMB": 2214.2,
+    "loadingChunks": 0,
+    "loadProgress": 0.9264705882352942,
+    "peakWasmMB": 1397.3,
+    "lodTimeMs": {
+     "n": 921,
+     "median": 18.100000023841858,
+     "p95": 362.89999997615814,
+     "max": 1524.7000000476837
+    }
+   },
+   "memory": {
+    "jsHeapUsedMB": 3517.7,
+    "gslResidentCpuMB": 3135,
+    "gslResidentGpuMB": 2750.2
+   },
+   "activeSplats": {
+    "min": 2806193,
+    "avg": 4383512,
+    "max": 7453854
+   },
+   "hitches": 92,
+   "worstHitchMs": 494.7000000000007
+  },
+  "stalls": [],
+  "trace": [
+   {
+    "t": 8,
+    "answerMs": 9,
+    "v": null
+   },
+   {
+    "t": 1031,
+    "answerMs": 13,
+    "v": [
+     240,
+     199354,
+     408,
+     "loading"
+    ]
+   },
+   {
+    "t": 2050,
+    "answerMs": 50,
+    "v": [
+     240,
+     2951447,
+     1973,
+     "loading"
+    ]
+   },
+   {
+    "t": 3114,
+    "answerMs": 30,
+    "v": [
+     240,
+     3002278,
+     2391,
+     "loading"
+    ]
+   },
+   {
+    "t": 4151,
+    "answerMs": 33,
+    "v": [
+     240,
+     4313531,
+     2510,
+     "loading"
+    ]
+   },
+   {
+    "t": 5190,
+    "answerMs": 6,
+    "v": [
+     240,
+     4218550,
+     2598,
+     "loading"
+    ]
+   },
+   {
+    "t": 6197,
+    "answerMs": 1,
+    "v": [
+     240,
+     4218550,
+     2614,
+     "settled"
+    ]
+   },
+   {
+    "t": 7205,
+    "answerMs": 3,
+    "v": [
+     240,
+     4218550,
+     2602,
+     "settled"
+    ]
+   },
+   {
+    "t": 8209,
+    "answerMs": 2,
+    "v": [
+     240,
+     4218550,
+     2612,
+     "settled"
+    ]
+   },
+   {
+    "t": 9217,
+    "answerMs": 5,
+    "v": [
+     240,
+     4218550,
+     2622,
+     "settled"
+    ]
+   },
+   {
+    "t": 11346,
+    "answerMs": 3,
+    "v": [
+     240,
+     4218550,
+     2201,
+     "settled"
+    ]
+   },
+   {
+    "t": 12357,
+    "answerMs": 660,
+    "v": [
+     240,
+     4226765,
+     2438,
+     "loading"
+    ]
+   },
+   {
+    "t": 14031,
+    "answerMs": 47,
+    "v": [
+     240,
+     3192137,
+     2435,
+     "loading"
+    ]
+   },
+   {
+    "t": 15081,
+    "answerMs": 1,
+    "v": [
+     240,
+     2842701,
+     2971,
+     "loading"
+    ]
+   },
+   {
+    "t": 16098,
+    "answerMs": 251,
+    "v": [
+     240,
+     3002474,
+     2976,
+     "loading"
+    ]
+   },
+   {
+    "t": 17352,
+    "answerMs": 4,
+    "v": [
+     240,
+     3116963,
+     2707,
+     "loading"
+    ]
+   },
+   {
+    "t": 18363,
+    "answerMs": 0,
+    "v": [
+     240,
+     3413496,
+     2883,
+     "loading"
+    ]
+   },
+   {
+    "t": 19369,
+    "answerMs": 14,
+    "v": [
+     240,
+     4302494,
+     3257,
+     "loading"
+    ]
+   },
+   {
+    "t": 20392,
+    "answerMs": 5,
+    "v": [
+     240,
+     4771013,
+     3418,
+     "loading"
+    ]
+   },
+   {
+    "t": 21410,
+    "answerMs": 118,
+    "v": [
+     240,
+     6910750,
+     4074,
+     "loading"
+    ]
+   },
+   {
+    "t": 22538,
+    "answerMs": 23,
+    "v": [
+     240,
+     5379597,
+     3907,
+     "loading"
+    ]
+   },
+   {
+    "t": 23576,
+    "answerMs": 70,
+    "v": [
+     240,
+     5179805,
+     4160,
+     "loading"
+    ]
+   },
+   {
+    "t": 24657,
+    "answerMs": 69,
+    "v": [
+     240,
+     5173956,
+     4147,
+     "loading"
+    ]
+   },
+   {
+    "t": 25739,
+    "answerMs": 2,
+    "v": [
+     240,
+     5185113,
+     4019,
+     "loading"
+    ]
+   },
+   {
+    "t": 26755,
+    "answerMs": 187,
+    "v": [
+     240,
+     5036895,
+     3883,
+     "loading"
+    ]
+   },
+   {
+    "t": 27942,
+    "answerMs": 161,
+    "v": [
+     240,
+     5268288,
+     3923,
+     "loading"
+    ]
+   },
+   {
+    "t": 29117,
+    "answerMs": 3,
+    "v": [
+     240,
+     5389113,
+     3911,
+     "loading"
+    ]
+   },
+   {
+    "t": 30132,
+    "answerMs": 2,
+    "v": [
+     240,
+     5330218,
+     3518,
+     "loading"
+    ]
+   },
+   {
+    "t": 31138,
+    "answerMs": 108,
+    "v": [
+     240,
+     4129735,
+     4010,
+     "loading"
+    ]
+   }
+  ]
+ },
+ {
+  "name": "gsl 5M fade 0",
+  "url": "http://localhost:5174/?scene=HighRezOculus&cam=0,1.6,4&target=0,1.2,0&pixelRatio=1&renderer=gsl&gslFade=0",
+  "load": {
+   "status": "settled",
+   "modelRequestMs": 502.90000009536743,
+   "firstSplatFrameMs": 691.2000000476837,
+   "settledMs": 7213,
+   "activeSplats": 4714712,
+   "budget": 5000000,
+   "networkMB": 0.1,
+   "requests": 12,
+   "errors": [],
+   "gpu": "WebGPU: nvidia blackwell",
+   "parts": [
+    [
+     "Oculus12",
+     159881
+    ],
+    [
+     "Oculus34",
+     837797
+    ],
+    [
+     "Oculus78",
+     1856033
+    ],
+    [
+     "Oculus56",
+     1861001
+    ]
+   ]
+  },
+  "memSettled": {
+   "workingSetMB": 5089,
+   "privateMB": 7133,
+   "gpuDedicatedMB": 2440
+  },
+  "memAfter": {
+   "workingSetMB": 6076,
+   "privateMB": 8705,
+   "gpuDedicatedMB": 2956
+  },
+  "bench": {
+   "kind": "orbit",
+   "renderer": "gsl",
+   "startedAtMs": 13884.300000071526,
+   "seconds": 20,
+   "turns": 1,
+   "target": [
+    0,
+    1.2,
+    0
+   ],
+   "radius": 3.9999999999999996,
+   "height": 0.40000000000000036,
+   "pixelRatio": 1,
+   "drawingBuffer": [
+    1584,
+    805
+   ],
+   "budget": 5000000,
+   "frames": {
+    "frames": 3054,
+    "durationS": 19.994300000000035,
+    "avgFps": 152.74353190659312,
+    "onePctLowFps": 3.3664914643151898,
+    "avgFrameMs": 6.546922069417169,
+    "p99FrameMs": 142.90000000000146,
+    "maxFrameMs": 1549.2000000000007
+   },
+   "gpuMs": {
+    "n": 146,
+    "median": 0.45055999999999996,
+    "p95": 2.3811413333333333,
+    "max": 3.178496
+   },
+   "spark": null,
+   "gsl": {
+    "visibleSplats": 3961527,
+    "residentCpuMB": 2857.1,
+    "residentGpuMB": 2493.2,
+    "downloadedMB": 2234,
+    "loadingChunks": 4,
+    "loadProgress": 0.6853932584269663,
+    "peakWasmMB": 1082.2,
+    "lodTimeMs": {
+     "n": 1052,
+     "median": 25.399999976158142,
+     "p95": 278.89999997615814,
+     "max": 1616.7000000476837
+    }
+   },
+   "memory": {
+    "jsHeapUsedMB": 3128.6,
+    "gslResidentCpuMB": 2857.1,
+    "gslResidentGpuMB": 2493.2
+   },
+   "activeSplats": {
+    "min": 2753704,
+    "avg": 3948895,
+    "max": 5080698
+   },
+   "hitches": 100,
+   "worstHitchMs": 610.2000000000007
+  },
+  "stalls": [],
+  "trace": [
+   {
+    "t": 7,
+    "answerMs": 7,
+    "v": null
+   },
+   {
+    "t": 1021,
+    "answerMs": 17,
+    "v": [
+     240,
+     1039660,
+     877,
+     "loading"
+    ]
+   },
+   {
+    "t": 2042,
+    "answerMs": 274,
+    "v": [
+     240,
+     3434365,
+     1973,
+     "loading"
+    ]
+   },
+   {
+    "t": 3323,
+    "answerMs": 104,
+    "v": [
+     240,
+     3511003,
+     2173,
+     "loading"
+    ]
+   },
+   {
+    "t": 4439,
+    "answerMs": 878,
+    "v": [
+     240,
+     4711040,
+     2327,
+     "loading"
+    ]
+   },
+   {
+    "t": 6330,
+    "answerMs": 718,
+    "v": [
+     240,
+     4714143,
+     2390,
+     "loading"
+    ]
+   },
+   {
+    "t": 8055,
+    "answerMs": 2,
+    "v": [
+     240,
+     4714712,
+     2416,
+     "loading"
+    ]
+   },
+   {
+    "t": 9062,
+    "answerMs": 1,
+    "v": [
+     240,
+     4714712,
+     2426,
+     "settled"
+    ]
+   },
+   {
+    "t": 10070,
+    "answerMs": 4,
+    "v": [
+     240,
+     4714712,
+     2403,
+     "settled"
+    ]
+   },
+   {
+    "t": 11079,
+    "answerMs": 4,
+    "v": [
+     240,
+     4714712,
+     2413,
+     "settled"
+    ]
+   },
+   {
+    "t": 13885,
+    "answerMs": 2,
+    "v": [
+     240,
+     4714712,
+     2407,
+     "settled"
+    ]
+   },
+   {
+    "t": 14902,
+    "answerMs": 735,
+    "v": [
+     240,
+     4681510,
+     2557,
+     "loading"
+    ]
+   },
+   {
+    "t": 16646,
+    "answerMs": 3,
+    "v": [
+     240,
+     3529394,
+     2583,
+     "loading"
+    ]
+   },
+   {
+    "t": 17655,
+    "answerMs": 14,
+    "v": [
+     240,
+     2824285,
+     2634,
+     "loading"
+    ]
+   },
+   {
+    "t": 18672,
+    "answerMs": 146,
+    "v": [
+     240,
+     2810168,
+     2827,
+     "loading"
+    ]
+   },
+   {
+    "t": 19818,
+    "answerMs": 4,
+    "v": [
+     240,
+     2817634,
+     2817,
+     "loading"
+    ]
+   },
+   {
+    "t": 20823,
+    "answerMs": 5,
+    "v": [
+     240,
+     4564642,
+     2804,
+     "loading"
+    ]
+   },
+   {
+    "t": 21828,
+    "answerMs": 4,
+    "v": [
+     240,
+     3894277,
+     2962,
+     "loading"
+    ]
+   },
+   {
+    "t": 22834,
+    "answerMs": 6,
+    "v": [
+     240,
+     4469107,
+     3266,
+     "loading"
+    ]
+   },
+   {
+    "t": 23851,
+    "answerMs": 2,
+    "v": [
+     240,
+     4375976,
+     3029,
+     "loading"
+    ]
+   },
+   {
+    "t": 24866,
+    "answerMs": 34,
+    "v": [
+     240,
+     4297267,
+     2962,
+     "loading"
+    ]
+   },
+   {
+    "t": 25901,
+    "answerMs": 53,
+    "v": [
+     240,
+     4391232,
+     3079,
+     "loading"
+    ]
+   },
+   {
+    "t": 26959,
+    "answerMs": 48,
+    "v": [
+     240,
+     4418289,
+     2903,
+     "loading"
+    ]
+   },
+   {
+    "t": 28014,
+    "answerMs": 135,
+    "v": [
+     240,
+     4512299,
+     2804,
+     "loading"
+    ]
+   },
+   {
+    "t": 29152,
+    "answerMs": 2,
+    "v": [
+     240,
+     4393607,
+     3007,
+     "loading"
+    ]
+   },
+   {
+    "t": 30159,
+    "answerMs": 1,
+    "v": [
+     240,
+     4499673,
+     2961,
+     "loading"
+    ]
+   },
+   {
+    "t": 31166,
+    "answerMs": 20,
+    "v": [
+     240,
+     4093275,
+     2764,
+     "loading"
+    ]
+   },
+   {
+    "t": 32187,
+    "answerMs": 3,
+    "v": [
+     240,
+     3710178,
+     2888,
+     "loading"
+    ]
+   },
+   {
+    "t": 33190,
+    "answerMs": 15,
+    "v": [
+     240,
+     4172289,
+     3036,
+     "loading"
+    ]
+   }
+  ]
+ },
+ {
+  "name": "gsl 5M cache 4GB/part",
+  "url": "http://localhost:5174/?scene=HighRezOculus&cam=0,1.6,4&target=0,1.2,0&pixelRatio=1&renderer=gsl&gslMemMB=4000",
+  "load": {
+   "status": "settled",
+   "modelRequestMs": 504,
+   "firstSplatFrameMs": 737.7999999523163,
+   "settledMs": 5214.899999976158,
+   "activeSplats": 4714712,
+   "budget": 5000000,
+   "networkMB": 0.1,
+   "requests": 12,
+   "errors": [],
+   "gpu": "WebGPU: nvidia blackwell",
+   "parts": [
+    [
+     "Oculus12",
+     159881
+    ],
+    [
+     "Oculus34",
+     837797
+    ],
+    [
+     "Oculus78",
+     1856033
+    ],
+    [
+     "Oculus56",
+     1861001
+    ]
+   ]
+  },
+  "memSettled": {
+   "workingSetMB": 5265,
+   "privateMB": 7370,
+   "gpuDedicatedMB": 2454
+  },
+  "memAfter": {
+   "workingSetMB": 6537,
+   "privateMB": 9565,
+   "gpuDedicatedMB": 3371
+  },
+  "bench": {
+   "kind": "orbit",
+   "renderer": "gsl",
+   "startedAtMs": 11870.199999928474,
+   "seconds": 20,
+   "turns": 1,
+   "target": [
+    0,
+    1.2,
+    0
+   ],
+   "radius": 3.9999999999999996,
+   "height": 0.40000000000000036,
+   "pixelRatio": 1,
+   "drawingBuffer": [
+    1584,
+    805
+   ],
+   "budget": 5000000,
+   "frames": {
+    "frames": 2883,
+    "durationS": 19.991699999999952,
+    "avgFps": 144.20984708654126,
+    "onePctLowFps": 2.6662743872165935,
+    "avgFrameMs": 6.934339229968766,
+    "p99FrameMs": 173.5,
+    "maxFrameMs": 1444.9000000000015
+   },
+   "gpuMs": {
+    "n": 138,
+    "median": 0.45001386666666665,
+    "p95": 3.473408,
+    "max": 3.801088
+   },
+   "spark": null,
+   "gsl": {
+    "visibleSplats": 4138815,
+    "residentCpuMB": 3091.2,
+    "residentGpuMB": 2699.4,
+    "downloadedMB": 2095.4,
+    "loadingChunks": 0,
+    "loadProgress": 0.9166666666666666,
+    "peakWasmMB": 1105.2,
+    "lodTimeMs": {
+     "n": 900,
+     "median": 15.299999952316284,
+     "p95": 406.10000002384186,
+     "max": 1480
+    }
+   },
+   "memory": {
+    "jsHeapUsedMB": 3763.2,
+    "gslResidentCpuMB": 3091.2,
+    "gslResidentGpuMB": 2699.4
+   },
+   "activeSplats": {
+    "min": 3326101,
+    "avg": 4632835,
+    "max": 6744059
+   },
+   "hitches": 73,
+   "worstHitchMs": 627
+  },
+  "stalls": [],
+  "trace": [
+   {
+    "t": 7,
+    "answerMs": 8,
+    "v": null
+   },
+   {
+    "t": 1028,
+    "answerMs": 29,
+    "v": [
+     240,
+     978061,
+     572,
+     "loading"
+    ]
+   },
+   {
+    "t": 2072,
+    "answerMs": 251,
+    "v": [
+     240,
+     3785133,
+     1825,
+     "loading"
+    ]
+   },
+   {
+    "t": 3338,
+    "answerMs": 99,
+    "v": [
+     240,
+     3510791,
+     2196,
+     "loading"
+    ]
+   },
+   {
+    "t": 4447,
+    "answerMs": 503,
+    "v": [
+     240,
+     4710904,
+     2436,
+     "loading"
+    ]
+   },
+   {
+    "t": 5953,
+    "answerMs": 4,
+    "v": [
+     240,
+     4714712,
+     2481,
+     "loading"
+    ]
+   },
+   {
+    "t": 6960,
+    "answerMs": 2,
+    "v": [
+     240,
+     4714712,
+     2493,
+     "settled"
+    ]
+   },
+   {
+    "t": 7966,
+    "answerMs": 5,
+    "v": [
+     240,
+     4714712,
+     2475,
+     "settled"
+    ]
+   },
+   {
+    "t": 8984,
+    "answerMs": 8,
+    "v": [
+     240,
+     4714712,
+     2485,
+     "settled"
+    ]
+   },
+   {
+    "t": 10005,
+    "answerMs": 1,
+    "v": [
+     240,
+     4714712,
+     2495,
+     "settled"
+    ]
+   },
+   {
+    "t": 11868,
+    "answerMs": 5,
+    "v": [
+     240,
+     4714712,
+     2484,
+     "settled"
+    ]
+   },
+   {
+    "t": 12883,
+    "answerMs": 654,
+    "v": [
+     240,
+     4763778,
+     2745,
+     "loading"
+    ]
+   },
+   {
+    "t": 14550,
+    "answerMs": 24,
+    "v": [
+     240,
+     3763829,
+     2803,
+     "loading"
+    ]
+   },
+   {
+    "t": 15589,
+    "answerMs": 1,
+    "v": [
+     240,
+     3539718,
+     2971,
+     "loading"
+    ]
+   },
+   {
+    "t": 16597,
+    "answerMs": 125,
+    "v": [
+     240,
+     3708014,
+     3114,
+     "loading"
+    ]
+   },
+   {
+    "t": 17729,
+    "answerMs": 342,
+    "v": [
+     240,
+     3958397,
+     2883,
+     "loading"
+    ]
+   },
+   {
+    "t": 19081,
+    "answerMs": 279,
+    "v": [
+     240,
+     4488726,
+     2918,
+     "loading"
+    ]
+   },
+   {
+    "t": 20372,
+    "answerMs": 1,
+    "v": [
+     240,
+     5333254,
+     3331,
+     "loading"
+    ]
+   },
+   {
+    "t": 21380,
+    "answerMs": 118,
+    "v": [
+     240,
+     5891766,
+     3408,
+     "loading"
+    ]
+   },
+   {
+    "t": 22507,
+    "answerMs": 119,
+    "v": [
+     240,
+     5022570,
+     4020,
+     "loading"
+    ]
+   },
+   {
+    "t": 23630,
+    "answerMs": 2,
+    "v": [
+     240,
+     5279603,
+     4088,
+     "loading"
+    ]
+   },
+   {
+    "t": 24636,
+    "answerMs": 0,
+    "v": [
+     240,
+     5211403,
+     4096,
+     "loading"
+    ]
+   },
+   {
+    "t": 25640,
+    "answerMs": 83,
+    "v": [
+     240,
+     5035090,
+     3802,
+     "loading"
+    ]
+   },
+   {
+    "t": 26737,
+    "answerMs": 104,
+    "v": [
+     240,
+     5174649,
+     3816,
+     "loading"
+    ]
+   },
+   {
+    "t": 27853,
+    "answerMs": 1,
+    "v": [
+     240,
+     5216602,
+     3726,
+     "loading"
+    ]
+   },
+   {
+    "t": 28859,
+    "answerMs": 106,
+    "v": [
+     240,
+     5027060,
+     3682,
+     "loading"
+    ]
+   },
+   {
+    "t": 29976,
+    "answerMs": 92,
+    "v": [
+     240,
+     5455748,
+     3819,
+     "loading"
+    ]
+   },
+   {
+    "t": 31077,
+    "answerMs": 163,
+    "v": [
+     240,
+     4746161,
+     3426,
+     "loading"
+    ]
+   }
+  ]
+ },
+ {
+  "name": "gsl 10M demand",
+  "url": "http://localhost:5174/?scene=HighRezOculus&cam=0,1.6,4&target=0,1.2,0&pixelRatio=1&renderer=gsl&lodScale=4",
+  "load": {
+   "status": "loading",
+   "modelRequestMs": 677.3999999761581,
+   "firstSplatFrameMs": 880.2999999523163,
+   "settledMs": 6846.799999952316,
+   "activeSplats": 7219893,
+   "budget": 10000000,
+   "networkMB": 0.1,
+   "requests": 12,
+   "errors": [],
+   "gpu": "WebGPU: nvidia blackwell",
+   "parts": [
+    [
+     "Oculus12",
+     159881
+    ],
+    [
+     "Oculus78",
+     1952908
+    ],
+    [
+     "Oculus34",
+     837797
+    ],
+    [
+     "Oculus56",
+     4269307
+    ]
+   ]
+  },
+  "memSettled": {
+   "workingSetMB": 5266,
+   "privateMB": 7921,
+   "gpuDedicatedMB": 3168
+  },
+  "memAfter": {
+   "workingSetMB": 8066,
+   "privateMB": 11773,
+   "gpuDedicatedMB": 4388
+  },
+  "bench": {
+   "kind": "orbit",
+   "renderer": "gsl",
+   "startedAtMs": 246731,
+   "seconds": 20,
+   "turns": 1,
+   "target": [
+    0,
+    1.2,
+    0
+   ],
+   "radius": 3.9999999999999996,
+   "height": 0.40000000000000036,
+   "pixelRatio": 1,
+   "drawingBuffer": [
+    1584,
+    805
+   ],
+   "budget": 10000000,
+   "frames": {
+    "frames": 2797,
+    "durationS": 20.007399999999993,
+    "avgFps": 139.79827463838384,
+    "onePctLowFps": 3.161519787726487,
+    "avgFrameMs": 7.1531641043975664,
+    "p99FrameMs": 178.5,
+    "maxFrameMs": 803.6000000000058
+   },
+   "gpuMs": {
+    "n": 169,
+    "median": 0.6859434666666666,
+    "p95": 4.2926079999999995,
+    "max": 5.308416
+   },
+   "spark": null,
+   "gsl": {
+    "visibleSplats": 6395905,
+    "residentCpuMB": 4019.3,
+    "residentGpuMB": 3517.8,
+    "downloadedMB": 2479,
+    "loadingChunks": 7,
+    "loadProgress": 0.7590361445783133,
+    "peakWasmMB": 1213.1,
+    "lodTimeMs": {
+     "n": 915,
+     "median": 11.5,
+     "p95": 329.40000009536743,
+     "max": 856.6000000238419
+    }
+   },
+   "memory": {
+    "jsHeapUsedMB": 4511.2,
+    "gslResidentCpuMB": 4019.3,
+    "gslResidentGpuMB": 3517.8
+   },
+   "activeSplats": {
+    "min": 4081263,
+    "avg": 6261627,
+    "max": 9993050
+   },
+   "hitches": 99,
+   "worstHitchMs": 803.6000000000058
+  },
+  "stalls": [
+   [
+    6881,
+    1901
+   ],
+   [
+    243831,
+    1828
+   ]
+  ],
+  "trace": [
+   {
+    "t": 7,
+    "answerMs": 8,
+    "v": null
+   },
+   {
+    "t": 1015,
+    "answerMs": 3,
+    "v": [
+     240,
+     199354,
+     532,
+     "loading"
+    ]
+   },
+   {
+    "t": 2019,
+    "answerMs": 1,
+    "v": [
+     240,
+     4269242,
+     1736,
+     "loading"
+    ]
+   },
+   {
+    "t": 3020,
+    "answerMs": 31,
+    "v": [
+     240,
+     5237321,
+     2516,
+     "loading"
+    ]
+   },
+   {
+    "t": 4054,
+    "answerMs": 0,
+    "v": [
+     240,
+     5237321,
+     2716,
+     "loading"
+    ]
+   },
+   {
+    "t": 5060,
+    "answerMs": 808,
+    "v": [
+     240,
+     5453685,
+     2772,
+     "loading"
+    ]
+   },
+   {
+    "t": 6881,
+    "answerMs": 1901,
+    "v": [
+     240,
+     7095191,
+     3069,
+     "loading"
+    ]
+   },
+   {
+    "t": 9789,
+    "answerMs": 970,
+    "v": [
+     240,
+     7219893,
+     3122,
+     "loading"
+    ]
+   },
+   {
+    "t": 11767,
+    "answerMs": 913,
+    "v": [
+     240,
+     7219893,
+     2865,
+     "loading"
+    ]
+   },
+   {
+    "t": 13682,
+    "answerMs": 982,
+    "v": [
+     240,
+     7219893,
+     2892,
+     "loading"
+    ]
+   },
+   {
+    "t": 15678,
+    "answerMs": 908,
+    "v": [
+     240,
+     7219893,
+     2951,
+     "loading"
+    ]
+   },
+   {
+    "t": 17592,
+    "answerMs": 970,
+    "v": [
+     240,
+     7219893,
+     2995,
+     "loading"
+    ]
+   },
+   {
+    "t": 19565,
+    "answerMs": 937,
+    "v": [
+     240,
+     7219893,
+     3054,
+     "loading"
+    ]
+   },
+   {
+    "t": 21512,
+    "answerMs": 965,
+    "v": [
+     240,
+     7219893,
+     3098,
+     "loading"
+    ]
+   },
+   {
+    "t": 23479,
+    "answerMs": 913,
+    "v": [
+     240,
+     7219893,
+     2864,
+     "loading"
+    ]
+   },
+   {
+    "t": 25398,
+    "answerMs": 972,
+    "v": [
+     240,
+     7219893,
+     2892,
+     "loading"
+    ]
+   },
+   {
+    "t": 27375,
+    "answerMs": 913,
+    "v": [
+     240,
+     7219893,
+     2951,
+     "loading"
+    ]
+   },
+   {
+    "t": 29289,
+    "answerMs": 975,
+    "v": [
+     240,
+     7219893,
+     2995,
+     "loading"
+    ]
+   },
+   {
+    "t": 31267,
+    "answerMs": 909,
+    "v": [
+     240,
+     7219893,
+     3053,
+     "loading"
+    ]
+   },
+   {
+    "t": 33179,
+    "answerMs": 971,
+    "v": [
+     240,
+     7219893,
+     2837,
+     "loading"
+    ]
+   },
+   {
+    "t": 35151,
+    "answerMs": 916,
+    "v": [
+     240,
+     7219893,
+     2896,
+     "loading"
+    ]
+   },
+   {
+    "t": 37077,
+    "answerMs": 966,
+    "v": [
+     240,
+     7219893,
+     2940,
+     "loading"
+    ]
+   },
+   {
+    "t": 39053,
+    "answerMs": 906,
+    "v": [
+     240,
+     7219893,
+     2999,
+     "loading"
+    ]
+   },
+   {
+    "t": 40973,
+    "answerMs": 961,
+    "v": [
+     240,
+     7219893,
+     3043,
+     "loading"
+    ]
+   },
+   {
+    "t": 42939,
+    "answerMs": 924,
+    "v": [
+     240,
+     7219893,
+     3103,
+     "loading"
+    ]
+   },
+   {
+    "t": 44876,
+    "answerMs": 959,
+    "v": [
+     240,
+     7219893,
+     2855,
+     "loading"
+    ]
+   },
+   {
+    "t": 46838,
+    "answerMs": 920,
+    "v": [
+     240,
+     7219893,
+     2900,
+     "loading"
+    ]
+   },
+   {
+    "t": 48773,
+    "answerMs": 959,
+    "v": [
+     240,
+     7219893,
+     2945,
+     "loading"
+    ]
+   },
+   {
+    "t": 50735,
+    "answerMs": 919,
+    "v": [
+     240,
+     7219893,
+     3003,
+     "loading"
+    ]
+   },
+   {
+    "t": 52664,
+    "answerMs": 961,
+    "v": [
+     240,
+     7219893,
+     3047,
+     "loading"
+    ]
+   },
+   {
+    "t": 54640,
+    "answerMs": 907,
+    "v": [
+     240,
+     7219893,
+     3105,
+     "loading"
+    ]
+   },
+   {
+    "t": 56553,
+    "answerMs": 969,
+    "v": [
+     240,
+     7219893,
+     2857,
+     "loading"
+    ]
+   },
+   {
+    "t": 58536,
+    "answerMs": 909,
+    "v": [
+     240,
+     7219893,
+     2901,
+     "loading"
+    ]
+   },
+   {
+    "t": 60451,
+    "answerMs": 970,
+    "v": [
+     240,
+     7219893,
+     2945,
+     "loading"
+    ]
+   },
+   {
+    "t": 62430,
+    "answerMs": 908,
+    "v": [
+     240,
+     7219893,
+     3003,
+     "loading"
+    ]
+   },
+   {
+    "t": 64351,
+    "answerMs": 962,
+    "v": [
+     240,
+     7219893,
+     3047,
+     "loading"
+    ]
+   },
+   {
+    "t": 66313,
+    "answerMs": 923,
+    "v": [
+     240,
+     7219893,
+     3103,
+     "loading"
+    ]
+   },
+   {
+    "t": 68244,
+    "answerMs": 968,
+    "v": [
+     240,
+     7219893,
+     2904,
+     "loading"
+    ]
+   },
+   {
+    "t": 70225,
+    "answerMs": 905,
+    "v": [
+     240,
+     7219893,
+     2948,
+     "loading"
+    ]
+   },
+   {
+    "t": 72143,
+    "answerMs": 962,
+    "v": [
+     240,
+     7219893,
+     2990,
+     "loading"
+    ]
+   },
+   {
+    "t": 74106,
+    "answerMs": 919,
+    "v": [
+     240,
+     7219893,
+     3049,
+     "loading"
+    ]
+   },
+   {
+    "t": 76035,
+    "answerMs": 965,
+    "v": [
+     240,
+     7219893,
+     3093,
+     "loading"
+    ]
+   },
+   {
+    "t": 78005,
+    "answerMs": 922,
+    "v": [
+     240,
+     7219893,
+     3152,
+     "loading"
+    ]
+   },
+   {
+    "t": 79935,
+    "answerMs": 976,
+    "v": [
+     240,
+     7219893,
+     2854,
+     "loading"
+    ]
+   },
+   {
+    "t": 81918,
+    "answerMs": 920,
+    "v": [
+     240,
+     7219893,
+     2900,
+     "loading"
+    ]
+   },
+   {
+    "t": 83853,
+    "answerMs": 951,
+    "v": [
+     240,
+     7219893,
+     2944,
+     "loading"
+    ]
+   },
+   {
+    "t": 85817,
+    "answerMs": 917,
+    "v": [
+     240,
+     7219893,
+     3003,
+     "loading"
+    ]
+   },
+   {
+    "t": 87746,
+    "answerMs": 966,
+    "v": [
+     240,
+     7219893,
+     3049,
+     "loading"
+    ]
+   },
+   {
+    "t": 89719,
+    "answerMs": 915,
+    "v": [
+     240,
+     7219893,
+     3108,
+     "loading"
+    ]
+   },
+   {
+    "t": 91636,
+    "answerMs": 971,
+    "v": [
+     240,
+     7219893,
+     2856,
+     "loading"
+    ]
+   },
+   {
+    "t": 93618,
+    "answerMs": 912,
+    "v": [
+     240,
+     7219893,
+     2901,
+     "loading"
+    ]
+   },
+   {
+    "t": 95536,
+    "answerMs": 968,
+    "v": [
+     240,
+     7219893,
+     2945,
+     "loading"
+    ]
+   },
+   {
+    "t": 97515,
+    "answerMs": 912,
+    "v": [
+     240,
+     7219893,
+     3004,
+     "loading"
+    ]
+   },
+   {
+    "t": 99432,
+    "answerMs": 967,
+    "v": [
+     240,
+     7219893,
+     3048,
+     "loading"
+    ]
+   },
+   {
+    "t": 101414,
+    "answerMs": 905,
+    "v": [
+     240,
+     7219893,
+     3103,
+     "loading"
+    ]
+   },
+   {
+    "t": 103334,
+    "answerMs": 966,
+    "v": [
+     240,
+     7219893,
+     2876,
+     "loading"
+    ]
+   },
+   {
+    "t": 105311,
+    "answerMs": 908,
+    "v": [
+     240,
+     7219893,
+     2917,
+     "loading"
+    ]
+   },
+   {
+    "t": 107229,
+    "answerMs": 975,
+    "v": [
+     240,
+     7219893,
+     2963,
+     "loading"
+    ]
+   },
+   {
+    "t": 109210,
+    "answerMs": 918,
+    "v": [
+     240,
+     7219893,
+     3022,
+     "loading"
+    ]
+   },
+   {
+    "t": 111135,
+    "answerMs": 973,
+    "v": [
+     240,
+     7219893,
+     3063,
+     "loading"
+    ]
+   },
+   {
+    "t": 113116,
+    "answerMs": 921,
+    "v": [
+     240,
+     7219893,
+     3122,
+     "loading"
+    ]
+   },
+   {
+    "t": 115048,
+    "answerMs": 974,
+    "v": [
+     240,
+     7219893,
+     2859,
+     "loading"
+    ]
+   },
+   {
+    "t": 117028,
+    "answerMs": 918,
+    "v": [
+     240,
+     7219893,
+     2901,
+     "loading"
+    ]
+   },
+   {
+    "t": 118954,
+    "answerMs": 972,
+    "v": [
+     240,
+     7219893,
+     2945,
+     "loading"
+    ]
+   },
+   {
+    "t": 120925,
+    "answerMs": 935,
+    "v": [
+     240,
+     7219893,
+     3007,
+     "loading"
+    ]
+   },
+   {
+    "t": 122873,
+    "answerMs": 966,
+    "v": [
+     240,
+     7219893,
+     3048,
+     "loading"
+    ]
+   },
+   {
+    "t": 124840,
+    "answerMs": 923,
+    "v": [
+     240,
+     7219893,
+     3104,
+     "loading"
+    ]
+   },
+   {
+    "t": 126768,
+    "answerMs": 978,
+    "v": [
+     240,
+     7219893,
+     2907,
+     "loading"
+    ]
+   },
+   {
+    "t": 128748,
+    "answerMs": 919,
+    "v": [
+     240,
+     7219893,
+     2946,
+     "loading"
+    ]
+   },
+   {
+    "t": 130678,
+    "answerMs": 962,
+    "v": [
+     240,
+     7219893,
+     2990,
+     "loading"
+    ]
+   },
+   {
+    "t": 132644,
+    "answerMs": 918,
+    "v": [
+     240,
+     7219893,
+     3049,
+     "loading"
+    ]
+   },
+   {
+    "t": 134570,
+    "answerMs": 971,
+    "v": [
+     240,
+     7219893,
+     3093,
+     "loading"
+    ]
+   },
+   {
+    "t": 136548,
+    "answerMs": 914,
+    "v": [
+     240,
+     7219893,
+     3152,
+     "loading"
+    ]
+   },
+   {
+    "t": 138471,
+    "answerMs": 973,
+    "v": [
+     240,
+     7219893,
+     2854,
+     "loading"
+    ]
+   },
+   {
+    "t": 140451,
+    "answerMs": 917,
+    "v": [
+     240,
+     7219893,
+     2904,
+     "loading"
+    ]
+   },
+   {
+    "t": 142385,
+    "answerMs": 962,
+    "v": [
+     240,
+     7219893,
+     2944,
+     "loading"
+    ]
+   },
+   {
+    "t": 144353,
+    "answerMs": 912,
+    "v": [
+     240,
+     7219893,
+     3003,
+     "loading"
+    ]
+   },
+   {
+    "t": 146277,
+    "answerMs": 969,
+    "v": [
+     240,
+     7219893,
+     3050,
+     "loading"
+    ]
+   },
+   {
+    "t": 148253,
+    "answerMs": 923,
+    "v": [
+     240,
+     7219893,
+     3103,
+     "loading"
+    ]
+   },
+   {
+    "t": 150181,
+    "answerMs": 983,
+    "v": [
+     240,
+     7219893,
+     2875,
+     "loading"
+    ]
+   },
+   {
+    "t": 152178,
+    "answerMs": 912,
+    "v": [
+     240,
+     7219893,
+     2917,
+     "loading"
+    ]
+   },
+   {
+    "t": 154100,
+    "answerMs": 961,
+    "v": [
+     240,
+     7219893,
+     2961,
+     "loading"
+    ]
+   },
+   {
+    "t": 156062,
+    "answerMs": 918,
+    "v": [
+     240,
+     7219893,
+     3019,
+     "loading"
+    ]
+   },
+   {
+    "t": 157989,
+    "answerMs": 968,
+    "v": [
+     240,
+     7219893,
+     3067,
+     "loading"
+    ]
+   },
+   {
+    "t": 159969,
+    "answerMs": 906,
+    "v": [
+     240,
+     7219893,
+     3126,
+     "loading"
+    ]
+   },
+   {
+    "t": 161889,
+    "answerMs": 970,
+    "v": [
+     240,
+     7219893,
+     2861,
+     "loading"
+    ]
+   },
+   {
+    "t": 163872,
+    "answerMs": 907,
+    "v": [
+     240,
+     7219893,
+     2902,
+     "loading"
+    ]
+   },
+   {
+    "t": 165783,
+    "answerMs": 970,
+    "v": [
+     240,
+     7219893,
+     2946,
+     "loading"
+    ]
+   },
+   {
+    "t": 167761,
+    "answerMs": 910,
+    "v": [
+     240,
+     7219893,
+     3004,
+     "loading"
+    ]
+   },
+   {
+    "t": 169682,
+    "answerMs": 963,
+    "v": [
+     240,
+     7219893,
+     3049,
+     "loading"
+    ]
+   },
+   {
+    "t": 171645,
+    "answerMs": 928,
+    "v": [
+     240,
+     7219893,
+     2844,
+     "loading"
+    ]
+   },
+   {
+    "t": 173579,
+    "answerMs": 979,
+    "v": [
+     240,
+     7219893,
+     2888,
+     "loading"
+    ]
+   },
+   {
+    "t": 175559,
+    "answerMs": 917,
+    "v": [
+     240,
+     7219893,
+     2947,
+     "loading"
+    ]
+   },
+   {
+    "t": 177479,
+    "answerMs": 970,
+    "v": [
+     240,
+     7219893,
+     2991,
+     "loading"
+    ]
+   },
+   {
+    "t": 179454,
+    "answerMs": 923,
+    "v": [
+     240,
+     7219893,
+     3053,
+     "loading"
+    ]
+   },
+   {
+    "t": 181384,
+    "answerMs": 983,
+    "v": [
+     240,
+     7219893,
+     3094,
+     "loading"
+    ]
+   },
+   {
+    "t": 183375,
+    "answerMs": 918,
+    "v": [
+     240,
+     7219893,
+     2864,
+     "loading"
+    ]
+   },
+   {
+    "t": 185307,
+    "answerMs": 966,
+    "v": [
+     240,
+     7219893,
+     2892,
+     "loading"
+    ]
+   },
+   {
+    "t": 187284,
+    "answerMs": 913,
+    "v": [
+     240,
+     7219893,
+     2951,
+     "loading"
+    ]
+   },
+   {
+    "t": 189205,
+    "answerMs": 971,
+    "v": [
+     240,
+     7219893,
+     2995,
+     "loading"
+    ]
+   },
+   {
+    "t": 191189,
+    "answerMs": 913,
+    "v": [
+     240,
+     7219893,
+     3057,
+     "loading"
+    ]
+   },
+   {
+    "t": 193103,
+    "answerMs": 974,
+    "v": [
+     240,
+     7219893,
+     2838,
+     "loading"
+    ]
+   },
+   {
+    "t": 195090,
+    "answerMs": 917,
+    "v": [
+     240,
+     7219893,
+     2896,
+     "loading"
+    ]
+   },
+   {
+    "t": 197022,
+    "answerMs": 954,
+    "v": [
+     240,
+     7219893,
+     2945,
+     "loading"
+    ]
+   },
+   {
+    "t": 198987,
+    "answerMs": 920,
+    "v": [
+     240,
+     7219893,
+     2999,
+     "loading"
+    ]
+   },
+   {
+    "t": 200909,
+    "answerMs": 978,
+    "v": [
+     240,
+     7219893,
+     3043,
+     "loading"
+    ]
+   },
+   {
+    "t": 202888,
+    "answerMs": 920,
+    "v": [
+     240,
+     7219893,
+     3102,
+     "loading"
+    ]
+   },
+   {
+    "t": 204819,
+    "answerMs": 970,
+    "v": [
+     240,
+     7219893,
+     2858,
+     "loading"
+    ]
+   },
+   {
+    "t": 206793,
+    "answerMs": 918,
+    "v": [
+     240,
+     7219893,
+     2900,
+     "loading"
+    ]
+   },
+   {
+    "t": 208723,
+    "answerMs": 968,
+    "v": [
+     240,
+     7219893,
+     2944,
+     "loading"
+    ]
+   },
+   {
+    "t": 210700,
+    "answerMs": 909,
+    "v": [
+     240,
+     7219893,
+     3007,
+     "loading"
+    ]
+   },
+   {
+    "t": 212612,
+    "answerMs": 976,
+    "v": [
+     240,
+     7219893,
+     3047,
+     "loading"
+    ]
+   },
+   {
+    "t": 214597,
+    "answerMs": 914,
+    "v": [
+     240,
+     7219893,
+     3105,
+     "loading"
+    ]
+   },
+   {
+    "t": 216516,
+    "answerMs": 985,
+    "v": [
+     240,
+     7219893,
+     2863,
+     "loading"
+    ]
+   },
+   {
+    "t": 218515,
+    "answerMs": 908,
+    "v": [
+     240,
+     7219893,
+     2902,
+     "loading"
+    ]
+   },
+   {
+    "t": 220430,
+    "answerMs": 966,
+    "v": [
+     240,
+     7219893,
+     2946,
+     "loading"
+    ]
+   },
+   {
+    "t": 222411,
+    "answerMs": 904,
+    "v": [
+     240,
+     7219893,
+     3004,
+     "loading"
+    ]
+   },
+   {
+    "t": 224327,
+    "answerMs": 967,
+    "v": [
+     240,
+     7219893,
+     3048,
+     "loading"
+    ]
+   },
+   {
+    "t": 226309,
+    "answerMs": 903,
+    "v": [
+     240,
+     7219893,
+     3107,
+     "loading"
+    ]
+   },
+   {
+    "t": 228218,
+    "answerMs": 977,
+    "v": [
+     240,
+     7219893,
+     2854,
+     "loading"
+    ]
+   },
+   {
+    "t": 230199,
+    "answerMs": 918,
+    "v": [
+     240,
+     7219893,
+     2905,
+     "loading"
+    ]
+   },
+   {
+    "t": 232133,
+    "answerMs": 964,
+    "v": [
+     240,
+     7219893,
+     2944,
+     "loading"
+    ]
+   },
+   {
+    "t": 234108,
+    "answerMs": 913,
+    "v": [
+     240,
+     7219893,
+     3003,
+     "loading"
+    ]
+   },
+   {
+    "t": 236023,
+    "answerMs": 977,
+    "v": [
+     240,
+     7219893,
+     3047,
+     "loading"
+    ]
+   },
+   {
+    "t": 238014,
+    "answerMs": 907,
+    "v": [
+     240,
+     7219893,
+     3103,
+     "loading"
+    ]
+   },
+   {
+    "t": 239933,
+    "answerMs": 967,
+    "v": [
+     240,
+     7219893,
+     2906,
+     "loading"
+    ]
+   },
+   {
+    "t": 241913,
+    "answerMs": 917,
+    "v": [
+     240,
+     7219893,
+     2947,
+     "loading"
+    ]
+   },
+   {
+    "t": 243831,
+    "answerMs": 1828,
+    "v": [
+     240,
+     7219893,
+     2991,
+     "loading"
+    ]
+   },
+   {
+    "t": 246663,
+    "answerMs": 71,
+    "v": [
+     240,
+     7219893,
+     3049,
+     "loading"
+    ]
+   },
+   {
+    "t": 247748,
+    "answerMs": 25,
+    "v": [
+     240,
+     5476675,
+     3057,
+     "loading"
+    ]
+   },
+   {
+    "t": 248784,
+    "answerMs": 1,
+    "v": [
+     240,
+     4944702,
+     3387,
+     "loading"
+    ]
+   },
+   {
+    "t": 249785,
+    "answerMs": 3,
+    "v": [
+     240,
+     4252326,
+     3196,
+     "loading"
+    ]
+   },
+   {
+    "t": 250788,
+    "answerMs": 120,
+    "v": [
+     240,
+     4274425,
+     3156,
+     "loading"
+    ]
+   },
+   {
+    "t": 251920,
+    "answerMs": 1,
+    "v": [
+     240,
+     4211660,
+     3191,
+     "loading"
+    ]
+   },
+   {
+    "t": 252937,
+    "answerMs": 315,
+    "v": [
+     240,
+     4812338,
+     3455,
+     "loading"
+    ]
+   },
+   {
+    "t": 254266,
+    "answerMs": 15,
+    "v": [
+     240,
+     4909773,
+     3480,
+     "loading"
+    ]
+   },
+   {
+    "t": 255281,
+    "answerMs": 6,
+    "v": [
+     240,
+     5648343,
+     3814,
+     "loading"
+    ]
+   },
+   {
+    "t": 256287,
+    "answerMs": 49,
+    "v": [
+     240,
+     6438808,
+     4065,
+     "loading"
+    ]
+   },
+   {
+    "t": 257337,
+    "answerMs": 27,
+    "v": [
+     240,
+     7949215,
+     4258,
+     "loading"
+    ]
+   },
+   {
+    "t": 258374,
+    "answerMs": 2,
+    "v": [
+     240,
+     9252916,
+     4623,
+     "loading"
+    ]
+   },
+   {
+    "t": 259377,
+    "answerMs": 2,
+    "v": [
+     240,
+     9096694,
+     4733,
+     "loading"
+    ]
+   },
+   {
+    "t": 260381,
+    "answerMs": 158,
+    "v": [
+     240,
+     8589718,
+     5065,
+     "loading"
+    ]
+   },
+   {
+    "t": 261539,
+    "answerMs": 2,
+    "v": [
+     240,
+     8884182,
+     4569,
+     "loading"
+    ]
+   },
+   {
+    "t": 262553,
+    "answerMs": 121,
+    "v": [
+     240,
+     8591254,
+     4815,
+     "loading"
+    ]
+   },
+   {
+    "t": 263683,
+    "answerMs": 164,
+    "v": [
+     240,
+     8245556,
+     4631,
+     "loading"
+    ]
+   },
+   {
+    "t": 264850,
+    "answerMs": 135,
+    "v": [
+     240,
+     7540576,
+     4743,
+     "loading"
+    ]
+   },
+   {
+    "t": 265997,
+    "answerMs": 2,
+    "v": [
+     240,
+     6936827,
+     4378,
+     "loading"
+    ]
+   }
+  ]
+ },
+ {
+  "name": "gsl 5M demand shot",
+  "url": "http://localhost:5174/?scene=HighRezOculus&cam=0,1.6,4&target=0,1.2,0&pixelRatio=1&renderer=gsl&overlay=0",
+  "load": {
+   "status": "settled",
+   "modelRequestMs": 676.1000000238419,
+   "firstSplatFrameMs": 885.3999999761581,
+   "settledMs": 4930.700000047684,
+   "activeSplats": 4224068,
+   "budget": 5000000,
+   "networkMB": 0.1,
+   "requests": 12,
+   "errors": [],
+   "gpu": "WebGPU: nvidia blackwell",
+   "parts": [
+    [
+     "Oculus78",
+     1952908
+    ],
+    [
+     "Oculus12",
+     159881
+    ],
+    [
+     "Oculus34",
+     837797
+    ],
+    [
+     "Oculus56",
+     1273482
+    ]
+   ]
+  },
+  "memSettled": {
+   "workingSetMB": 5183,
+   "privateMB": 7227,
+   "gpuDedicatedMB": 2372
+  },
+  "memAfter": {
+   "workingSetMB": 6499,
+   "privateMB": 9441,
+   "gpuDedicatedMB": 3354
+  },
+  "bench": {
+   "kind": "orbit",
+   "renderer": "gsl",
+   "startedAtMs": 16399.899999976158,
+   "seconds": 20,
+   "turns": 1,
+   "target": [
+    0,
+    1.2,
+    0
+   ],
+   "radius": 3.9999999999999996,
+   "height": 0.40000000000000036,
+   "pixelRatio": 1,
+   "drawingBuffer": [
+    1584,
+    805
+   ],
+   "budget": 5000000,
+   "frames": {
+    "frames": 2958,
+    "durationS": 20.004099999999998,
+    "avgFps": 147.8696867142236,
+    "onePctLowFps": 2.8332625017707875,
+    "avgFrameMs": 6.762711291413116,
+    "p99FrameMs": 158.79999999999927,
+    "maxFrameMs": 1461.8999999999978
+   },
+   "gpuMs": {
+    "n": 160,
+    "median": 0.442368,
+    "p95": 3.309568,
+    "max": 6.029312
+   },
+   "spark": null,
+   "gsl": {
+    "visibleSplats": 4454607,
+    "residentCpuMB": 3083.2,
+    "residentGpuMB": 2701.8,
+    "downloadedMB": 2169.2,
+    "loadingChunks": 0,
+    "loadProgress": 0.8904109589041096,
+    "peakWasmMB": 1115.4,
+    "lodTimeMs": {
+     "n": 955,
+     "median": 17.299999952316284,
+     "p95": 361.7000000476837,
+     "max": 1494.1000000238419
+    }
+   },
+   "memory": {
+    "jsHeapUsedMB": 3753.2,
+    "gslResidentCpuMB": 3083.2,
+    "gslResidentGpuMB": 2701.8
+   },
+   "activeSplats": {
+    "min": 2773622,
+    "avg": 4326883,
+    "max": 6403233
+   },
+   "hitches": 85,
+   "worstHitchMs": 637.7999999999993
+  },
+  "stalls": [
+   [
+    5191,
+    1272
+   ],
+   [
+    14536,
+    1864
+   ]
+  ],
+  "trace": [
+   {
+    "t": 8,
+    "answerMs": 9,
+    "v": null
+   },
+   {
+    "t": 1029,
+    "answerMs": 3,
+    "v": [
+     240,
+     199354,
+     465,
+     "loading"
+    ]
+   },
+   {
+    "t": 2044,
+    "answerMs": 7,
+    "v": [
+     240,
+     3854342,
+     1677,
+     "loading"
+    ]
+   },
+   {
+    "t": 3059,
+    "answerMs": 127,
+    "v": [
+     240,
+     3875500,
+     2130,
+     "loading"
+    ]
+   },
+   {
+    "t": 4188,
+    "answerMs": 1,
+    "v": [
+     240,
+     4366827,
+     2456,
+     "loading"
+    ]
+   },
+   {
+    "t": 5191,
+    "answerMs": 1272,
+    "v": [
+     240,
+     4379952,
+     2545,
+     "loading"
+    ]
+   },
+   {
+    "t": 7467,
+    "answerMs": 1,
+    "v": [
+     240,
+     4224068,
+     2578,
+     "settled"
+    ]
+   },
+   {
+    "t": 8472,
+    "answerMs": 3,
+    "v": [
+     240,
+     4224068,
+     2554,
+     "settled"
+    ]
+   },
+   {
+    "t": 9477,
+    "answerMs": 3,
+    "v": [
+     240,
+     4224068,
+     2567,
+     "settled"
+    ]
+   },
+   {
+    "t": 10495,
+    "answerMs": 7,
+    "v": [
+     240,
+     4224068,
+     2576,
+     "settled"
+    ]
+   },
+   {
+    "t": 11517,
+    "answerMs": 7,
+    "v": [
+     240,
+     4224068,
+     2556,
+     "settled"
+    ]
+   },
+   {
+    "t": 12524,
+    "answerMs": 1,
+    "v": [
+     240,
+     4224068,
+     2564,
+     "settled"
+    ]
+   },
+   {
+    "t": 13533,
+    "answerMs": 3,
+    "v": [
+     240,
+     4224068,
+     2573,
+     "settled"
+    ]
+   },
+   {
+    "t": 14536,
+    "answerMs": 1864,
+    "v": [
+     240,
+     4224068,
+     2581,
+     "settled"
+    ]
+   },
+   {
+    "t": 17415,
+    "answerMs": 681,
+    "v": [
+     240,
+     4258197,
+     2456,
+     "loading"
+    ]
+   },
+   {
+    "t": 19099,
+    "answerMs": 18,
+    "v": [
+     240,
+     3278681,
+     2483,
+     "loading"
+    ]
+   },
+   {
+    "t": 20119,
+    "answerMs": 191,
+    "v": [
+     240,
+     2937965,
+     2766,
+     "loading"
+    ]
+   },
+   {
+    "t": 21311,
+    "answerMs": 1,
+    "v": [
+     240,
+     2945773,
+     3023,
+     "loading"
+    ]
+   },
+   {
+    "t": 22315,
+    "answerMs": 136,
+    "v": [
+     240,
+     3371305,
+     2854,
+     "loading"
+    ]
+   },
+   {
+    "t": 23463,
+    "answerMs": 405,
+    "v": [
+     240,
+     3892029,
+     2973,
+     "loading"
+    ]
+   },
+   {
+    "t": 24876,
+    "answerMs": 52,
+    "v": [
+     240,
+     4603814,
+     3088,
+     "loading"
+    ]
+   },
+   {
+    "t": 25931,
+    "answerMs": 1,
+    "v": [
+     240,
+     5978865,
+     3455,
+     "loading"
+    ]
+   },
+   {
+    "t": 26938,
+    "answerMs": 53,
+    "v": [
+     240,
+     6026606,
+     3819,
+     "loading"
+    ]
+   },
+   {
+    "t": 27995,
+    "answerMs": 47,
+    "v": [
+     240,
+     5203197,
+     3884,
+     "loading"
+    ]
+   },
+   {
+    "t": 29050,
+    "answerMs": 117,
+    "v": [
+     240,
+     5035898,
+     3987,
+     "loading"
+    ]
+   },
+   {
+    "t": 30179,
+    "answerMs": 149,
+    "v": [
+     240,
+     5034406,
+     3734,
+     "loading"
+    ]
+   },
+   {
+    "t": 31338,
+    "answerMs": 181,
+    "v": [
+     240,
+     5164273,
+     3798,
+     "loading"
+    ]
+   },
+   {
+    "t": 32530,
+    "answerMs": 503,
+    "v": [
+     240,
+     5041219,
+     3960,
+     "loading"
+    ]
+   },
+   {
+    "t": 34038,
+    "answerMs": 5,
+    "v": [
+     240,
+     5346038,
+     3481,
+     "loading"
+    ]
+   },
+   {
+    "t": 35058,
+    "answerMs": 1,
+    "v": [
+     240,
+     5430959,
+     3587,
+     "loading"
+    ]
+   },
+   {
+    "t": 36062,
+    "answerMs": 11,
+    "v": [
+     240,
+     5120770,
+     3644,
+     "loading"
+    ]
+   }
+  ]
+ },
+ {
+  "name": "gsl 10M demand shot",
+  "url": "http://localhost:5174/?scene=HighRezOculus&cam=0,1.6,4&target=0,1.2,0&pixelRatio=1&renderer=gsl&lodScale=4&overlay=0",
+  "load": {
+   "status": "settled",
+   "modelRequestMs": 682.5999999046326,
+   "firstSplatFrameMs": 874.7999999523163,
+   "settledMs": 5086.899999976158,
+   "activeSplats": 5456985,
+   "budget": 10000000,
+   "networkMB": 0.1,
+   "requests": 12,
+   "errors": [],
+   "gpu": "WebGPU: nvidia blackwell",
+   "parts": [
+    [
+     "Oculus12",
+     159881
+    ],
+    [
+     "Oculus34",
+     837797
+    ],
+    [
+     "Oculus56",
+     2506399
+    ],
+    [
+     "Oculus78",
+     1952908
+    ]
+   ]
+  },
+  "memSettled": {
+   "workingSetMB": 5078,
+   "privateMB": 7719,
+   "gpuDedicatedMB": 3127
+  },
+  "memAfter": {
+   "workingSetMB": 7509,
+   "privateMB": 11587,
+   "gpuDedicatedMB": 4480
+  },
+  "bench": {
+   "kind": "orbit",
+   "renderer": "gsl",
+   "startedAtMs": 248109.39999997616,
+   "seconds": 20,
+   "turns": 1,
+   "target": [
+    0,
+    1.2,
+    0
+   ],
+   "radius": 3.9999999999999996,
+   "height": 0.40000000000000036,
+   "pixelRatio": 1,
+   "drawingBuffer": [
+    1584,
+    805
+   ],
+   "budget": 10000000,
+   "frames": {
+    "frames": 2959,
+    "durationS": 20.180100000000007,
+    "avgFps": 146.62960044796603,
+    "onePctLowFps": 2.80248112996041,
+    "avgFrameMs": 6.819905373436974,
+    "p99FrameMs": 174.90000000002328,
+    "maxFrameMs": 820.2000000000116
+   },
+   "gpuMs": {
+    "n": 128,
+    "median": 0.5064145454545455,
+    "p95": 4.325376,
+    "max": 4.75136
+   },
+   "spark": null,
+   "gsl": {
+    "visibleSplats": 6749631,
+    "residentCpuMB": 3987.6,
+    "residentGpuMB": 3469,
+    "downloadedMB": 2321.5,
+    "loadingChunks": 2,
+    "loadProgress": 0.9658119658119658,
+    "peakWasmMB": 1218.9,
+    "lodTimeMs": {
+     "n": 847,
+     "median": 10.599999904632568,
+     "p95": 412.7999999523163,
+     "max": 921.8000000715256
+    }
+   },
+   "memory": {
+    "jsHeapUsedMB": 4767.1,
+    "gslResidentCpuMB": 3987.6,
+    "gslResidentGpuMB": 3469
+   },
+   "activeSplats": {
+    "min": 4138524,
+    "avg": 6045429,
+    "max": 10047087
+   },
+   "hitches": 79,
+   "worstHitchMs": 820.2000000000116
+  },
+  "stalls": [
+   [
+    5179,
+    1705
+   ],
+   [
+    7886,
+    1013
+   ],
+   [
+    245221,
+    2008
+   ]
+  ],
+  "trace": [
+   {
+    "t": 8,
+    "answerMs": 9,
+    "v": null
+   },
+   {
+    "t": 1024,
+    "answerMs": 11,
+    "v": [
+     240,
+     199354,
+     459,
+     "loading"
+    ]
+   },
+   {
+    "t": 2044,
+    "answerMs": 3,
+    "v": [
+     240,
+     4105494,
+     1867,
+     "loading"
+    ]
+   },
+   {
+    "t": 3059,
+    "answerMs": 62,
+    "v": [
+     240,
+     5106680,
+     2346,
+     "loading"
+    ]
+   },
+   {
+    "t": 4129,
+    "answerMs": 42,
+    "v": [
+     240,
+     5291955,
+     2846,
+     "loading"
+    ]
+   },
+   {
+    "t": 5179,
+    "answerMs": 1705,
+    "v": [
+     240,
+     5951609,
+     2849,
+     "loading"
+    ]
+   },
+   {
+    "t": 7886,
+    "answerMs": 1013,
+    "v": [
+     240,
+     7219893,
+     3062,
+     "loading"
+    ]
+   },
+   {
+    "t": 9911,
+    "answerMs": 961,
+    "v": [
+     240,
+     7219893,
+     3106,
+     "loading"
+    ]
+   },
+   {
+    "t": 11878,
+    "answerMs": 909,
+    "v": [
+     240,
+     7219893,
+     2849,
+     "loading"
+    ]
+   },
+   {
+    "t": 13800,
+    "answerMs": 959,
+    "v": [
+     240,
+     7219893,
+     2878,
+     "loading"
+    ]
+   },
+   {
+    "t": 15766,
+    "answerMs": 912,
+    "v": [
+     240,
+     7219893,
+     2937,
+     "loading"
+    ]
+   },
+   {
+    "t": 17688,
+    "answerMs": 955,
+    "v": [
+     240,
+     7219893,
+     2981,
+     "loading"
+    ]
+   },
+   {
+    "t": 19654,
+    "answerMs": 895,
+    "v": [
+     240,
+     7219893,
+     3040,
+     "loading"
+    ]
+   },
+   {
+    "t": 21554,
+    "answerMs": 965,
+    "v": [
+     240,
+     7219893,
+     3084,
+     "loading"
+    ]
+   },
+   {
+    "t": 23534,
+    "answerMs": 898,
+    "v": [
+     240,
+     7219893,
+     2848,
+     "loading"
+    ]
+   },
+   {
+    "t": 25439,
+    "answerMs": 952,
+    "v": [
+     240,
+     7219893,
+     2878,
+     "loading"
+    ]
+   },
+   {
+    "t": 27392,
+    "answerMs": 906,
+    "v": [
+     240,
+     7219893,
+     2937,
+     "loading"
+    ]
+   },
+   {
+    "t": 29310,
+    "answerMs": 957,
+    "v": [
+     240,
+     7219893,
+     2981,
+     "loading"
+    ]
+   },
+   {
+    "t": 31282,
+    "answerMs": 895,
+    "v": [
+     240,
+     7219893,
+     3040,
+     "loading"
+    ]
+   },
+   {
+    "t": 33177,
+    "answerMs": 965,
+    "v": [
+     240,
+     7219893,
+     3082,
+     "loading"
+    ]
+   },
+   {
+    "t": 35156,
+    "answerMs": 901,
+    "v": [
+     240,
+     7219893,
+     2897,
+     "loading"
+    ]
+   },
+   {
+    "t": 37057,
+    "answerMs": 970,
+    "v": [
+     240,
+     7219893,
+     2927,
+     "loading"
+    ]
+   },
+   {
+    "t": 39035,
+    "answerMs": 903,
+    "v": [
+     240,
+     7219893,
+     2986,
+     "loading"
+    ]
+   },
+   {
+    "t": 40941,
+    "answerMs": 965,
+    "v": [
+     240,
+     7219893,
+     3030,
+     "loading"
+    ]
+   },
+   {
+    "t": 42920,
+    "answerMs": 897,
+    "v": [
+     240,
+     7219893,
+     3089,
+     "loading"
+    ]
+   },
+   {
+    "t": 44820,
+    "answerMs": 962,
+    "v": [
+     240,
+     7219893,
+     2824,
+     "loading"
+    ]
+   },
+   {
+    "t": 46791,
+    "answerMs": 919,
+    "v": [
+     240,
+     7219893,
+     2883,
+     "loading"
+    ]
+   },
+   {
+    "t": 48718,
+    "answerMs": 956,
+    "v": [
+     240,
+     7219893,
+     2927,
+     "loading"
+    ]
+   },
+   {
+    "t": 50687,
+    "answerMs": 908,
+    "v": [
+     240,
+     7219893,
+     2986,
+     "loading"
+    ]
+   },
+   {
+    "t": 52604,
+    "answerMs": 967,
+    "v": [
+     240,
+     7219893,
+     3030,
+     "loading"
+    ]
+   },
+   {
+    "t": 54579,
+    "answerMs": 911,
+    "v": [
+     240,
+     7219893,
+     3089,
+     "loading"
+    ]
+   },
+   {
+    "t": 56495,
+    "answerMs": 966,
+    "v": [
+     240,
+     7219893,
+     2841,
+     "loading"
+    ]
+   },
+   {
+    "t": 58461,
+    "answerMs": 908,
+    "v": [
+     240,
+     7219893,
+     2887,
+     "loading"
+    ]
+   },
+   {
+    "t": 60382,
+    "answerMs": 958,
+    "v": [
+     240,
+     7219893,
+     2931,
+     "loading"
+    ]
+   },
+   {
+    "t": 62347,
+    "answerMs": 909,
+    "v": [
+     240,
+     7219893,
+     2990,
+     "loading"
+    ]
+   },
+   {
+    "t": 64257,
+    "answerMs": 969,
+    "v": [
+     240,
+     7219893,
+     3034,
+     "loading"
+    ]
+   },
+   {
+    "t": 66241,
+    "answerMs": 912,
+    "v": [
+     240,
+     7219893,
+     3092,
+     "loading"
+    ]
+   },
+   {
+    "t": 68160,
+    "answerMs": 973,
+    "v": [
+     240,
+     7219893,
+     2842,
+     "loading"
+    ]
+   },
+   {
+    "t": 70138,
+    "answerMs": 918,
+    "v": [
+     240,
+     7219893,
+     2888,
+     "loading"
+    ]
+   },
+   {
+    "t": 72069,
+    "answerMs": 957,
+    "v": [
+     240,
+     7219893,
+     2932,
+     "loading"
+    ]
+   },
+   {
+    "t": 74038,
+    "answerMs": 913,
+    "v": [
+     240,
+     7219893,
+     2990,
+     "loading"
+    ]
+   },
+   {
+    "t": 75954,
+    "answerMs": 965,
+    "v": [
+     240,
+     7219893,
+     3035,
+     "loading"
+    ]
+   },
+   {
+    "t": 77920,
+    "answerMs": 914,
+    "v": [
+     240,
+     7219893,
+     3093,
+     "loading"
+    ]
+   },
+   {
+    "t": 79842,
+    "answerMs": 967,
+    "v": [
+     240,
+     7219893,
+     2842,
+     "loading"
+    ]
+   },
+   {
+    "t": 81820,
+    "answerMs": 910,
+    "v": [
+     240,
+     7219893,
+     2888,
+     "loading"
+    ]
+   },
+   {
+    "t": 83736,
+    "answerMs": 964,
+    "v": [
+     240,
+     7219893,
+     2932,
+     "loading"
+    ]
+   },
+   {
+    "t": 85704,
+    "answerMs": 914,
+    "v": [
+     240,
+     7219893,
+     2991,
+     "loading"
+    ]
+   },
+   {
+    "t": 87621,
+    "answerMs": 966,
+    "v": [
+     240,
+     7219893,
+     3035,
+     "loading"
+    ]
+   },
+   {
+    "t": 89589,
+    "answerMs": 915,
+    "v": [
+     240,
+     7219893,
+     3093,
+     "loading"
+    ]
+   },
+   {
+    "t": 91509,
+    "answerMs": 971,
+    "v": [
+     240,
+     7219893,
+     2842,
+     "loading"
+    ]
+   },
+   {
+    "t": 93497,
+    "answerMs": 898,
+    "v": [
+     240,
+     7219893,
+     2888,
+     "loading"
+    ]
+   },
+   {
+    "t": 95403,
+    "answerMs": 961,
+    "v": [
+     240,
+     7219893,
+     2932,
+     "loading"
+    ]
+   },
+   {
+    "t": 97372,
+    "answerMs": 910,
+    "v": [
+     240,
+     7219893,
+     2990,
+     "loading"
+    ]
+   },
+   {
+    "t": 99282,
+    "answerMs": 966,
+    "v": [
+     240,
+     7219893,
+     3034,
+     "loading"
+    ]
+   },
+   {
+    "t": 101250,
+    "answerMs": 916,
+    "v": [
+     240,
+     7219893,
+     3093,
+     "loading"
+    ]
+   },
+   {
+    "t": 103174,
+    "answerMs": 971,
+    "v": [
+     240,
+     7219893,
+     2842,
+     "loading"
+    ]
+   },
+   {
+    "t": 105156,
+    "answerMs": 899,
+    "v": [
+     240,
+     7219893,
+     2888,
+     "loading"
+    ]
+   },
+   {
+    "t": 107068,
+    "answerMs": 956,
+    "v": [
+     240,
+     7219893,
+     2932,
+     "loading"
+    ]
+   },
+   {
+    "t": 109029,
+    "answerMs": 913,
+    "v": [
+     240,
+     7219893,
+     2990,
+     "loading"
+    ]
+   },
+   {
+    "t": 110947,
+    "answerMs": 963,
+    "v": [
+     240,
+     7219893,
+     3034,
+     "loading"
+    ]
+   },
+   {
+    "t": 112913,
+    "answerMs": 922,
+    "v": [
+     240,
+     7219893,
+     2831,
+     "loading"
+    ]
+   },
+   {
+    "t": 114843,
+    "answerMs": 960,
+    "v": [
+     240,
+     7219893,
+     2875,
+     "loading"
+    ]
+   },
+   {
+    "t": 116817,
+    "answerMs": 903,
+    "v": [
+     240,
+     7219893,
+     2934,
+     "loading"
+    ]
+   },
+   {
+    "t": 118734,
+    "answerMs": 961,
+    "v": [
+     240,
+     7219893,
+     2978,
+     "loading"
+    ]
+   },
+   {
+    "t": 120696,
+    "answerMs": 916,
+    "v": [
+     240,
+     7219893,
+     3037,
+     "loading"
+    ]
+   },
+   {
+    "t": 122613,
+    "answerMs": 974,
+    "v": [
+     240,
+     7219893,
+     3081,
+     "loading"
+    ]
+   },
+   {
+    "t": 124593,
+    "answerMs": 911,
+    "v": [
+     240,
+     7219893,
+     2847,
+     "loading"
+    ]
+   },
+   {
+    "t": 126509,
+    "answerMs": 968,
+    "v": [
+     240,
+     7219893,
+     2879,
+     "loading"
+    ]
+   },
+   {
+    "t": 128480,
+    "answerMs": 923,
+    "v": [
+     240,
+     7219893,
+     2937,
+     "loading"
+    ]
+   },
+   {
+    "t": 130414,
+    "answerMs": 962,
+    "v": [
+     240,
+     7219893,
+     2981,
+     "loading"
+    ]
+   },
+   {
+    "t": 132381,
+    "answerMs": 914,
+    "v": [
+     240,
+     7219893,
+     3040,
+     "loading"
+    ]
+   },
+   {
+    "t": 134307,
+    "answerMs": 958,
+    "v": [
+     240,
+     7219893,
+     2825,
+     "loading"
+    ]
+   },
+   {
+    "t": 136269,
+    "answerMs": 921,
+    "v": [
+     240,
+     7219893,
+     2883,
+     "loading"
+    ]
+   },
+   {
+    "t": 138201,
+    "answerMs": 966,
+    "v": [
+     240,
+     7219893,
+     2928,
+     "loading"
+    ]
+   },
+   {
+    "t": 140170,
+    "answerMs": 916,
+    "v": [
+     240,
+     7219893,
+     2986,
+     "loading"
+    ]
+   },
+   {
+    "t": 142093,
+    "answerMs": 966,
+    "v": [
+     240,
+     7219893,
+     3030,
+     "loading"
+    ]
+   },
+   {
+    "t": 144060,
+    "answerMs": 926,
+    "v": [
+     240,
+     7219893,
+     2836,
+     "loading"
+    ]
+   },
+   {
+    "t": 145995,
+    "answerMs": 962,
+    "v": [
+     240,
+     7219893,
+     2880,
+     "loading"
+    ]
+   },
+   {
+    "t": 147958,
+    "answerMs": 917,
+    "v": [
+     240,
+     7219893,
+     2938,
+     "loading"
+    ]
+   },
+   {
+    "t": 149889,
+    "answerMs": 957,
+    "v": [
+     240,
+     7219893,
+     2982,
+     "loading"
+    ]
+   },
+   {
+    "t": 151855,
+    "answerMs": 908,
+    "v": [
+     240,
+     7219893,
+     3041,
+     "loading"
+    ]
+   },
+   {
+    "t": 153774,
+    "answerMs": 958,
+    "v": [
+     240,
+     7219893,
+     3082,
+     "loading"
+    ]
+   },
+   {
+    "t": 155738,
+    "answerMs": 920,
+    "v": [
+     240,
+     7219893,
+     2884,
+     "loading"
+    ]
+   },
+   {
+    "t": 157669,
+    "answerMs": 955,
+    "v": [
+     240,
+     7219893,
+     2927,
+     "loading"
+    ]
+   },
+   {
+    "t": 159634,
+    "answerMs": 905,
+    "v": [
+     240,
+     7219893,
+     2987,
+     "loading"
+    ]
+   },
+   {
+    "t": 161549,
+    "answerMs": 955,
+    "v": [
+     240,
+     7219893,
+     3033,
+     "loading"
+    ]
+   },
+   {
+    "t": 163518,
+    "answerMs": 901,
+    "v": [
+     240,
+     7219893,
+     3091,
+     "loading"
+    ]
+   },
+   {
+    "t": 165429,
+    "answerMs": 961,
+    "v": [
+     240,
+     7219893,
+     2824,
+     "loading"
+    ]
+   },
+   {
+    "t": 167396,
+    "answerMs": 922,
+    "v": [
+     240,
+     7219893,
+     2883,
+     "loading"
+    ]
+   },
+   {
+    "t": 169328,
+    "answerMs": 960,
+    "v": [
+     240,
+     7219893,
+     2928,
+     "loading"
+    ]
+   },
+   {
+    "t": 171294,
+    "answerMs": 904,
+    "v": [
+     240,
+     7219893,
+     2987,
+     "loading"
+    ]
+   },
+   {
+    "t": 173200,
+    "answerMs": 970,
+    "v": [
+     240,
+     7219893,
+     3032,
+     "loading"
+    ]
+   },
+   {
+    "t": 175179,
+    "answerMs": 908,
+    "v": [
+     240,
+     7219893,
+     2830,
+     "loading"
+    ]
+   },
+   {
+    "t": 177096,
+    "answerMs": 961,
+    "v": [
+     240,
+     7219893,
+     2875,
+     "loading"
+    ]
+   },
+   {
+    "t": 179071,
+    "answerMs": 905,
+    "v": [
+     240,
+     7219893,
+     2934,
+     "loading"
+    ]
+   },
+   {
+    "t": 180988,
+    "answerMs": 976,
+    "v": [
+     240,
+     7219893,
+     2979,
+     "loading"
+    ]
+   },
+   {
+    "t": 182968,
+    "answerMs": 915,
+    "v": [
+     240,
+     7219893,
+     3039,
+     "loading"
+    ]
+   },
+   {
+    "t": 184885,
+    "answerMs": 967,
+    "v": [
+     240,
+     7219893,
+     2824,
+     "loading"
+    ]
+   },
+   {
+    "t": 186858,
+    "answerMs": 913,
+    "v": [
+     240,
+     7219893,
+     2883,
+     "loading"
+    ]
+   },
+   {
+    "t": 188779,
+    "answerMs": 959,
+    "v": [
+     240,
+     7219893,
+     2927,
+     "loading"
+    ]
+   },
+   {
+    "t": 190741,
+    "answerMs": 920,
+    "v": [
+     240,
+     7219893,
+     2985,
+     "loading"
+    ]
+   },
+   {
+    "t": 192676,
+    "answerMs": 954,
+    "v": [
+     240,
+     7219893,
+     3033,
+     "loading"
+    ]
+   },
+   {
+    "t": 194644,
+    "answerMs": 913,
+    "v": [
+     240,
+     7219893,
+     2830,
+     "loading"
+    ]
+   },
+   {
+    "t": 196565,
+    "answerMs": 968,
+    "v": [
+     240,
+     7219893,
+     2874,
+     "loading"
+    ]
+   },
+   {
+    "t": 198547,
+    "answerMs": 896,
+    "v": [
+     240,
+     7219893,
+     2933,
+     "loading"
+    ]
+   },
+   {
+    "t": 200456,
+    "answerMs": 958,
+    "v": [
+     240,
+     7219893,
+     2978,
+     "loading"
+    ]
+   },
+   {
+    "t": 202419,
+    "answerMs": 914,
+    "v": [
+     240,
+     7219893,
+     3037,
+     "loading"
+    ]
+   },
+   {
+    "t": 204348,
+    "answerMs": 957,
+    "v": [
+     240,
+     7219893,
+     2824,
+     "loading"
+    ]
+   },
+   {
+    "t": 206320,
+    "answerMs": 909,
+    "v": [
+     240,
+     7219893,
+     2883,
+     "loading"
+    ]
+   },
+   {
+    "t": 208229,
+    "answerMs": 973,
+    "v": [
+     240,
+     7219893,
+     2927,
+     "loading"
+    ]
+   },
+   {
+    "t": 210212,
+    "answerMs": 907,
+    "v": [
+     240,
+     7219893,
+     2986,
+     "loading"
+    ]
+   },
+   {
+    "t": 212133,
+    "answerMs": 955,
+    "v": [
+     240,
+     7219893,
+     3031,
+     "loading"
+    ]
+   },
+   {
+    "t": 214094,
+    "answerMs": 919,
+    "v": [
+     240,
+     7219893,
+     2830,
+     "loading"
+    ]
+   },
+   {
+    "t": 216022,
+    "answerMs": 966,
+    "v": [
+     240,
+     7219893,
+     2875,
+     "loading"
+    ]
+   },
+   {
+    "t": 218000,
+    "answerMs": 899,
+    "v": [
+     240,
+     7219893,
+     2934,
+     "loading"
+    ]
+   },
+   {
+    "t": 219901,
+    "answerMs": 968,
+    "v": [
+     240,
+     7219893,
+     2979,
+     "loading"
+    ]
+   },
+   {
+    "t": 221869,
+    "answerMs": 916,
+    "v": [
+     240,
+     7219893,
+     3038,
+     "loading"
+    ]
+   },
+   {
+    "t": 223790,
+    "answerMs": 970,
+    "v": [
+     240,
+     7219893,
+     2824,
+     "loading"
+    ]
+   },
+   {
+    "t": 225771,
+    "answerMs": 917,
+    "v": [
+     240,
+     7219893,
+     2883,
+     "loading"
+    ]
+   },
+   {
+    "t": 227690,
+    "answerMs": 970,
+    "v": [
+     240,
+     7219893,
+     2928,
+     "loading"
+    ]
+   },
+   {
+    "t": 229674,
+    "answerMs": 900,
+    "v": [
+     240,
+     7219893,
+     2987,
+     "loading"
+    ]
+   },
+   {
+    "t": 231575,
+    "answerMs": 975,
+    "v": [
+     240,
+     7219893,
+     3032,
+     "loading"
+    ]
+   },
+   {
+    "t": 233562,
+    "answerMs": 909,
+    "v": [
+     240,
+     7219893,
+     2830,
+     "loading"
+    ]
+   },
+   {
+    "t": 235482,
+    "answerMs": 963,
+    "v": [
+     240,
+     7219893,
+     2874,
+     "loading"
+    ]
+   },
+   {
+    "t": 237454,
+    "answerMs": 909,
+    "v": [
+     240,
+     7219893,
+     2933,
+     "loading"
+    ]
+   },
+   {
+    "t": 239371,
+    "answerMs": 963,
+    "v": [
+     240,
+     7219893,
+     2978,
+     "loading"
+    ]
+   },
+   {
+    "t": 241335,
+    "answerMs": 908,
+    "v": [
+     240,
+     7219893,
+     3037,
+     "loading"
+    ]
+   },
+   {
+    "t": 243244,
+    "answerMs": 970,
+    "v": [
+     240,
+     7219893,
+     2824,
+     "loading"
+    ]
+   },
+   {
+    "t": 245221,
+    "answerMs": 2008,
+    "v": [
+     240,
+     7219893,
+     2883,
+     "loading"
+    ]
+   },
+   {
+    "t": 248245,
+    "answerMs": 2,
+    "v": [
+     240,
+     5463929,
+     2996,
+     "loading"
+    ]
+   },
+   {
+    "t": 249248,
+    "answerMs": 137,
+    "v": [
+     240,
+     5412367,
+     3213,
+     "loading"
+    ]
+   },
+   {
+    "t": 250395,
+    "answerMs": 80,
+    "v": [
+     240,
+     4545581,
+     3233,
+     "loading"
+    ]
+   },
+   {
+    "t": 251478,
+    "answerMs": 4,
+    "v": [
+     240,
+     4178371,
+     3327,
+     "loading"
+    ]
+   },
+   {
+    "t": 252496,
+    "answerMs": 1,
+    "v": [
+     240,
+     4202268,
+     2945,
+     "loading"
+    ]
+   },
+   {
+    "t": 253512,
+    "answerMs": 307,
+    "v": [
+     240,
+     4501333,
+     3184,
+     "loading"
+    ]
+   },
+   {
+    "t": 254828,
+    "answerMs": 2,
+    "v": [
+     240,
+     4652748,
+     3447,
+     "loading"
+    ]
+   },
+   {
+    "t": 255834,
+    "answerMs": 90,
+    "v": [
+     240,
+     4772214,
+     3178,
+     "loading"
+    ]
+   },
+   {
+    "t": 256936,
+    "answerMs": 2,
+    "v": [
+     240,
+     5354869,
+     3414,
+     "loading"
+    ]
+   },
+   {
+    "t": 257940,
+    "answerMs": 218,
+    "v": [
+     240,
+     6457941,
+     3800,
+     "loading"
+    ]
+   },
+   {
+    "t": 259163,
+    "answerMs": 358,
+    "v": [
+     240,
+     7501690,
+     4539,
+     "loading"
+    ]
+   },
+   {
+    "t": 260530,
+    "answerMs": 67,
+    "v": [
+     240,
+     7901812,
+     4703,
+     "loading"
+    ]
+   },
+   {
+    "t": 261601,
+    "answerMs": 67,
+    "v": [
+     240,
+     9151901,
+     4486,
+     "loading"
+    ]
+   },
+   {
+    "t": 262674,
+    "answerMs": 768,
+    "v": [
+     240,
+     9276529,
+     4656,
+     "loading"
+    ]
+   },
+   {
+    "t": 264450,
+    "answerMs": 129,
+    "v": [
+     240,
+     10047087,
+     4887,
+     "loading"
+    ]
+   },
+   {
+    "t": 265584,
+    "answerMs": 2,
+    "v": [
+     240,
+     8343887,
+     4527,
+     "loading"
+    ]
+   },
+   {
+    "t": 266589,
+    "answerMs": 123,
+    "v": [
+     240,
+     7173441,
+     4488,
+     "loading"
+    ]
+   },
+   {
+    "t": 267717,
+    "answerMs": 3,
+    "v": [
+     240,
+     6501082,
+     4536,
+     "loading"
+    ]
+   }
+  ]
+ }
+]

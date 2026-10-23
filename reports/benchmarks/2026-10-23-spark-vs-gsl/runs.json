@@ -1,0 +1,2202 @@
+[
+ {
+  "name": "spark 5M",
+  "url": "http://localhost:5174/?scene=HighRezOculus&cam=0,1.6,4&target=0,1.2,0&pixelRatio=1",
+  "load": {
+   "status": "settled",
+   "modelRequestMs": 176.5,
+   "firstSplatFrameMs": 1139.1000000238419,
+   "settledMs": 146453,
+   "activeSplats": 4995277,
+   "budget": 5000000,
+   "networkMB": 940.7,
+   "requests": 300,
+   "errors": [],
+   "gpu": "ANGLE (NVIDIA, NVIDIA GeForce RTX 5080 (0x00002C02) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+   "parts": [
+    [
+     "Oculus12",
+     227766
+    ],
+    [
+     "Oculus34",
+     1191716
+    ],
+    [
+     "Oculus78",
+     984506
+    ],
+    [
+     "Oculus56",
+     2596011
+    ]
+   ]
+  },
+  "memSettled": {
+   "workingSetMB": 7100,
+   "privateMB": 12772,
+   "gpuDedicatedMB": 0
+  },
+  "memAfter": {
+   "workingSetMB": 7315,
+   "privateMB": 12445,
+   "gpuDedicatedMB": 4836
+  },
+  "bench": {
+   "kind": "orbit",
+   "renderer": "spark",
+   "startedAtMs": 187088,
+   "seconds": 20,
+   "turns": 1,
+   "target": [
+    0,
+    1.2,
+    0
+   ],
+   "radius": 3.9999999999999996,
+   "height": 0.40000000000000036,
+   "pixelRatio": 1,
+   "drawingBuffer": [
+    1584,
+    805
+   ],
+   "budget": 5000000,
+   "frames": {
+    "frames": 787,
+    "durationS": 17.544899999999995,
+    "avgFps": 44.856340019036885,
+    "onePctLowFps": 0.45998160073597055,
+    "avgFrameMs": 22.293392630241417,
+    "p99FrameMs": 9.700000000011642,
+    "maxFrameMs": 14957.799999999988
+   },
+   "gpuMs": {
+    "n": 34,
+    "median": 7.55648,
+    "p95": 8.07264,
+    "max": 8.131104
+   },
+   "spark": {
+    "windowS": 21.338700000047684,
+    "lodUpdatesPerS": 0,
+    "traverseMs": null,
+    "lodUpdateMs": null,
+    "sortsPerS": 0.04686321097338476,
+    "readbackMs": {
+     "n": 1,
+     "median": 1749,
+     "p95": 1749,
+     "max": 1749
+    },
+    "sortMs": {
+     "n": 1,
+     "median": 4253.5,
+     "p95": 4253.5,
+     "max": 4253.5
+    },
+    "uploadMsPerS": 0,
+    "pagesUploadedPerS": 0,
+    "missing": []
+   },
+   "gsl": null,
+   "memory": {
+    "jsHeapUsedMB": 3441.6,
+    "gslResidentCpuMB": null,
+    "gslResidentGpuMB": null
+   },
+   "activeSplats": {
+    "min": 4995277,
+    "avg": 4995277,
+    "max": 4995277
+   },
+   "hitches": 3,
+   "worstHitchMs": 463.3999999999942
+  },
+  "stalls": [
+   [
+    3127,
+    3366
+   ],
+   [
+    8764,
+    7273
+   ],
+   [
+    17041,
+    7305
+   ],
+   [
+    27019,
+    2075
+   ],
+   [
+    31157,
+    1951
+   ],
+   [
+    34114,
+    13611
+   ],
+   [
+    49730,
+    10443
+   ],
+   [
+    61187,
+    13908
+   ],
+   [
+    76103,
+    14078
+   ],
+   [
+    91196,
+    8403
+   ],
+   [
+    101611,
+    29095
+   ],
+   [
+    131708,
+    10081
+   ],
+   [
+    143802,
+    2646
+   ],
+   [
+    148792,
+    12315
+   ],
+   [
+    162118,
+    14194
+   ],
+   [
+    178326,
+    8765
+   ],
+   [
+    188105,
+    14299
+   ],
+   [
+    205186,
+    5102
+   ]
+  ],
+  "trace": [
+   {
+    "t": 6,
+    "answerMs": 8,
+    "v": null
+   },
+   {
+    "t": 1029,
+    "answerMs": 1,
+    "v": [
+     240,
+     0,
+     3364,
+     "loading"
+    ]
+   },
+   {
+    "t": 2044,
+    "answerMs": 71,
+    "v": [
+     240,
+     504365,
+     3647,
+     "loading"
+    ]
+   },
+   {
+    "t": 3127,
+    "answerMs": 3366,
+    "v": [
+     240,
+     783525,
+     3656,
+     "loading"
+    ]
+   },
+   {
+    "t": 7498,
+    "answerMs": 262,
+    "v": [
+     240,
+     1776391,
+     3590,
+     "loading"
+    ]
+   },
+   {
+    "t": 8764,
+    "answerMs": 7273,
+    "v": [
+     240,
+     1776391,
+     3605,
+     "loading"
+    ]
+   },
+   {
+    "t": 17041,
+    "answerMs": 7305,
+    "v": [
+     240,
+     2652448,
+     3623,
+     "loading"
+    ]
+   },
+   {
+    "t": 25354,
+    "answerMs": 656,
+    "v": [
+     240,
+     2652448,
+     3674,
+     "loading"
+    ]
+   },
+   {
+    "t": 27019,
+    "answerMs": 2075,
+    "v": [
+     240,
+     3677118,
+     3782,
+     "loading"
+    ]
+   },
+   {
+    "t": 30107,
+    "answerMs": 36,
+    "v": [
+     240,
+     4859819,
+     3923,
+     "loading"
+    ]
+   },
+   {
+    "t": 31157,
+    "answerMs": 1951,
+    "v": [
+     240,
+     4859819,
+     3633,
+     "loading"
+    ]
+   },
+   {
+    "t": 34114,
+    "answerMs": 13611,
+    "v": [
+     240,
+     4859819,
+     3655,
+     "loading"
+    ]
+   },
+   {
+    "t": 48726,
+    "answerMs": 1,
+    "v": [
+     240,
+     4994825,
+     3829,
+     "loading"
+    ]
+   },
+   {
+    "t": 49730,
+    "answerMs": 10443,
+    "v": [
+     240,
+     4994825,
+     3916,
+     "loading"
+    ]
+   },
+   {
+    "t": 61187,
+    "answerMs": 13908,
+    "v": [
+     240,
+     4994825,
+     4076,
+     "loading"
+    ]
+   },
+   {
+    "t": 76103,
+    "answerMs": 14078,
+    "v": [
+     240,
+     4994825,
+     4030,
+     "loading"
+    ]
+   },
+   {
+    "t": 91196,
+    "answerMs": 8403,
+    "v": [
+     240,
+     4995121,
+     3576,
+     "loading"
+    ]
+   },
+   {
+    "t": 100602,
+    "answerMs": 1,
+    "v": [
+     240,
+     4995279,
+     3905,
+     "loading"
+    ]
+   },
+   {
+    "t": 101611,
+    "answerMs": 29095,
+    "v": [
+     240,
+     4995279,
+     3848,
+     "loading"
+    ]
+   },
+   {
+    "t": 131708,
+    "answerMs": 10081,
+    "v": [
+     240,
+     4995279,
+     3798,
+     "loading"
+    ]
+   },
+   {
+    "t": 142795,
+    "answerMs": 1,
+    "v": [
+     240,
+     4995274,
+     3414,
+     "loading"
+    ]
+   },
+   {
+    "t": 143802,
+    "answerMs": 2646,
+    "v": [
+     240,
+     4995274,
+     3436,
+     "loading"
+    ]
+   },
+   {
+    "t": 147458,
+    "answerMs": 329,
+    "v": [
+     240,
+     4995274,
+     3470,
+     "loading"
+    ]
+   },
+   {
+    "t": 148792,
+    "answerMs": 12315,
+    "v": [
+     240,
+     4995274,
+     3489,
+     "loading"
+    ]
+   },
+   {
+    "t": 162118,
+    "answerMs": 14194,
+    "v": [
+     240,
+     4995274,
+     3422,
+     "settled"
+    ]
+   },
+   {
+    "t": 177321,
+    "answerMs": 0,
+    "v": [
+     240,
+     4995277,
+     3384,
+     "settled"
+    ]
+   },
+   {
+    "t": 178326,
+    "answerMs": 8765,
+    "v": [
+     240,
+     4995277,
+     3385,
+     "settled"
+    ]
+   },
+   {
+    "t": 188105,
+    "answerMs": 14299,
+    "v": [
+     240,
+     4995277,
+     3318,
+     "settled"
+    ]
+   },
+   {
+    "t": 203409,
+    "answerMs": 770,
+    "v": [
+     240,
+     4995277,
+     3352,
+     "loading"
+    ]
+   },
+   {
+    "t": 205186,
+    "answerMs": 5102,
+    "v": [
+     240,
+     4995277,
+     3442,
+     "loading"
+    ]
+   }
+  ]
+ },
+ {
+  "name": "gsl 5M (WebGPU)",
+  "url": "http://localhost:5174/?scene=HighRezOculus&cam=0,1.6,4&target=0,1.2,0&pixelRatio=1&renderer=gsl",
+  "load": {
+   "status": "settled",
+   "modelRequestMs": 699.7999999523163,
+   "firstSplatFrameMs": 896.1999999284744,
+   "settledMs": 3270.0999999046326,
+   "activeSplats": 3511003,
+   "budget": 5000000,
+   "networkMB": 0.1,
+   "requests": 12,
+   "errors": [],
+   "gpu": "WebGPU: nvidia blackwell",
+   "parts": [
+    [
+     "Oculus12",
+     159881
+    ],
+    [
+     "Oculus34",
+     837797
+    ],
+    [
+     "Oculus78",
+     1256712
+    ],
+    [
+     "Oculus56",
+     1256613
+    ]
+   ]
+  },
+  "memSettled": {
+   "workingSetMB": 4375,
+   "privateMB": 6091,
+   "gpuDedicatedMB": 2007
+  },
+  "memAfter": {
+   "workingSetMB": 5973,
+   "privateMB": 8979,
+   "gpuDedicatedMB": 3237
+  },
+  "bench": {
+   "kind": "orbit",
+   "renderer": "gsl",
+   "startedAtMs": 10348.399999976158,
+   "seconds": 20,
+   "turns": 1,
+   "target": [
+    0,
+    1.2,
+    0
+   ],
+   "radius": 3.9999999999999996,
+   "height": 0.40000000000000036,
+   "pixelRatio": 1,
+   "drawingBuffer": [
+    1584,
+    805
+   ],
+   "budget": 5000000,
+   "frames": {
+    "frames": 2783,
+    "durationS": 20.017499999999966,
+    "avgFps": 139.02835019358085,
+    "onePctLowFps": 3.400038857586948,
+    "avgFrameMs": 7.19277757815306,
+    "p99FrameMs": 113,
+    "maxFrameMs": 1450.5999999999985
+   },
+   "gpuMs": {
+    "n": 230,
+    "median": 0.8912896,
+    "p95": 3.407872,
+    "max": 3.899392
+   },
+   "spark": null,
+   "gsl": {
+    "visibleSplats": 4125769,
+    "residentCpuMB": 3037.8,
+    "residentGpuMB": 2648.1,
+    "downloadedMB": 1872.9,
+    "loadingChunks": 1,
+    "loadProgress": 0.9041095890410958,
+    "peakWasmMB": 934.2,
+    "lodTimeMs": {
+     "n": 1164,
+     "median": 28.199999928474426,
+     "p95": 247.79999995231628,
+     "max": 1524.2999999523163
+    }
+   },
+   "memory": {
+    "jsHeapUsedMB": 3628.1,
+    "gslResidentCpuMB": 3037.8,
+    "gslResidentGpuMB": 2648.1
+   },
+   "activeSplats": {
+    "min": 2804969,
+    "avg": 4123909,
+    "max": 5481104
+   },
+   "hitches": 116,
+   "worstHitchMs": 453
+  },
+  "stalls": [],
+  "trace": [
+   {
+    "t": 7,
+    "answerMs": 7,
+    "v": null
+   },
+   {
+    "t": 1021,
+    "answerMs": 3,
+    "v": [
+     240,
+     199354,
+     447,
+     "loading"
+    ]
+   },
+   {
+    "t": 2036,
+    "answerMs": 4,
+    "v": [
+     240,
+     4075905,
+     1733,
+     "loading"
+    ]
+   },
+   {
+    "t": 3053,
+    "answerMs": 5,
+    "v": [
+     240,
+     3523120,
+     1910,
+     "loading"
+    ]
+   },
+   {
+    "t": 4072,
+    "answerMs": 7,
+    "v": [
+     240,
+     3511003,
+     1923,
+     "loading"
+    ]
+   },
+   {
+    "t": 5080,
+    "answerMs": 5,
+    "v": [
+     240,
+     3511003,
+     1932,
+     "settled"
+    ]
+   },
+   {
+    "t": 6087,
+    "answerMs": 5,
+    "v": [
+     240,
+     3511003,
+     1942,
+     "settled"
+    ]
+   },
+   {
+    "t": 7106,
+    "answerMs": 2,
+    "v": [
+     240,
+     3511003,
+     1919,
+     "settled"
+    ]
+   },
+   {
+    "t": 8115,
+    "answerMs": 4,
+    "v": [
+     240,
+     3511003,
+     1929,
+     "settled"
+    ]
+   },
+   {
+    "t": 10349,
+    "answerMs": 2,
+    "v": [
+     240,
+     3511003,
+     1863,
+     "settled"
+    ]
+   },
+   {
+    "t": 11362,
+    "answerMs": 669,
+    "v": [
+     240,
+     3549082,
+     2019,
+     "loading"
+    ]
+   },
+   {
+    "t": 13046,
+    "answerMs": 2,
+    "v": [
+     240,
+     3209366,
+     2278,
+     "loading"
+    ]
+   },
+   {
+    "t": 14052,
+    "answerMs": 2,
+    "v": [
+     240,
+     3048356,
+     2454,
+     "loading"
+    ]
+   },
+   {
+    "t": 15057,
+    "answerMs": 3,
+    "v": [
+     240,
+     2983925,
+     2466,
+     "loading"
+    ]
+   },
+   {
+    "t": 16063,
+    "answerMs": 2,
+    "v": [
+     240,
+     2914410,
+     2685,
+     "loading"
+    ]
+   },
+   {
+    "t": 17070,
+    "answerMs": 13,
+    "v": [
+     240,
+     3031358,
+     2613,
+     "loading"
+    ]
+   },
+   {
+    "t": 18092,
+    "answerMs": 1,
+    "v": [
+     240,
+     3145359,
+     2521,
+     "loading"
+    ]
+   },
+   {
+    "t": 19097,
+    "answerMs": 20,
+    "v": [
+     240,
+     3611519,
+     2629,
+     "loading"
+    ]
+   },
+   {
+    "t": 20130,
+    "answerMs": 10,
+    "v": [
+     240,
+     4511005,
+     2928,
+     "loading"
+    ]
+   },
+   {
+    "t": 21151,
+    "answerMs": 159,
+    "v": [
+     240,
+     5207627,
+     3536,
+     "loading"
+    ]
+   },
+   {
+    "t": 22323,
+    "answerMs": 9,
+    "v": [
+     240,
+     5293227,
+     3290,
+     "loading"
+    ]
+   },
+   {
+    "t": 23342,
+    "answerMs": 1,
+    "v": [
+     240,
+     5143062,
+     3481,
+     "loading"
+    ]
+   },
+   {
+    "t": 24347,
+    "answerMs": 167,
+    "v": [
+     240,
+     5034666,
+     3559,
+     "loading"
+    ]
+   },
+   {
+    "t": 25524,
+    "answerMs": 92,
+    "v": [
+     240,
+     5170432,
+     3332,
+     "loading"
+    ]
+   },
+   {
+    "t": 26628,
+    "answerMs": 226,
+    "v": [
+     240,
+     5103456,
+     3405,
+     "loading"
+    ]
+   },
+   {
+    "t": 27858,
+    "answerMs": 2,
+    "v": [
+     240,
+     5397025,
+     3701,
+     "loading"
+    ]
+   },
+   {
+    "t": 28864,
+    "answerMs": 2,
+    "v": [
+     240,
+     5481104,
+     3318,
+     "loading"
+    ]
+   },
+   {
+    "t": 29868,
+    "answerMs": 9,
+    "v": [
+     240,
+     3969967,
+     3383,
+     "loading"
+    ]
+   }
+  ]
+ },
+ {
+  "name": "gsl 5M (WebGL2 backend)",
+  "url": "http://localhost:5174/?scene=HighRezOculus&cam=0,1.6,4&target=0,1.2,0&pixelRatio=1&renderer=gsl-webgl",
+  "load": {
+   "status": "settled",
+   "modelRequestMs": 414.2000000476837,
+   "firstSplatFrameMs": 714.8000000715256,
+   "settledMs": 4787.900000095367,
+   "activeSplats": 3511003,
+   "budget": 5000000,
+   "networkMB": 0.1,
+   "requests": 12,
+   "errors": [],
+   "gpu": "WebGL2 backend: ANGLE (NVIDIA, NVIDIA GeForce RTX 5080 (0x00002C02) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+   "parts": [
+    [
+     "Oculus12",
+     159881
+    ],
+    [
+     "Oculus34",
+     837797
+    ],
+    [
+     "Oculus56",
+     1256613
+    ],
+    [
+     "Oculus78",
+     1256712
+    ]
+   ]
+  },
+  "memSettled": {
+   "workingSetMB": 6478,
+   "privateMB": 8322,
+   "gpuDedicatedMB": 2113
+  },
+  "memAfter": {
+   "workingSetMB": 8831,
+   "privateMB": 11686,
+   "gpuDedicatedMB": 3153
+  },
+  "bench": {
+   "kind": "orbit",
+   "renderer": "gsl-webgl",
+   "startedAtMs": 17115.400000095367,
+   "seconds": 20,
+   "turns": 1,
+   "target": [
+    0,
+    1.2,
+    0
+   ],
+   "radius": 3.9999999999999996,
+   "height": 0.40000000000000036,
+   "pixelRatio": 1,
+   "drawingBuffer": [
+    1584,
+    805
+   ],
+   "budget": 5000000,
+   "frames": {
+    "frames": 954,
+    "durationS": 19.9429,
+    "avgFps": 47.83657341710583,
+    "onePctLowFps": 0.6461116997906592,
+    "avgFrameMs": 20.90450733752621,
+    "p99FrameMs": 296,
+    "maxFrameMs": 12128.7
+   },
+   "gpuMs": {
+    "n": 94,
+    "median": 5.213024,
+    "p95": 26.524032000000002,
+    "max": 120.10214400000004
+   },
+   "spark": null,
+   "gsl": {
+    "visibleSplats": 3940640,
+    "residentCpuMB": 2697.3,
+    "residentGpuMB": 2345.5,
+    "downloadedMB": 1324.9,
+    "loadingChunks": 5,
+    "loadProgress": 0.8904109589041096,
+    "peakWasmMB": 897.4,
+    "lodTimeMs": {
+     "n": 130,
+     "median": 228.10000002384186,
+     "p95": 507.5,
+     "max": 12203.899999976158
+    }
+   },
+   "memory": {
+    "jsHeapUsedMB": 2761.4,
+    "gslResidentCpuMB": 2697.3,
+    "gslResidentGpuMB": 2345.5
+   },
+   "activeSplats": {
+    "min": 3468817,
+    "avg": 5034974,
+    "max": 5565975
+   },
+   "hitches": 38,
+   "worstHitchMs": 468.1000000000022
+  },
+  "stalls": [
+   [
+    7599,
+    4702
+   ],
+   [
+    18119,
+    11446
+   ]
+  ],
+  "trace": [
+   {
+    "t": 7,
+    "answerMs": 9,
+    "v": null
+   },
+   {
+    "t": 1026,
+    "answerMs": 284,
+    "v": [
+     240,
+     50188,
+     401,
+     "loading"
+    ]
+   },
+   {
+    "t": 2324,
+    "answerMs": 21,
+    "v": [
+     240,
+     1590221,
+     1202,
+     "loading"
+    ]
+   },
+   {
+    "t": 3350,
+    "answerMs": 18,
+    "v": [
+     240,
+     3973701,
+     1658,
+     "loading"
+    ]
+   },
+   {
+    "t": 4381,
+    "answerMs": 76,
+    "v": [
+     240,
+     3509887,
+     2124,
+     "loading"
+    ]
+   },
+   {
+    "t": 5464,
+    "answerMs": 96,
+    "v": [
+     240,
+     3511003,
+     1953,
+     "loading"
+    ]
+   },
+   {
+    "t": 6562,
+    "answerMs": 30,
+    "v": [
+     240,
+     3511003,
+     1952,
+     "settled"
+    ]
+   },
+   {
+    "t": 7599,
+    "answerMs": 4702,
+    "v": [
+     240,
+     3511003,
+     1960,
+     "settled"
+    ]
+   },
+   {
+    "t": 13302,
+    "answerMs": 1,
+    "v": [
+     240,
+     3511003,
+     1962,
+     "settled"
+    ]
+   },
+   {
+    "t": 14305,
+    "answerMs": 9,
+    "v": [
+     240,
+     3511003,
+     1973,
+     "settled"
+    ]
+   },
+   {
+    "t": 17055,
+    "answerMs": 63,
+    "v": [
+     240,
+     3511003,
+     1968,
+     "settled"
+    ]
+   },
+   {
+    "t": 18119,
+    "answerMs": 11446,
+    "v": [
+     240,
+     3510788,
+     2066,
+     "loading"
+    ]
+   },
+   {
+    "t": 30567,
+    "answerMs": 81,
+    "v": [
+     240,
+     5018328,
+     2615,
+     "loading"
+    ]
+   },
+   {
+    "t": 31654,
+    "answerMs": 123,
+    "v": [
+     240,
+     5027688,
+     2872,
+     "loading"
+    ]
+   },
+   {
+    "t": 32786,
+    "answerMs": 95,
+    "v": [
+     240,
+     5037427,
+     2913,
+     "loading"
+    ]
+   },
+   {
+    "t": 33886,
+    "answerMs": 70,
+    "v": [
+     240,
+     5192643,
+     2813,
+     "loading"
+    ]
+   },
+   {
+    "t": 34967,
+    "answerMs": 258,
+    "v": [
+     240,
+     5030349,
+     3011,
+     "loading"
+    ]
+   },
+   {
+    "t": 36237,
+    "answerMs": 150,
+    "v": [
+     240,
+     5357798,
+     2784,
+     "loading"
+    ]
+   }
+  ]
+ },
+ {
+  "name": "spark 10M",
+  "url": "http://localhost:5174/?scene=HighRezOculus&cam=0,1.6,4&target=0,1.2,0&pixelRatio=1&lodScale=4",
+  "load": {
+   "status": "loading",
+   "modelRequestMs": 197,
+   "firstSplatFrameMs": 1406.8000000715256,
+   "settledMs": null,
+   "activeSplats": 8747655,
+   "budget": 10000000,
+   "networkMB": 1315.7,
+   "requests": 422,
+   "errors": [],
+   "gpu": "ANGLE (NVIDIA, NVIDIA GeForce RTX 5080 (0x00002C02) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+   "parts": [
+    [
+     "Oculus34",
+     1960544
+    ],
+    [
+     "Oculus12",
+     554231
+    ],
+    [
+     "Oculus56",
+     4225987
+    ],
+    [
+     "Oculus78",
+     1848486
+    ]
+   ]
+  },
+  "memSettled": {
+   "workingSetMB": 9953,
+   "privateMB": 18419,
+   "gpuDedicatedMB": 6538
+  },
+  "memAfter": {
+   "workingSetMB": 10763,
+   "privateMB": 18989,
+   "gpuDedicatedMB": 6354
+  },
+  "bench": {
+   "kind": "orbit",
+   "renderer": "spark",
+   "startedAtMs": 274666.10000002384,
+   "seconds": 20,
+   "turns": 1,
+   "target": [
+    -1.199471801195745,
+    -2.332346727135316,
+    0.1560071094487112
+   ],
+   "radius": 3.7933947042880503,
+   "height": 1.7841814885823388,
+   "pixelRatio": 1,
+   "drawingBuffer": [
+    1584,
+    805
+   ],
+   "budget": 10000000,
+   "frames": {
+    "frames": 4289,
+    "durationS": 12.889299999999988,
+    "avgFps": 332.7566275903272,
+    "onePctLowFps": 3.5687312745350344,
+    "avgFrameMs": 3.005199347167169,
+    "p99FrameMs": 2.599999999976717,
+    "maxFrameMs": 4246.099999999977
+   },
+   "gpuMs": {
+    "n": 110,
+    "median": 5.347744,
+    "p95": 10.069056,
+    "max": 14.49504
+   },
+   "spark": {
+    "windowS": 26.333,
+    "lodUpdatesPerS": 0.0759503284851707,
+    "traverseMs": {
+     "n": 2,
+     "median": 4287.600000023842,
+     "p95": 4287.600000023842,
+     "max": 4287.600000023842
+    },
+    "lodUpdateMs": {
+     "n": 2,
+     "median": 6702.299999952316,
+     "p95": 6702.299999952316,
+     "max": 6702.299999952316
+    },
+    "sortsPerS": 0.1519006569703414,
+    "readbackMs": {
+     "n": 4,
+     "median": 40,
+     "p95": 4690.799999952316,
+     "max": 4690.799999952316
+    },
+    "sortMs": {
+     "n": 4,
+     "median": 1730.5,
+     "p95": 4300.400000095367,
+     "max": 4300.400000095367
+    },
+    "uploadMsPerS": 0.6038051105517086,
+    "pagesUploadedPerS": 1.06330459879239,
+    "missing": []
+   },
+   "gsl": null,
+   "memory": {
+    "jsHeapUsedMB": 5243.5,
+    "gslResidentCpuMB": null,
+    "gslResidentGpuMB": null
+   },
+   "activeSplats": {
+    "min": 8747655,
+    "avg": 8834946,
+    "max": 8842678
+   },
+   "hitches": 11,
+   "worstHitchMs": 999.4000000000233
+  },
+  "stalls": [
+   [
+    2032,
+    3825
+   ],
+   [
+    6858,
+    1968
+   ],
+   [
+    9837,
+    6560
+   ],
+   [
+    18404,
+    5087
+   ],
+   [
+    24507,
+    8939
+   ],
+   [
+    34454,
+    2136
+   ],
+   [
+    38599,
+    11100
+   ],
+   [
+    50702,
+    12055
+   ],
+   [
+    65782,
+    17122
+   ],
+   [
+    83909,
+    16177
+   ],
+   [
+    101100,
+    16938
+   ],
+   [
+    119046,
+    1765
+   ],
+   [
+    121816,
+    12962
+   ],
+   [
+    135781,
+    5309
+   ],
+   [
+    142095,
+    3431
+   ],
+   [
+    146536,
+    1209
+   ],
+   [
+    150777,
+    21399
+   ],
+   [
+    173185,
+    21198
+   ],
+   [
+    195397,
+    21276
+   ],
+   [
+    217687,
+    14843
+   ],
+   [
+    235647,
+    4275
+   ],
+   [
+    240932,
+    5861
+   ],
+   [
+    247807,
+    3804
+   ],
+   [
+    252613,
+    22059
+   ],
+   [
+    279914,
+    1585
+   ],
+   [
+    282509,
+    3282
+   ],
+   [
+    288559,
+    14274
+   ]
+  ],
+  "trace": [
+   {
+    "t": 7,
+    "answerMs": 7,
+    "v": null
+   },
+   {
+    "t": 1017,
+    "answerMs": 1,
+    "v": [
+     240,
+     0,
+     4976,
+     "loading"
+    ]
+   },
+   {
+    "t": 2032,
+    "answerMs": 3825,
+    "v": [
+     240,
+     924937,
+     5244,
+     "loading"
+    ]
+   },
+   {
+    "t": 6858,
+    "answerMs": 1968,
+    "v": [
+     240,
+     1483835,
+     5289,
+     "loading"
+    ]
+   },
+   {
+    "t": 9837,
+    "answerMs": 6560,
+    "v": [
+     240,
+     1483835,
+     5290,
+     "loading"
+    ]
+   },
+   {
+    "t": 17399,
+    "answerMs": 1,
+    "v": [
+     240,
+     2504968,
+     5493,
+     "loading"
+    ]
+   },
+   {
+    "t": 18404,
+    "answerMs": 5087,
+    "v": [
+     240,
+     2504968,
+     5576,
+     "loading"
+    ]
+   },
+   {
+    "t": 24507,
+    "answerMs": 8939,
+    "v": [
+     240,
+     2504968,
+     5577,
+     "loading"
+    ]
+   },
+   {
+    "t": 34454,
+    "answerMs": 2136,
+    "v": [
+     240,
+     4077246,
+     5387,
+     "loading"
+    ]
+   },
+   {
+    "t": 37594,
+    "answerMs": 0,
+    "v": [
+     240,
+     4077246,
+     5556,
+     "loading"
+    ]
+   },
+   {
+    "t": 38599,
+    "answerMs": 11100,
+    "v": [
+     240,
+     4077246,
+     5598,
+     "loading"
+    ]
+   },
+   {
+    "t": 50702,
+    "answerMs": 12055,
+    "v": [
+     240,
+     4077246,
+     5560,
+     "loading"
+    ]
+   },
+   {
+    "t": 63766,
+    "answerMs": 1,
+    "v": [
+     240,
+     6442628,
+     5302,
+     "loading"
+    ]
+   },
+   {
+    "t": 64775,
+    "answerMs": 3,
+    "v": [
+     240,
+     6442628,
+     5547,
+     "loading"
+    ]
+   },
+   {
+    "t": 65782,
+    "answerMs": 17122,
+    "v": [
+     240,
+     6442628,
+     5588,
+     "loading"
+    ]
+   },
+   {
+    "t": 83909,
+    "answerMs": 16177,
+    "v": [
+     240,
+     6442628,
+     5551,
+     "loading"
+    ]
+   },
+   {
+    "t": 101100,
+    "answerMs": 16938,
+    "v": [
+     240,
+     6442628,
+     5517,
+     "loading"
+    ]
+   },
+   {
+    "t": 119046,
+    "answerMs": 1765,
+    "v": [
+     240,
+     6925060,
+     5754,
+     "loading"
+    ]
+   },
+   {
+    "t": 121816,
+    "answerMs": 12962,
+    "v": [
+     240,
+     6925060,
+     5721,
+     "loading"
+    ]
+   },
+   {
+    "t": 135781,
+    "answerMs": 5309,
+    "v": [
+     240,
+     8125509,
+     5799,
+     "loading"
+    ]
+   },
+   {
+    "t": 142095,
+    "answerMs": 3431,
+    "v": [
+     240,
+     8516157,
+     5286,
+     "loading"
+    ]
+   },
+   {
+    "t": 146536,
+    "answerMs": 1209,
+    "v": [
+     240,
+     8516157,
+     5321,
+     "loading"
+    ]
+   },
+   {
+    "t": 148749,
+    "answerMs": 1,
+    "v": [
+     240,
+     8565536,
+     5520,
+     "loading"
+    ]
+   },
+   {
+    "t": 149754,
+    "answerMs": 20,
+    "v": [
+     240,
+     8565536,
+     5292,
+     "loading"
+    ]
+   },
+   {
+    "t": 150777,
+    "answerMs": 21399,
+    "v": [
+     240,
+     8565536,
+     5501,
+     "loading"
+    ]
+   },
+   {
+    "t": 173185,
+    "answerMs": 21198,
+    "v": [
+     240,
+     8565536,
+     5652,
+     "loading"
+    ]
+   },
+   {
+    "t": 195397,
+    "answerMs": 21276,
+    "v": [
+     240,
+     8565536,
+     5587,
+     "loading"
+    ]
+   },
+   {
+    "t": 217687,
+    "answerMs": 14843,
+    "v": [
+     240,
+     8629904,
+     5237,
+     "loading"
+    ]
+   },
+   {
+    "t": 233543,
+    "answerMs": 48,
+    "v": [
+     240,
+     8747655,
+     5450,
+     "loading"
+    ]
+   },
+   {
+    "t": 234595,
+    "answerMs": 47,
+    "v": [
+     240,
+     8747655,
+     5525,
+     "loading"
+    ]
+   },
+   {
+    "t": 235647,
+    "answerMs": 4275,
+    "v": [
+     240,
+     8747655,
+     5351,
+     "loading"
+    ]
+   },
+   {
+    "t": 240932,
+    "answerMs": 5861,
+    "v": [
+     240,
+     8747655,
+     5237,
+     "loading"
+    ]
+   },
+   {
+    "t": 247807,
+    "answerMs": 3804,
+    "v": [
+     240,
+     8747655,
+     5272,
+     "loading"
+    ]
+   },
+   {
+    "t": 252613,
+    "answerMs": 22059,
+    "v": [
+     240,
+     8747655,
+     5189,
+     "loading"
+    ]
+   },
+   {
+    "t": 275680,
+    "answerMs": 967,
+    "v": [
+     240,
+     8842678,
+     5365,
+     "loading"
+    ]
+   },
+   {
+    "t": 277649,
+    "answerMs": 184,
+    "v": [
+     240,
+     8842678,
+     5285,
+     "loading"
+    ]
+   },
+   {
+    "t": 278844,
+    "answerMs": 59,
+    "v": [
+     240,
+     8842678,
+     5341,
+     "loading"
+    ]
+   },
+   {
+    "t": 279914,
+    "answerMs": 1585,
+    "v": [
+     240,
+     8842678,
+     5247,
+     "loading"
+    ]
+   },
+   {
+    "t": 282509,
+    "answerMs": 3282,
+    "v": [
+     240,
+     8842678,
+     5348,
+     "loading"
+    ]
+   },
+   {
+    "t": 286799,
+    "answerMs": 759,
+    "v": [
+     240,
+     8842678,
+     5243,
+     "loading"
+    ]
+   },
+   {
+    "t": 288559,
+    "answerMs": 14274,
+    "v": [
+     240,
+     8842678,
+     5138,
+     "loading"
+    ]
+   }
+  ]
+ },
+ {
+  "name": "gsl 10M (WebGPU)",
+  "url": "http://localhost:5174/?scene=HighRezOculus&cam=0,1.6,4&target=0,1.2,0&pixelRatio=1&renderer=gsl&lodScale=4",
+  "load": {
+   "status": "settled",
+   "modelRequestMs": 500.10000002384186,
+   "firstSplatFrameMs": 703,
+   "settledMs": 4532.399999976158,
+   "activeSplats": 5456985,
+   "budget": 10000000,
+   "networkMB": 0.1,
+   "requests": 12,
+   "errors": [],
+   "gpu": "WebGPU: nvidia blackwell",
+   "parts": [
+    [
+     "Oculus12",
+     159881
+    ],
+    [
+     "Oculus34",
+     837797
+    ],
+    [
+     "Oculus56",
+     2506399
+    ],
+    [
+     "Oculus78",
+     1952908
+    ]
+   ]
+  },
+  "memSettled": {
+   "workingSetMB": 5393,
+   "privateMB": 7651,
+   "gpuDedicatedMB": 2646
+  },
+  "memAfter": {
+   "workingSetMB": 7364,
+   "privateMB": 11178,
+   "gpuDedicatedMB": 4228
+  },
+  "bench": {
+   "kind": "orbit",
+   "renderer": "gsl",
+   "startedAtMs": 11855.300000071526,
+   "seconds": 20,
+   "turns": 1,
+   "target": [
+    0,
+    1.2,
+    0
+   ],
+   "radius": 3.9999999999999996,
+   "height": 0.40000000000000036,
+   "pixelRatio": 1,
+   "drawingBuffer": [
+    1584,
+    805
+   ],
+   "budget": 10000000,
+   "frames": {
+    "frames": 2439,
+    "durationS": 20.22900000000005,
+    "avgFps": 120.56947946018066,
+    "onePctLowFps": 2.7700524093915853,
+    "avgFrameMs": 8.293972939729416,
+    "p99FrameMs": 146.59999999999854,
+    "maxFrameMs": 1533.300000000001
+   },
+   "gpuMs": {
+    "n": 183,
+    "median": 0.8238811428571429,
+    "p95": 3.76832,
+    "max": 5.111808
+   },
+   "spark": null,
+   "gsl": {
+    "visibleSplats": 6042725,
+    "residentCpuMB": 3985,
+    "residentGpuMB": 3466.4,
+    "downloadedMB": 2301.3,
+    "loadingChunks": 5,
+    "loadProgress": 0.9316239316239316,
+    "peakWasmMB": 1170.9,
+    "lodTimeMs": {
+     "n": 991,
+     "median": 18.100000023841858,
+     "p95": 336.5,
+     "max": 1606.3999999761581
+    }
+   },
+   "memory": {
+    "jsHeapUsedMB": 4606.6,
+    "gslResidentCpuMB": 3985,
+    "gslResidentGpuMB": 3466.4
+   },
+   "activeSplats": {
+    "min": 4070644,
+    "avg": 6690789,
+    "max": 9241839
+   },
+   "hitches": 108,
+   "worstHitchMs": 559
+  },
+  "stalls": [],
+  "trace": [
+   {
+    "t": 6,
+    "answerMs": 9,
+    "v": null
+   },
+   {
+    "t": 1020,
+    "answerMs": 34,
+    "v": [
+     240,
+     1023512,
+     803,
+     "loading"
+    ]
+   },
+   {
+    "t": 2060,
+    "answerMs": 284,
+    "v": [
+     240,
+     4135956,
+     1942,
+     "loading"
+    ]
+   },
+   {
+    "t": 3348,
+    "answerMs": 44,
+    "v": [
+     240,
+     5639951,
+     2511,
+     "loading"
+    ]
+   },
+   {
+    "t": 4394,
+    "answerMs": 140,
+    "v": [
+     240,
+     5456930,
+     2586,
+     "loading"
+    ]
+   },
+   {
+    "t": 5542,
+    "answerMs": 8,
+    "v": [
+     240,
+     5456985,
+     2607,
+     "loading"
+    ]
+   },
+   {
+    "t": 6564,
+    "answerMs": 5,
+    "v": [
+     240,
+     5456985,
+     2617,
+     "settled"
+    ]
+   },
+   {
+    "t": 7569,
+    "answerMs": 4,
+    "v": [
+     240,
+     5456985,
+     2594,
+     "settled"
+    ]
+   },
+   {
+    "t": 8589,
+    "answerMs": 1,
+    "v": [
+     240,
+     5456985,
+     2604,
+     "settled"
+    ]
+   },
+   {
+    "t": 9596,
+    "answerMs": 2,
+    "v": [
+     240,
+     5456985,
+     2614,
+     "settled"
+    ]
+   },
+   {
+    "t": 11852,
+    "answerMs": 5,
+    "v": [
+     240,
+     5456985,
+     2604,
+     "settled"
+    ]
+   },
+   {
+    "t": 12866,
+    "answerMs": 736,
+    "v": [
+     240,
+     5484485,
+     2841,
+     "loading"
+    ]
+   },
+   {
+    "t": 14609,
+    "answerMs": 34,
+    "v": [
+     240,
+     5754762,
+     3054,
+     "loading"
+    ]
+   },
+   {
+    "t": 15657,
+    "answerMs": 8,
+    "v": [
+     240,
+     4608512,
+     2778,
+     "loading"
+    ]
+   },
+   {
+    "t": 16679,
+    "answerMs": 82,
+    "v": [
+     240,
+     4136751,
+     3177,
+     "loading"
+    ]
+   },
+   {
+    "t": 17767,
+    "answerMs": 29,
+    "v": [
+     240,
+     4606113,
+     3060,
+     "loading"
+    ]
+   },
+   {
+    "t": 18803,
+    "answerMs": 7,
+    "v": [
+     240,
+     5168706,
+     3192,
+     "loading"
+    ]
+   },
+   {
+    "t": 19810,
+    "answerMs": 59,
+    "v": [
+     240,
+     5443185,
+     3139,
+     "loading"
+    ]
+   },
+   {
+    "t": 20877,
+    "answerMs": 5,
+    "v": [
+     240,
+     6523830,
+     3663,
+     "loading"
+    ]
+   },
+   {
+    "t": 21895,
+    "answerMs": 31,
+    "v": [
+     240,
+     7381170,
+     4151,
+     "loading"
+    ]
+   },
+   {
+    "t": 22931,
+    "answerMs": 31,
+    "v": [
+     240,
+     8413492,
+     4243,
+     "loading"
+    ]
+   },
+   {
+    "t": 23969,
+    "answerMs": 1,
+    "v": [
+     240,
+     9014015,
+     4547,
+     "loading"
+    ]
+   },
+   {
+    "t": 24973,
+    "answerMs": 34,
+    "v": [
+     240,
+     8762561,
+     4685,
+     "loading"
+    ]
+   },
+   {
+    "t": 26010,
+    "answerMs": 267,
+    "v": [
+     240,
+     8651161,
+     4791,
+     "loading"
+    ]
+   },
+   {
+    "t": 27282,
+    "answerMs": 285,
+    "v": [
+     240,
+     8711402,
+     4932,
+     "loading"
+    ]
+   },
+   {
+    "t": 28571,
+    "answerMs": 45,
+    "v": [
+     240,
+     8792791,
+     4955,
+     "loading"
+    ]
+   },
+   {
+    "t": 29621,
+    "answerMs": 178,
+    "v": [
+     240,
+     8742533,
+     4944,
+     "loading"
+    ]
+   },
+   {
+    "t": 30801,
+    "answerMs": 117,
+    "v": [
+     240,
+     7184586,
+     4874,
+     "loading"
+    ]
+   },
+   {
+    "t": 31933,
+    "answerMs": 166,
+    "v": [
+     240,
+     6042725,
+     4606,
+     "loading"
+    ]
+   }
+  ]
+ }
+]

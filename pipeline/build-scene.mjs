@@ -9,11 +9,15 @@
 // part, not of the whole scene):
 //   for each part, in scene order:
 //     reuse   unchanged since the last good build (source size + mtime, transform
-//             matrix, build-lod flags, Spark tag) and its files are in build/:
-//             hard-linked (or copied) into .build-tmp/<id>/, nothing rebuilt
-//     build   1. if the transform is not identity, bake it into a temp .ply (transform.mjs)
-//             2. build-lod into .build-tmp/<id>/ (build.mjs logic, fixed scope flags)
-//             3. delete the temp .ply before the next part (disk use stays ~1 part)
+//             matrix, build-lod flags, Spark tag, crop) and its files are
+//             in build/: hard-linked (or copied) into .build-tmp/<id>/, nothing rebuilt
+//     build   1. crop the source into a temp .ply (lib/splat-crop.mjs) when the part has
+//                a partition part (scene `partition` + part `partitionPart`: keep its
+//                own partition region) and/or a region of interest (part `roi`: keep
+//                the splats inside it)
+//             2. if the transform is not identity, bake it into a temp .ply (transform.mjs)
+//             3. build-lod into .build-tmp/<id>/ (build.mjs logic, fixed scope flags)
+//             4. delete the temp .ply files before the next part (disk use stays ~1 part)
 //   when every part succeeded: swap .build-tmp/ in as build/ (the previous build
 //   is only removed once the new one is in place; a failure leaves it untouched)
 //   and write `build` + `buildAttempt` into scene.json (re-read first, so edits
@@ -31,14 +35,18 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { PROJECT_ROOT, SCENES_ROOT, SCOPE_FLAGS, SPARK_TAG, resolveBuildLodBin } from './lib/config.mjs';
+import { DEFAULT_MAX_SH, PROJECT_ROOT, SCENES_ROOT, SPARK_TAG, resolveBuildLodBin, scopeFlags } from './lib/config.mjs';
 import { buildModel, checkInputFile } from './build.mjs';
 import { runTransform } from './transform.mjs';
+import { loadPartitionTree } from './partition-split.mjs';
+import { readPartitionInfo } from './lib/partition.mjs';
+import { readRoi } from './lib/roi.mjs';
+import { cropPly } from './lib/splat-crop.mjs';
 import { formatBytes } from './lib/memory.mjs';
 import {
   scenePaths, readScene, updateScene, swapBuildDir, removeStaleBuildDirs, acquireBuildLock,
 } from './lib/scene-files.mjs';
-import { isIdentityMatrix, isValidPartId, isValidSceneName, matricesEqual } from '../shared/scene-schema.mjs';
+import { isIdentityMatrix, isValidPartId, isValidSceneName, matricesEqual, outlinesOf, partCrop, sameCrop } from '../shared/scene-schema.mjs';
 
 export const BUILD_SCENE_USAGE = `Usage:
   node pipeline/build-scene.mjs <scene-name> [options]
@@ -56,8 +64,10 @@ Options:
 
 Reads scenes/<name>/scene.json and builds its enabled parts one after another
 from their original sources with the scene "transform", then replaces
-scenes/<name>/build/ in one step. Parts whose source (size + mtime), transform
-and build flags are unchanged since the last good build are reused, not rebuilt.
+scenes/<name>/build/ in one step. Parts whose source (size + mtime), transform,
+build flags and crop are unchanged since the last good build are reused, not
+rebuilt. With a scene "partition", parts that have a "partitionPart" are first
+cropped to their own partition region; parts with a "roi" to that region.
 Only one scene build runs at a time.`;
 
 export function parseBuildSceneArgs(argv) {
@@ -142,6 +152,13 @@ export function makeBuildLodProgress(onProgress, { from = 5, lodTo = 88, chunksT
   };
 }
 
+/** "partition part 1", "ROI region6.json \"Outline 1\" + \"Outline 2\"" or both, for logs. */
+export function cropText(crop) {
+  const outlines = outlinesOf(crop);
+  const roi = crop.roi && `ROI ${crop.roi.split(/[\\/]/).pop()}${outlines.length ? ` ${outlines.map((o) => `"${o}"`).join(' + ')}` : ''}`;
+  return [crop.partition && `partition part ${crop.part}`, roi].filter(Boolean).join(' and ');
+}
+
 /** Output file stem of a part's build: <scene>-<part>-lod.rad / -lod-N.radc. */
 export function partStem(sceneName, partId) {
   return `${sceneName}-${partId}`;
@@ -151,10 +168,15 @@ export function partStem(sceneName, partId) {
  * Can the previous build of a part be reused as it is?
  * @param {object|null} prev  scene.build.parts entry
  * @param {{ source: string }} part
- * @param {{ matrix: number[], flags: string[], sparkTag?: string|null, stat: { size: number, mtime: Date } | null }} now
+ * @param {{ matrix: number[], flags: string[], sparkTag?: string|null, stat: { size: number, mtime: Date } | null, crop?: { partition?: string, part?: number, roi?: string, partitionBytes?: number, roiDigest?: string } | null }} now
  * @returns {{ ok: boolean, reason: string }}
  */
 export function partReuseCheck(prev, part, now) {
+  const crop = now.crop ?? null;
+  const prevCrop = prev?.crop ?? null;
+  if (prev && !sameCrop(prevCrop, crop)) return { ok: false, reason: crop ? (prevCrop ? 'crop changed' : 'crop added') : 'crop removed' };
+  if (crop?.partition && prevCrop && Number.isFinite(crop.partitionBytes) && prevCrop.partitionBytes !== crop.partitionBytes) return { ok: false, reason: 'partition file changed' };
+  if (crop?.roi && prevCrop && crop.roiDigest && prevCrop.roiDigest !== crop.roiDigest) return { ok: false, reason: 'ROI region changed' };
   if (!prev) return { ok: false, reason: 'not built yet' };
   if (prev.source !== part.source) return { ok: false, reason: 'source file changed' };
   if (!now.stat) return { ok: false, reason: 'source missing' };
@@ -248,13 +270,40 @@ export function planPartBuilds(scene, { force = false, only = [], buildDir, matr
     if (!p) errors.push(`no part "${id}" in scene "${scene.name}" (parts: ${scene.parts.map((x) => x.id).join(', ')})`);
     else if (p.enabled === false) errors.push(`part "${id}" is disabled; enable it first`);
   }
+  // The partition is checked once (json + .bin present); its points are only read when a part is cropped.
+  let partition = null;
+  if (scene.partition) {
+    const abs = path.resolve(projectRoot, scene.partition);
+    try {
+      partition = { abs, ...readPartitionInfo(abs) };
+    } catch (e) {
+      errors.push(`partition: ${e.message}`);
+    }
+  }
   const plan = scene.parts.map((part, index) => {
     const abs = path.resolve(projectRoot, part.source);
     const stat = sourceStat(abs);
     const prev = scene.build?.parts?.find((b) => b.id === part.id) ?? null;
     const prevFiles = prev && fs.existsSync(buildDir) ? previousPartFiles(buildDir, prev) : null;
     const selected = part.enabled !== false && (only.length === 0 || only.includes(part.id));
-    const check = partReuseCheck(prev, part, { matrix, flags, sparkTag, stat });
+    const want = partCrop(scene, part);
+    const crop = want ? { ...want } : null;
+    if (want?.partition && partition) {
+      crop.partitionBytes = partition.binBytes;
+      if (selected && want.part >= partition.numParts) {
+        errors.push(`part "${part.id}": partitionPart ${want.part} does not exist (the partition has parts 0..${partition.numParts - 1})`);
+      }
+    }
+    let roi = null;
+    if (want?.roi) {
+      try {
+        roi = readRoi(path.resolve(projectRoot, want.roi), want.roiOutlines ?? null);
+        crop.roiDigest = roi.digest;
+      } catch (e) {
+        if (selected) errors.push(`part "${part.id}" roi: ${e.message}`);
+      }
+    }
+    const check = partReuseCheck(prev, part, { matrix, flags, sparkTag, stat, crop });
     let action;
     let reason;
     if (!selected) {
@@ -270,7 +319,7 @@ export function planPartBuilds(scene, { force = false, only = [], buildDir, matr
       const err = checkInputFile(abs);
       if (err) errors.push(`part "${part.id}" source: ${err}`);
     }
-    return { part, index, abs, stat, prev, prevFiles, action, reason, identity: isIdentityMatrix(matrix) };
+    return { part, index, abs, stat, prev, prevFiles, action, reason, identity: isIdentityMatrix(matrix), crop, partitionAbs: crop?.partition ? partition?.abs ?? null : null, roi };
   });
   if (!plan.some((p) => p.part.enabled !== false)) errors.push('every part is disabled: nothing to build');
   return { plan, errors };
@@ -298,7 +347,8 @@ export async function buildScene(opts) {
   const matrix = [...scene.transform.matrix];
   const identity = isIdentityMatrix(matrix);
   const extra = scene.buildOptions?.extraFlags ?? [];
-  const flags = [...SCOPE_FLAGS, ...extra];
+  const fixed = scopeFlags({ maxSh: scene.buildOptions?.maxSh ?? DEFAULT_MAX_SH });
+  const flags = [...fixed, ...extra];
   const buildLodBin = resolveBuildLodBin(opts.buildLod);
   const { plan, errors } = planPartBuilds(scene, { force: !!opts.force, only: opts.parts ?? [], buildDir: paths.build, matrix, flags });
 
@@ -306,9 +356,10 @@ export async function buildScene(opts) {
   console.log(`Scene:     ${scene.name}  (${path.relative(PROJECT_ROOT, paths.dir).split(path.sep).join('/')})`);
   console.log(`Transform: ${identity ? 'identity (build straight from the sources)' : `position ${JSON.stringify(scene.transform.position)}, rotationDeg ${JSON.stringify(scene.transform.rotationDeg)}, scale ${scene.transform.scale}`}`);
   console.log(`Parts:     ${count}${opts.parts?.length ? ` (building only: ${opts.parts.join(', ')})` : ''}${opts.force ? ' (--force)' : ''}`);
+  if (scene.partition) console.log(`Partition: ${scene.partition} (parts with a partitionPart are cropped to their own region)`);
   for (const p of plan) {
     const size = p.stat ? formatBytes(p.stat.size) : 'missing';
-    console.log(`  ${String(p.index + 1).padStart(2)}. ${p.part.id.padEnd(16)} ${p.action.padEnd(6)} ${p.reason.padEnd(34)} ${p.part.source} (${size})`);
+    console.log(`  ${String(p.index + 1).padStart(2)}. ${p.part.id.padEnd(16)} ${p.action.padEnd(6)} ${p.reason.padEnd(34)} ${p.part.source} (${size})${p.crop ? `, crop to ${cropText(p.crop)}` : ''}`);
   }
   if (errors.length) {
     for (const e of errors) console.error(`error: ${e}`);
@@ -318,8 +369,16 @@ export async function buildScene(opts) {
   if (opts.dryRun) {
     console.log('\nDry run, nothing written. Would run, one part at a time:');
     for (const p of plan.filter((x) => x.action === 'build')) {
-      if (!identity) console.log(`  transform.mjs ${p.part.source} -> ${path.join(paths.tmp, `_baked-${p.part.id}.ply`)} (temporary)`);
-      console.log(`  build-lod ${identity ? p.part.source : `_baked-${p.part.id}.ply`} -> ${path.join(paths.tmp, p.part.id)}`);
+      let input = p.part.source;
+      if (p.crop) {
+        console.log(`  crop ${input} to ${cropText(p.crop)} -> ${path.join(paths.tmp, `_cropped-${p.part.id}.ply`)} (temporary)`);
+        input = `_cropped-${p.part.id}.ply`;
+      }
+      if (!identity) {
+        console.log(`  transform.mjs ${input} -> ${path.join(paths.tmp, `_baked-${p.part.id}.ply`)} (temporary)`);
+        input = `_baked-${p.part.id}.ply`;
+      }
+      console.log(`  build-lod ${input} -> ${path.join(paths.tmp, p.part.id)}`);
     }
     console.log(`  then swap ${paths.tmp} into ${paths.build}`);
     return 0;
@@ -378,6 +437,7 @@ export async function buildScene(opts) {
   const attemptParts = plan.map((p) => ({ id: p.part.id, status: p.action === 'build' ? 'not-run' : p.action === 'reuse' ? 'reused' : p.action === 'keep' ? 'kept' : 'none' }));
   for (const p of plan) emit('part', { id: p.part.id, index: p.index, count, status: p.action === 'build' ? 'queued' : p.action, reason: p.reason });
   const newParts = [];
+  let partitionTree = null; // loaded at the first part that is cropped (one partition per scene)
   try {
     const stale = removeStaleBuildDirs(paths.dir);
     if (stale.length) console.log(`Removed leftovers of an interrupted build: ${stale.join(', ')}`);
@@ -403,15 +463,47 @@ export async function buildScene(opts) {
       att.status = 'failed';
       const partStart = new Date();
       const t0 = Date.now();
+      const croppedPly = path.join(paths.tmp, `_cropped-${id}.ply`);
       const bakedPly = path.join(paths.tmp, `_baked-${id}.ply`);
+      let cropReport = null;
       let transformReport = null;
       let buildInput = p.abs;
+      // Stage weights inside a part (percent of the part): crop 0-10, transform -> +14, build-lod the rest.
+      let at = 1;
       try {
-        // 1. Bake the transform into a temp .ply (skipped for identity)
-        if (!identity) {
-          progress(p, 'transform', 1, 'baking the scene transform into a temporary .ply (splat-transform)');
-          transformReport = await runTransform({
+        // 1. Crop to the part's partition part and/or region of interest
+        if (p.crop) {
+          const what = cropText(p.crop);
+          progress(p, 'crop', at, `cropping to ${what}`);
+          // Labels: partition part 0..K-1 (or 0 without a partition) inside the ROI, K outside it.
+          const tree = p.crop.partition ? (partitionTree ??= loadPartitionTree(p.partitionAbs)) : null;
+          const K = tree ? tree.numParts : 1;
+          const roi = p.roi;
+          if (roi?.rotated) console.log(`WARNING: ${p.crop.roi} is rotated; the direction of Spirula's ROI rotation is unverified (assumed local -> world). Check the crop in the viewer.`);
+          cropReport = cropPly({
             input: p.abs,
+            out: croppedPly,
+            labelOf: (x, y, z) => (roi && !roi.contains(x, y, z) ? K : tree ? tree.tree.label(x, y, z) : 0),
+            numLabels: K + 1,
+            keep: tree ? p.crop.part : 0,
+            emptyHint: `none lies in ${what}: wrong part number, or a region in another coordinate frame?`,
+            log: (s) => console.log(s),
+            onProgress: (pass, f) => progress(p, 'crop', at + ((pass - 1 + f) / 2) * 9, `cropping to ${what} (pass ${pass}/2)`),
+          });
+          cropReport.droppedOutsideRoi = roi ? cropReport.counts[K] : 0;
+          cropReport.droppedOutsidePart = cropReport.droppedSplats - cropReport.droppedOutsideRoi;
+          const share = cropReport.droppedSplats / Math.max(1, cropReport.totalSplats);
+          const by = [tree && `${cropReport.droppedOutsidePart} outside the partition part (by part: ${cropReport.counts.slice(0, K).map((c, k) => (k === p.crop.part ? 0 : c)).join(' / ')})`, roi && `${cropReport.droppedOutsideRoi} outside the ROI`].filter(Boolean).join(', ');
+          console.log(`crop: kept ${cropReport.keptSplats} of ${cropReport.totalSplats} splats, dropped ${cropReport.droppedSplats} (${(share * 100).toFixed(2)}%): ${by}; ${cropReport.seconds.toFixed(1)} s`);
+          buildInput = croppedPly;
+          at += 9;
+        }
+
+        // 2. Bake the transform into a temp .ply (skipped for identity)
+        if (!identity) {
+          progress(p, 'transform', at, 'baking the scene transform into a temporary .ply (splat-transform)');
+          transformReport = await runTransform({
+            input: buildInput,
             transformJson: { ...scene.transform, tool: 'viewer-align' },
             out: bakedPly,
             overwrite: true,
@@ -421,11 +513,14 @@ export async function buildScene(opts) {
           const v = transformReport.verification;
           console.log(`transform: ${transformReport.wallClockSeconds.toFixed(1)} s, peak ${formatBytes(transformReport.memory?.peakRssBytes)}${v && !v.skipped ? `, verified ${v.checked} splats (max rel error ${v.maxRelError.toExponential(2)})` : ''}`);
           buildInput = bakedPly;
-          progress(p, 'transform', 15, 'transform baked');
+          // The cropped .ply is as big as the part: drop it before build-lod writes its chunks.
+          if (!opts.keepTemp) fs.rmSync(croppedPly, { force: true });
+          at += 14;
+          progress(p, 'transform', at, 'transform baked');
         }
 
-        // 2. build-lod into .build-tmp/<id>/
-        const from = identity ? 2 : 16;
+        // 3. build-lod into .build-tmp/<id>/
+        const from = at + 1;
         progress(p, 'lod', from, 'running build-lod');
         const { code, report } = await buildModel({
           inputPath: buildInput,
@@ -433,6 +528,7 @@ export async function buildScene(opts) {
           outDir,
           version: null,
           extra,
+          scopeFlags: fixed,
           buildLodBin,
           onOutput: makeBuildLodProgress((e) => progress(p, e.stage, e.pct, e.message), { from }),
           inputExtra: {
@@ -441,6 +537,7 @@ export async function buildScene(opts) {
             sceneSource: p.part.source,
             sceneTransformMatrix: matrix,
             bakedFromSource: !identity,
+            partitionCrop: p.crop ? { ...p.crop, keptSplats: cropReport.keptSplats, droppedSplats: cropReport.droppedSplats } : null,
           },
         });
         if (code !== 0 || !report || report.status !== 'ok') throw new Error(report?.error ?? `build-lod step failed (exit ${code})`);
@@ -475,6 +572,16 @@ export async function buildScene(opts) {
               maxRelError: transformReport.verification?.maxRelError ?? null,
             }
             : null,
+          crop: p.crop
+            ? {
+              ...p.crop,
+              keptSplats: cropReport.keptSplats,
+              droppedSplats: cropReport.droppedSplats,
+              ...(p.crop.partition && { droppedOutsidePart: cropReport.droppedOutsidePart }),
+              ...(p.crop.roi && { droppedOutsideRoi: cropReport.droppedOutsideRoi }),
+              seconds: Number(cropReport.seconds.toFixed(1)),
+            }
+            : null,
         };
         newParts.push(pb);
         Object.assign(att, { status: 'built', seconds: pb.wallClockSeconds, peakMemoryBytes: pb.peakMemoryBytes });
@@ -487,8 +594,8 @@ export async function buildScene(opts) {
         emit('part', { id, index: p.index, count, status: 'failed', error: e.message });
         throw new Error(`part "${id}": ${e.message}`);
       } finally {
-        // The baked .ply is as big as the part's source: never keep it past its part.
-        if (!opts.keepTemp) fs.rmSync(bakedPly, { force: true });
+        // The temp .ply files are as big as the part's source: never keep them past their part.
+        if (!opts.keepTemp) for (const f of [croppedPly, bakedPly]) fs.rmSync(f, { force: true });
       }
     }
 
@@ -501,7 +608,7 @@ export async function buildScene(opts) {
     const complete = enabledIds.every((id) => {
       const b = newParts.find((x) => x.id === id);
       const part = scene.parts.find((x) => x.id === id);
-      return b && b.source === part.source && matricesEqual(b.transformMatrix, matrix);
+      return b && b.source === part.source && matricesEqual(b.transformMatrix, matrix) && sameCrop(b.crop ?? null, partCrop(scene, part));
     });
     buildInfo = {
       status: complete ? 'ok' : 'partial',

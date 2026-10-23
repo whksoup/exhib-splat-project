@@ -256,11 +256,15 @@ export class PlanMode {
   }
 
   get meshes(): SplatMesh[] {
-    return this.viewer.models.filter((m) => m.ready).map((m) => m.mesh);
+    return this.viewer.models.flatMap((m) => (m.ready && m.mesh ? [m.mesh] : []));
   }
 
   setActive(on: boolean): void {
     if (on === this.active || this.capturing) return;
+    if (on && !this.viewer.spark) {
+      this.flashHint("Plan needs the Spark renderer: open the page without ?renderer=gsl", 4000);
+      return;
+    }
     if (on && this.meshes.length === 0) {
       this.flashHint("Load a model first", 2500);
       return;
@@ -273,7 +277,7 @@ export class PlanMode {
     this.warnLine.hidden = !warn;
     this.warnLine.textContent = warn ?? "";
     this.toggleButton.classList.toggle("on", on);
-    const spark = this.viewer.spark;
+    const spark = this.viewer.requireSpark();
     if (on) {
       if (!this.bounds || this.boundsVersion !== this.viewer.modelsVersion) {
         this.bounds = this.computeBounds();
@@ -448,7 +452,7 @@ export class PlanMode {
     // orthographic camera, so scale the pixel limit by the farthest visible distance.
     const base = this.savedSpark?.lodRenderScale ?? 1;
     const dMax = Math.hypot(hw, hh, camDepth - farDepth);
-    this.viewer.spark.lodRenderScale = this.picking ? base : base / Math.max(1, dMax);
+    this.viewer.requireSpark().lodRenderScale = this.picking ? base : base / Math.max(1, dMax);
     this.viewer.renderCamera = this.picking ? null : this.cam;
   }
 
@@ -632,7 +636,7 @@ export class PlanMode {
       return;
     }
     const { width, height } = this.exportRegion(1 / ppm);
-    const tile = Math.min(4096, gpuTileLimit(this.viewer.renderer));
+    const tile = Math.min(4096, gpuTileLimit(this.viewer.webgl));
     const tiles = Math.ceil(width / tile) * Math.ceil(height / tile);
     const tooBig = width > MAX_IMAGE_EDGE || height > MAX_IMAGE_EDGE || width * height > MAX_IMAGE_PIXELS;
     this.sizeLine.textContent = `${width} × ${height} px, ${tiles} tile${tiles > 1 ? "s" : ""} of ≤ ${tile} px${tooBig ? " (too large!)" : ""}`;
@@ -755,7 +759,7 @@ export class PlanMode {
           settleMs,
           durationS: Number((cap.durationMs / 1000).toFixed(1)),
           cameraDepth: Number(camDepth.toFixed(4)),
-          sparkMaxStdDev: Number(this.viewer.spark.maxStdDev.toFixed(4)),
+          sparkMaxStdDev: Number(this.viewer.requireSpark().maxStdDev.toFixed(4)),
         },
       };
       const sidecar = buildSidecar(info, files);

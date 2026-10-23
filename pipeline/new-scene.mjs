@@ -18,12 +18,16 @@
 // scene transform relative to the original source.
 // --transform-from <scene> copies the transform of an existing scene instead
 // (e.g. split parts of a merged file that already has an aligned scene).
+// --partition <json> sets the Spirula partition the parts were trained with;
+// each part's partition part is detected and the build crops it to its own
+// region (see scene-partition.mjs).
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { PROJECT_ROOT, SCENES_ROOT } from './lib/config.mjs';
 import { readScene, scenePaths, writeSceneAtomic } from './lib/scene-files.mjs';
+import { assignPartitionParts, repoRelativePartition } from './scene-partition.mjs';
 import {
   SOURCE_EXTS, composeTransforms, createScene, isSafeSourcePath, isValidSceneName, partsFromSources,
 } from '../shared/scene-schema.mjs';
@@ -35,10 +39,12 @@ export const NEW_SCENE_USAGE = `Usage:
                            to the repo root. Repeat for more parts. Sources are never modified.
   --transform <json>       v1 Align transform JSON. Repeat to compose (applied in the order given).
   --transform-from <scene> Use the transform of an existing scene (scenes/<scene>/scene.json).
-  --force                  Overwrite an existing scene.json (nav/ and build/ are left alone).`;
+  --partition <json>       Spirula partition.json the parts were trained with (repo-relative). Each part's
+                           partition part is detected; builds crop every part to its own region.
+  --force                 Overwrite an existing scene.json (nav/ and build/ are left alone).`;
 
 export function parseNewSceneArgs(argv) {
-  const opts = { name: null, sources: [], transforms: [], transformFrom: null, force: false, help: false };
+  const opts = { name: null, sources: [], transforms: [], transformFrom: null, partition: null, force: false, help: false };
   const errors = [];
   const positional = [];
   for (let i = 0; i < argv.length; i++) {
@@ -57,6 +63,7 @@ export function parseNewSceneArgs(argv) {
       case '--source': { const v = takeValue(); if (v) opts.sources.push(v.split(path.sep).join('/')); break; }
       case '--transform': { const v = takeValue(); if (v) opts.transforms.push(v); break; }
       case '--transform-from': opts.transformFrom = takeValue(); break;
+      case '--partition': opts.partition = takeValue(); break;
       case '--force': opts.force = true; break;
       default:
         if (a.startsWith('-')) errors.push(`Unknown option: ${a}`);
@@ -161,10 +168,22 @@ async function main() {
   const scene = createScene({ name: opts.name, parts: partsFromSources(sources), transform });
   if (migratedFrom) scene.migratedFrom = migratedFrom;
   if (opts.transformFrom) scene.transformFrom = opts.transformFrom;
+  if (opts.partition) {
+    try {
+      scene.partition = repoRelativePartition(opts.partition);
+      for (const a of assignPartitionParts(scene, path.resolve(PROJECT_ROOT, scene.partition))) {
+        scene.parts.find((x) => x.id === a.id).partitionPart = a.part;
+      }
+    } catch (e) {
+      console.error(`error: --partition: ${e.message}`);
+      return 2;
+    }
+  }
   fs.mkdirSync(p.nav, { recursive: true });
   writeSceneAtomic(p.file, scene);
   console.log(`Created ${path.relative(PROJECT_ROOT, p.file)}`);
-  for (const part of scene.parts) console.log(`  part ${part.id.padEnd(16)} ${part.source}`);
+  if (scene.partition) console.log(`  partition   ${scene.partition} (each part is cropped to its partition part)`);
+  for (const part of scene.parts) console.log(`  part ${part.id.padEnd(16)} ${part.source}${Number.isInteger(part.partitionPart) ? `  (partition part ${part.partitionPart})` : ''}`);
   console.log(`  position    ${JSON.stringify(scene.transform.position)}`);
   console.log(`  rotationDeg ${JSON.stringify(scene.transform.rotationDeg)}  scale ${scene.transform.scale}`);
   console.log(`Build it with: node pipeline/build-scene.mjs ${opts.name}`);

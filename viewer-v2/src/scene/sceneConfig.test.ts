@@ -46,13 +46,13 @@ describe("sceneModels", () => {
 
   it("does not auto-load unbuilt sources over the cap, and loads opted-in parts that fit", () => {
     const s = createScene({ name: "big", sources: ["a/p0.ply", "a/p1.ply"] });
-    const over = sceneModels(s, info(s, 1 * GB));
+    const over = sceneModels(s, info(s, 2 * GB));
     expect(over.mode).toBe("none");
     expect(over.models).toEqual([]);
     expect(over.plan.overCap).toBe(true);
-    const one = sceneModels(s, info(s, 1 * GB), { previewParts: ["p1"] });
+    const one = sceneModels(s, info(s, 2 * GB), { previewParts: ["p1"] });
     expect(one.models.map((m) => m.id)).toEqual(["p1"]);
-    expect(sceneModels(s, info(s, 1 * GB), { capBytes: 3 * GB }).models).toHaveLength(2);
+    expect(sceneModels(s, info(s, 2 * GB), { capBytes: 5 * GB }).models).toHaveLength(2);
     // Single-source scenes too (the 4.9 GB merged file).
     const merged = base();
     expect(sceneModels(merged, info(merged, 4.9 * GB)).models).toEqual([]);
@@ -66,7 +66,7 @@ describe("sceneModels", () => {
 
   it("reads the preview cap from the URL", () => {
     expect(previewCapBytes("?previewCapGB=4")).toBe(4 * GB);
-    expect(previewCapBytes("?scene=x")).toBe(1.5 * GB);
+    expect(previewCapBytes("?scene=x")).toBe(3 * GB);
   });
 });
 

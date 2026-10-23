@@ -8,7 +8,7 @@
 // Each splat goes to the part of its NEAREST partition point (k-d tree over the
 // partition's labelled points). Two streaming passes over the .ply, so RAM stays
 // at the partition data (~30 bytes/point) + 1 byte/splat of labels + I/O buffers,
-// never the .ply itself:
+// never the .ply itself (lib/splat-crop.mjs):
 //   pass 1  read positions in 32 MB blocks, label every splat
 //   pass 2  read again, append each record to its part file (8 MB write buffers)
 // Every output has the input's header byte for byte except the vertex count;
@@ -18,13 +18,21 @@
 // Also reports the share of splats whose label disagrees with their position in
 // the file assuming the merge wrote the parts back to back in part order (true
 // for Spirula's merges), and nearest-point distance percentiles.
+//
+// cropToPartitionPart / detectPartitionPart (used by build-scene.mjs and
+// scene-partition.mjs) apply the same labelling to Spirula's per-part exports:
+// keep only a part's own region, and find which part a file was trained for.
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { readPlyHeader } from './lib/ply.mjs';
 import { readPartition, KdTree } from './lib/partition.mjs';
 import { formatBytes } from './lib/memory.mjs';
+import {
+  PartWriter, cropPly, headerWithCount, labelSplats, openSplatPly, passProgress, readHeaderText, writeByLabel,
+} from './lib/splat-crop.mjs';
+
+export { headerWithCount, openSplatPly };
 
 export const SPLIT_USAGE = `Usage:
   node pipeline/partition-split.mjs <merged.ply> --partition <partition.json> --out-dir <dir> [options]
@@ -73,53 +81,6 @@ export function parseSplitArgs(argv) {
   return { opts, errors };
 }
 
-/** Header text with the vertex count replaced (exactly one `element vertex N` line). */
-export function headerWithCount(headerText, count) {
-  const re = /^element vertex \d+(?=\r?\n)/m;
-  const matches = headerText.match(/^element vertex \d+\r?$/gm);
-  if (!matches || matches.length !== 1) throw new Error('.ply header must contain exactly one "element vertex <n>" line');
-  return headerText.replace(re, `element vertex ${count}`);
-}
-
-class PartWriter {
-  constructor(file, header, recordBytes, bufferBytes = 8 * 1024 * 1024) {
-    this.file = file;
-    this.tmp = `${file}.tmp`;
-    this.fd = fs.openSync(this.tmp, 'w');
-    this.headerLength = header.length;
-    fs.writeSync(this.fd, header, 0, header.length, 0);
-    this.pos = header.length;
-    this.buf = Buffer.alloc(Math.max(recordBytes, Math.floor(bufferBytes / recordBytes) * recordBytes));
-    this.used = 0;
-    this.count = 0;
-  }
-
-  push(src, offset, length) {
-    if (this.used + length > this.buf.length) this.flush();
-    src.copy(this.buf, this.used, offset, offset + length);
-    this.used += length;
-    this.count++;
-  }
-
-  flush() {
-    if (this.used === 0) return;
-    fs.writeSync(this.fd, this.buf, 0, this.used, this.pos);
-    this.pos += this.used;
-    this.used = 0;
-  }
-
-  close() {
-    this.flush();
-    fs.closeSync(this.fd);
-    this.fd = null;
-  }
-
-  abort() {
-    try { if (this.fd !== null) fs.closeSync(this.fd); } catch { /* ignore */ }
-    fs.rmSync(this.tmp, { force: true });
-  }
-}
-
 /** Approximate percentiles from a log-spaced histogram of distances (metres). */
 function makeDistHistogram() {
   const BINS = 200; // 1e-6 m .. 1e4 m, 20 bins/decade
@@ -144,6 +105,12 @@ function makeDistHistogram() {
   };
 }
 
+/** Partition + k-d tree over its labelled points, ready for labelling. */
+export function loadPartitionTree(jsonPath) {
+  const part = readPartition(jsonPath);
+  return { part, tree: new KdTree(part.positions, part.labels), numParts: part.numParts };
+}
+
 /**
  * Split `input` into one .ply per partition part.
  * @param {{ input: string, partition: string, outDir: string, prefix?: string, overwrite?: boolean, log?: (s: string) => void, onProgress?: (pass: number, f: number) => void, readBytes?: number }} o
@@ -152,32 +119,12 @@ function makeDistHistogram() {
 export async function partitionSplit(o) {
   const log = o.log ?? console.log;
   const t0 = Date.now();
-  const input = path.resolve(o.input);
   const prefix = o.prefix ?? 'part';
-  if (!fs.existsSync(input) || !fs.statSync(input).isFile()) throw new Error(`input not found: ${input}`);
-
-  const header = readPlyHeader(input);
-  if (header.format !== 'binary_little_endian') throw new Error(`only binary_little_endian .ply is supported (got ${header.format})`);
-  if (header.isCompressed) throw new Error('PlayCanvas compressed .ply is not supported; split the original training .ply');
-  const vertex = header.elements.find((e) => e.name === 'vertex');
-  if (header.elements.length !== 1 || header.elements[0] !== vertex) {
-    throw new Error(`the .ply must hold only a "vertex" element (found: ${header.elements.map((e) => e.name).join(', ')})`);
-  }
-  if (!vertex.fixedSize) throw new Error('vertex element has list properties; cannot split by fixed-size records');
-  const props = Object.fromEntries(vertex.properties.map((p) => [p.name, p]));
-  for (const k of ['x', 'y', 'z']) {
-    if (!props[k] || !['float', 'float32'].includes(props[k].type)) throw new Error(`vertex property "${k}" must be float32`);
-  }
-  const stride = vertex.stride;
-  const total = vertex.count;
-  const fileSize = fs.statSync(input).size;
-  const bodyEnd = header.headerBytes + total * stride;
-  if (bodyEnd > fileSize) throw new Error(`.ply truncated: header declares ${total} splats (${bodyEnd} bytes) but the file has ${fileSize} bytes`);
-  if (bodyEnd < fileSize) log(`WARNING: ${fileSize - bodyEnd} trailing bytes after the vertex data are ignored`);
+  const ply = openSplatPly(o.input, log);
+  const { input, header, stride, total, fileSize } = ply;
 
   const tP = Date.now();
-  const part = readPartition(o.partition);
-  const tree = new KdTree(part.positions, part.labels);
+  const { part, tree } = loadPartitionTree(o.partition);
   const k = part.numParts;
   log(`partition: ${part.count.toLocaleString('en-US')} labelled points, ${k} parts (${part.labelCounts.join(' / ')} points), bbox (${part.bbox.min.map((v) => v.toFixed(2)).join(', ')}) .. (${part.bbox.max.map((v) => v.toFixed(2)).join(', ')}); k-d tree in ${((Date.now() - tP) / 1000).toFixed(1)} s`);
   log(`input:     ${input} (${formatBytes(fileSize)}, ${total.toLocaleString('en-US')} splats, ${stride} B/splat)`);
@@ -189,74 +136,28 @@ export async function partitionSplit(o) {
     if (fs.existsSync(f) && !o.overwrite) throw new Error(`${f} exists (pass --overwrite)`);
   }
 
-  const ox = props.x.offset, oy = props.y.offset, oz = props.z.offset;
   const records = Math.max(1, Math.floor((o.readBytes ?? 32 * 1024 * 1024) / stride));
   const buf = Buffer.alloc(records * stride);
-  const labels = new Uint8Array(total);
-  const counts = new Array(k).fill(0);
   const hist = makeDistHistogram();
-  let nonFinite = 0;
   let maxDist = 0;
+  const labelOf = (x, y, z) => {
+    const l = tree.label(x, y, z);
+    const d = Math.sqrt(tree.bestD);
+    hist.add(d);
+    if (d > maxDist) maxDist = d;
+    return l;
+  };
 
-  // Pass 1: label ------------------------------------------------------------
   const fd = fs.openSync(input, 'r');
   try {
-    let done = 0;
-    let prev = 0;
-    let lastReport = 0;
-    while (done < total) {
-      const want = Math.min(records, total - done);
-      const got = fs.readSync(fd, buf, 0, want * stride, header.headerBytes + done * stride);
-      if (got !== want * stride) throw new Error(`short read at splat ${done}`);
-      for (let i = 0; i < want; i++) {
-        const b = i * stride;
-        const x = buf.readFloatLE(b + ox), y = buf.readFloatLE(b + oy), z = buf.readFloatLE(b + oz);
-        let l;
-        if (Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(z)) {
-          l = tree.label(x, y, z);
-          const d = Math.sqrt(tree.bestD);
-          hist.add(d);
-          if (d > maxDist) maxDist = d;
-        } else {
-          l = prev; // no position: keep it with its file-order neighbours
-          nonFinite++;
-        }
-        labels[done + i] = l;
-        counts[l]++;
-        prev = l;
-      }
-      done += want;
-      if (done - lastReport >= total / 20 || done === total) {
-        lastReport = done;
-        o.onProgress?.(1, done / total);
-        if (!o.onProgress) process.stdout.write(`\r  pass 1/2 (label): ${((done / total) * 100).toFixed(0)}%   `);
-      }
-    }
-    if (!o.onProgress) process.stdout.write('\n');
+    const { labels, counts, nonFinite } = labelSplats(fd, ply, labelOf, k, buf, records, passProgress(o, 1, 2, 'label', total));
     const tLabel = Date.now();
 
-    // Pass 2: write ----------------------------------------------------------
-    const headerText = Buffer.alloc(header.headerBytes);
-    fs.readSync(fd, headerText, 0, header.headerBytes, 0);
-    const text = headerText.toString('latin1');
+    const text = readHeaderText(fd, header.headerBytes);
     const writers = [];
     try {
       for (let p = 0; p < k; p++) writers.push(new PartWriter(outFiles[p], Buffer.from(headerWithCount(text, counts[p]), 'latin1'), stride));
-      done = 0;
-      lastReport = 0;
-      while (done < total) {
-        const want = Math.min(records, total - done);
-        const got = fs.readSync(fd, buf, 0, want * stride, header.headerBytes + done * stride);
-        if (got !== want * stride) throw new Error(`short read at splat ${done} (file changed during the split?)`);
-        for (let i = 0; i < want; i++) writers[labels[done + i]].push(buf, i * stride, stride);
-        done += want;
-        if (done - lastReport >= total / 20 || done === total) {
-          lastReport = done;
-          o.onProgress?.(2, done / total);
-          if (!o.onProgress) process.stdout.write(`\r  pass 2/2 (write): ${((done / total) * 100).toFixed(0)}%   `);
-        }
-      }
-      if (!o.onProgress) process.stdout.write('\n');
+      writeByLabel(fd, ply, labels, writers, buf, records, passProgress(o, 2, 2, 'write', total));
       for (const w of writers) w.close();
       for (let p = 0; p < k; p++) {
         if (writers[p].count !== counts[p]) throw new Error(`internal error: part ${p} wrote ${writers[p].count} of ${counts[p]} splats`);
@@ -314,6 +215,64 @@ export async function partitionSplit(o) {
   } finally {
     fs.closeSync(fd);
   }
+}
+
+/** A loaded partition ({ tree, numParts }, from loadPartitionTree) or the path of its partition.json. */
+function asPartition(p) {
+  return typeof p === 'string' ? loadPartitionTree(p) : p;
+}
+
+/**
+ * Crop one Spirula part export to its own region: keep only the splats whose
+ * nearest partition point carries label `part`. A part trained by Spirula also
+ * reconstructs what its cameras see of the other parts' regions, at low detail
+ * (seen from afar or through glass); overlaid with the other parts, those
+ * splats blur their sharp ones. Same two streaming passes as the split, one output.
+ * @param {{ input: string, out: string, partition: string | { tree: KdTree, numParts: number }, part: number, readBytes?: number, log?: (s: string) => void, onProgress?: (pass: number, f: number) => void }} o
+ * @returns {{ input: string, out: string, part: number, totalSplats: number, keptSplats: number, droppedSplats: number, droppedByPart: number[], nonFiniteSplats: number, seconds: number }}
+ */
+export function cropToPartitionPart(o) {
+  const { tree, numParts } = asPartition(o.partition);
+  if (!Number.isInteger(o.part) || o.part < 0 || o.part >= numParts) throw new Error(`partition part ${o.part} does not exist (the partition has parts 0..${numParts - 1})`);
+  const r = cropPly({ ...o, labelOf: (x, y, z) => tree.label(x, y, z), numLabels: numParts, keep: o.part, emptyHint: `none lies in partition part ${o.part}: wrong part number?` });
+  const { counts, ...rest } = r;
+  return { ...rest, part: o.part, droppedByPart: counts.map((c, p) => (p === o.part ? 0 : c)) };
+}
+
+/**
+ * Which partition part a Spirula part export was trained for: label `samples`
+ * evenly spaced splats and take the majority. Parts hold ~99% of their splats
+ * in their own region, so anything under `minShare` is refused as ambiguous.
+ * @returns {{ part: number, share: number, shares: number[], sampled: number }}
+ */
+export function detectPartitionPart(input, partition, { samples = 20000, minShare = 0.8 } = {}) {
+  const ply = openSplatPly(input, () => {});
+  const { tree, numParts } = asPartition(partition);
+  const { header, props, stride, total } = ply;
+  const n = Math.min(samples, total);
+  const counts = new Array(numParts).fill(0);
+  let sampled = 0;
+  const rec = Buffer.alloc(stride);
+  const fd = fs.openSync(ply.input, 'r');
+  try {
+    for (let s = 0; s < n; s++) {
+      const i = Math.floor(((s + 0.5) * total) / n);
+      fs.readSync(fd, rec, 0, stride, header.headerBytes + i * stride);
+      const x = rec.readFloatLE(props.x.offset), y = rec.readFloatLE(props.y.offset), z = rec.readFloatLE(props.z.offset);
+      if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) continue;
+      counts[tree.label(x, y, z)]++;
+      sampled++;
+    }
+  } finally {
+    fs.closeSync(fd);
+  }
+  if (sampled === 0) throw new Error(`${path.basename(ply.input)}: no splat with a finite position`);
+  const shares = counts.map((c) => c / sampled);
+  const part = shares.indexOf(Math.max(...shares));
+  if (shares[part] < minShare) {
+    throw new Error(`${path.basename(ply.input)} is not clearly one partition part (shares ${shares.map((v, p) => `${p}: ${(v * 100).toFixed(1)}%`).join(', ')}); set its part number by hand`);
+  }
+  return { part, share: shares[part], shares, sampled };
 }
 
 async function main() {

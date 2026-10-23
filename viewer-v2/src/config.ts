@@ -41,15 +41,40 @@ export interface CameraSpec {
 /** "walk" = first-person collision navigation (src/nav/); "fly" = Spark debug fly (no collision). */
 export type ControlsMode = "orbit" | "fly" | "walk";
 
+/** Splat renderer: Spark (default) or Gaussian Splat Lite on WebGPU / its WebGL2 backend (src/gsl.ts). */
+export type RendererKind = "spark" | "gsl" | "gsl-webgl";
+const RENDERER_KINDS: RendererKind[] = ["spark", "gsl", "gsl-webgl"];
+
+/** Gaussian Splat Lite streaming settings (?gslCooldown= etc.); unset = GSL / viewer defaults. */
+export interface GslOptions {
+  /** RadStreamScheduler.cooldownMs: how long unused detail stays cached (viewer default 10000; GSL's own is 2000). */
+  cooldownMs?: number;
+  /** RadStreamScheduler.maxConcurrentLoads (GSL default 4). */
+  maxConcurrentLoads?: number;
+  /** RadStreamScheduler.fadeDurationMs (GSL default 200; 0 switches detail instantly). */
+  fadeDurationMs?: number;
+  /** Per-part CPU and GPU cache cap in MB (default: room for the whole budget, at least 1 GiB). */
+  memMB?: number;
+  /** How the budget is split between parts: by demand (default) or by screen coverage only. */
+  share?: "demand" | "coverage";
+}
+
 export interface ViewerConfig {
   models: ModelSpec[];
+  /** ?renderer=spark|gsl|gsl-webgl. */
+  renderer: RendererKind;
+  gsl: GslOptions;
   camera?: CameraSpec;
   /** Force a device profile (testing a phone budget on desktop, etc.). */
   device?: DeviceProfileId;
   /** Base splat budget -> SparkRenderer.lodSplatCount. Unset = Spark platform default. */
   budget?: number;
-  /** Budget multiplier -> SparkRenderer.lodSplatScale. */
+  /** Budget multiplier -> SparkRenderer.lodSplatScale. Unset = 2 on desktop, 1 on phones (viewer.ts). */
   lodScale?: number;
+  /** Camera movement speed multiplier (fly / walk / orbit pan + zoom). Unset = 0.2 (viewer.ts). */
+  speed?: number;
+  /** Streaming pool size in 65,536-splat pages (SparkRenderer.maxPagedSplats). Unset = sized from the detail setting on desktop. */
+  pages?: number;
   /** Renderer pixel ratio. Unset = devicePixelRatio capped per profile. */
   pixelRatio?: number;
   /** SparkRenderer.maxStdDev (default sqrt(8); sqrt(5) suggested for Quest). */
@@ -64,12 +89,15 @@ export interface ViewerConfig {
   overlay: boolean;
   /** How long Spark must stay idle before LoD counts as "settled". */
   settleWindowMs: number;
+  /** Run the orbit benchmark (bench.ts) for this many seconds once LoD first settles. */
+  benchSeconds?: number;
   /** Where the JSON config came from, if any (echoed into results). */
   configUrl?: string;
 }
 
 /** Shape of the optional JSON file. Everything optional; URL params override. */
-export interface ViewerConfigFile extends Partial<Omit<ViewerConfig, "models" | "navigation">> {
+export interface ViewerConfigFile extends Partial<Omit<ViewerConfig, "models" | "navigation" | "gsl">> {
+  gsl?: GslOptions;
   navigation?: NavigationConfigFile;
   models?: (ModelSpec | string)[];
   model?: string;
@@ -81,6 +109,12 @@ function num(v: string | null): number | undefined {
   if (v === null || v.trim() === "") return undefined;
   const n = Number(v);
   return Number.isFinite(n) ? n : undefined;
+}
+
+/** Pool pages: a whole number from 1 to 2048 (2048 pages = 134M splats). */
+function pageCount(v: string | null): number | undefined {
+  const n = num(v);
+  return n !== undefined && Number.isInteger(n) && n >= 1 && n <= 2048 ? n : undefined;
 }
 
 /** Accepts plain numbers plus "1.5M" / "500k" shorthand. */
@@ -177,12 +211,30 @@ export async function loadConfig(search = window.location.search, base?: ViewerC
         ? "walk"
         : (file.controls ?? (navStartsFirstPerson(file.navigation, q) ? "walk" : "orbit"));
 
+  const rendererParam = (q.get("renderer") ?? file.renderer) as RendererKind | undefined;
+  const nonNegInt = (v: string | null) => {
+    const n = num(v);
+    return n !== undefined && Number.isInteger(n) && n >= 0 ? n : undefined;
+  };
+  const shareParam = q.get("gslShare") ?? file.gsl?.share;
+  const gsl: GslOptions = {
+    cooldownMs: nonNegInt(q.get("gslCooldown")) ?? file.gsl?.cooldownMs,
+    maxConcurrentLoads: nonNegInt(q.get("gslLoads")) || file.gsl?.maxConcurrentLoads,
+    fadeDurationMs: nonNegInt(q.get("gslFade")) ?? file.gsl?.fadeDurationMs,
+    memMB: nonNegInt(q.get("gslMemMB")) || file.gsl?.memMB,
+    share: shareParam === "coverage" || shareParam === "demand" ? shareParam : undefined,
+  };
+
   return {
     models,
+    renderer: rendererParam && RENDERER_KINDS.includes(rendererParam) ? rendererParam : "spark",
+    gsl,
     camera,
     device,
     budget: count(q.get("budget")) ?? file.budget,
     lodScale: num(q.get("lodScale")) ?? file.lodScale,
+    speed: num(q.get("speed")) ?? file.speed,
+    pages: pageCount(q.get("pages")) ?? file.pages,
     pixelRatio: num(q.get("pixelRatio")) ?? file.pixelRatio,
     maxStdDev: stdDev(q.get("maxStdDev")) ?? file.maxStdDev,
     lodRenderScale: num(q.get("lodRenderScale")) ?? file.lodRenderScale,
@@ -191,6 +243,7 @@ export async function loadConfig(search = window.location.search, base?: ViewerC
     navigation: resolveNavigationConfig(file.navigation, q),
     overlay: bool(q.get("overlay")) ?? file.overlay ?? true,
     settleWindowMs: num(q.get("settleMs")) ?? file.settleWindowMs ?? 1500,
+    benchSeconds: num(q.get("bench")) ?? file.benchSeconds,
     configUrl,
   };
 }

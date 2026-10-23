@@ -1,0 +1,506 @@
+{
+  "schemaVersion": 2,
+  "name": "HighRezOculus",
+  "parts": [
+    {
+      "id": "Oculus12",
+      "source": "assets/source_ply/Oculus12.ply",
+      "enabled": true,
+      "roiOutlines": [
+        "Outline 1",
+        "Outline 2"
+      ]
+    },
+    {
+      "id": "Oculus34",
+      "source": "assets/source_ply/Oculus34.ply",
+      "enabled": true,
+      "roiOutlines": [
+        "Outline 3",
+        "Outline 4"
+      ]
+    },
+    {
+      "id": "Oculus56",
+      "source": "assets/source_ply/Oculus56.ply",
+      "enabled": true,
+      "roiOutlines": [
+        "Outline 5",
+        "Outline 6"
+      ]
+    },
+    {
+      "id": "Oculus78",
+      "source": "assets/source_ply/Oculus78.ply",
+      "enabled": true,
+      "roiOutlines": [
+        "Outline 7",
+        "Outline 8"
+      ]
+    }
+  ],
+  "transform": {
+    "position": [
+      -1.2173382742979126,
+      -0.5149450234734789,
+      5.064170343211911
+    ],
+    "rotationDeg": [
+      -90,
+      0,
+      0
+    ],
+    "eulerOrder": "XYZ",
+    "quaternion": [
+      -0.7071067811865475,
+      0,
+      0,
+      0.7071067811865476
+    ],
+    "scale": 8,
+    "matrix": [
+      8,
+      0,
+      0,
+      0,
+      0,
+      1.7763568394002505e-15,
+      -8,
+      0,
+      0,
+      8,
+      1.7763568394002505e-15,
+      0,
+      -1.2173382742979126,
+      -0.5149450234734789,
+      5.064170343211911,
+      1
+    ],
+    "appliedOrder": "scale, then rotate, then translate, about the world origin (three.js Object3D: M = T * R * S, column vectors)"
+  },
+  "floorY": -1.6,
+  "navigation": {
+    "spawn": {
+      "position": [
+        -2.3351,
+        0.1265,
+        -3.1628
+      ],
+      "yaw": 165.36,
+      "pitch": -3.95
+    }
+  },
+  "camera": {
+    "position": [
+      0,
+      0,
+      0
+    ],
+    "target": [
+      -1.8084,
+      -0.4109,
+      4.8796
+    ],
+    "fov": 60
+  },
+  "navTransformMatrix": [
+    8,
+    0,
+    0,
+    0,
+    0,
+    1.7763568394002505e-15,
+    -8,
+    0,
+    0,
+    8,
+    1.7763568394002505e-15,
+    0,
+    -3.5524006067276876,
+    -0.38843493600283163,
+    1.901323632600344,
+    1
+  ],
+  "buildOptions": {
+    "maxSh": 3
+  },
+  "build": {
+    "status": "ok",
+    "transformMatrix": [
+      8,
+      0,
+      0,
+      0,
+      0,
+      1.7763568394002505e-15,
+      -8,
+      0,
+      0,
+      8,
+      1.7763568394002505e-15,
+      0,
+      -1.2173382742979126,
+      -0.5149450234734789,
+      5.064170343211911,
+      1
+    ],
+    "startedAt": "2026-10-23T08:38:45.090Z",
+    "finishedAt": "2026-10-23T08:52:14.150Z",
+    "wallClockSeconds": 809.1,
+    "splatCount": {
+      "input": 44518753,
+      "final": 60011160
+    },
+    "bounds": {
+      "bboxMin": [
+        -13.933667182922363,
+        -0.8066004514694214,
+        -7.608739376068115
+      ],
+      "bboxMax": [
+        9.381035804748535,
+        6.451079368591309,
+        15.119664192199707
+      ]
+    },
+    "chunkCount": 918,
+    "totalBytes": 2792211432,
+    "peakMemoryBytes": 5233905664,
+    "buildLodFlags": [
+      "--quality",
+      "--rad-chunked",
+      "--max-sh=3"
+    ],
+    "sparkTag": "v2.3.1",
+    "parts": [
+      {
+        "id": "Oculus12",
+        "status": "ok",
+        "radFile": "Oculus12/HighRezOculus-Oculus12-lod.rad",
+        "transformMatrix": [
+          8,
+          0,
+          0,
+          0,
+          0,
+          1.7763568394002505e-15,
+          -8,
+          0,
+          0,
+          8,
+          1.7763568394002505e-15,
+          0,
+          -1.2173382742979126,
+          -0.5149450234734789,
+          5.064170343211911,
+          1
+        ],
+        "source": "assets/source_ply/Oculus12.ply",
+        "sourceBytes": 2963272933,
+        "sourceModified": "2026-10-21T20:25:42.376Z",
+        "buildLodFlags": [
+          "--quality",
+          "--rad-chunked",
+          "--max-sh=3"
+        ],
+        "sparkTag": "v2.3.1",
+        "startedAt": "2026-10-23T08:38:45.091Z",
+        "finishedAt": "2026-10-23T08:42:22.679Z",
+        "wallClockSeconds": 217.6,
+        "buildLodSeconds": 207.243,
+        "peakMemoryBytes": 5233905664,
+        "splatCount": {
+          "input": 11201445,
+          "final": 15080835
+        },
+        "bounds": {
+          "bboxMin": [
+            -13.187427520751953,
+            -0.7667388916015625,
+            2.7592406272888184
+          ],
+          "bboxMax": [
+            -0.8500475287437439,
+            6.370752811431885,
+            14.077815055847168
+          ]
+        },
+        "chunkCount": 231,
+        "totalBytes": 699670720,
+        "transformStep": {
+          "splatTransform": "3.10.0",
+          "seconds": 5.58,
+          "peakMemoryBytes": 626458624,
+          "maxRelError": 5.527866321565026e-8
+        },
+        "crop": {
+          "roi": "assets/roi/HighRezOculus/Oculus6Part.json",
+          "roiOutlines": [
+            "Outline 1",
+            "Outline 2"
+          ],
+          "roiDigest": "0bb9492cea9831b7",
+          "keptSplats": 11201445,
+          "droppedSplats": 747230,
+          "droppedOutsideRoi": 747230,
+          "seconds": 3.4
+        }
+      },
+      {
+        "id": "Oculus34",
+        "status": "ok",
+        "radFile": "Oculus34/HighRezOculus-Oculus34-lod.rad",
+        "transformMatrix": [
+          8,
+          0,
+          0,
+          0,
+          0,
+          1.7763568394002505e-15,
+          -8,
+          0,
+          0,
+          8,
+          1.7763568394002505e-15,
+          0,
+          -1.2173382742979126,
+          -0.5149450234734789,
+          5.064170343211911,
+          1
+        ],
+        "source": "assets/source_ply/Oculus34.ply",
+        "sourceBytes": 2965988781,
+        "sourceModified": "2026-10-22T06:45:13.918Z",
+        "buildLodFlags": [
+          "--quality",
+          "--rad-chunked",
+          "--max-sh=3"
+        ],
+        "sparkTag": "v2.3.1",
+        "startedAt": "2026-10-23T08:42:22.880Z",
+        "finishedAt": "2026-10-23T08:45:58.327Z",
+        "wallClockSeconds": 215.4,
+        "buildLodSeconds": 205.625,
+        "peakMemoryBytes": 5200306176,
+        "splatCount": {
+          "input": 11121347,
+          "final": 15026708
+        },
+        "bounds": {
+          "bboxMin": [
+            -6.2237701416015625,
+            -0.7695339918136597,
+            3.7599470615386963
+          ],
+          "bboxMax": [
+            9.22761344909668,
+            6.3794660568237305,
+            15.119664192199707
+          ]
+        },
+        "chunkCount": 230,
+        "totalBytes": 696958192,
+        "transformStep": {
+          "splatTransform": "3.10.0",
+          "seconds": 5.606,
+          "peakMemoryBytes": 626958336,
+          "maxRelError": 5.729264449662346e-8
+        },
+        "crop": {
+          "roi": "assets/roi/HighRezOculus/Oculus6Part.json",
+          "roiOutlines": [
+            "Outline 3",
+            "Outline 4"
+          ],
+          "roiDigest": "24af1fdc9a12a04e",
+          "keptSplats": 11121347,
+          "droppedSplats": 838279,
+          "droppedOutsideRoi": 838279,
+          "seconds": 3
+        }
+      },
+      {
+        "id": "Oculus56",
+        "status": "ok",
+        "radFile": "Oculus56/HighRezOculus-Oculus56-lod.rad",
+        "transformMatrix": [
+          8,
+          0,
+          0,
+          0,
+          0,
+          1.7763568394002505e-15,
+          -8,
+          0,
+          0,
+          8,
+          1.7763568394002505e-15,
+          0,
+          -1.2173382742979126,
+          -0.5149450234734789,
+          5.064170343211911,
+          1
+        ],
+        "source": "assets/source_ply/Oculus56.ply",
+        "sourceBytes": 2968398597,
+        "sourceModified": "2026-10-22T16:17:03.807Z",
+        "buildLodFlags": [
+          "--quality",
+          "--rad-chunked",
+          "--max-sh=3"
+        ],
+        "sparkTag": "v2.3.1",
+        "startedAt": "2026-10-23T08:45:58.577Z",
+        "finishedAt": "2026-10-23T08:49:02.628Z",
+        "wallClockSeconds": 184.1,
+        "buildLodSeconds": 174.077,
+        "peakMemoryBytes": 5231435776,
+        "splatCount": {
+          "input": 11213520,
+          "final": 15294151
+        },
+        "bounds": {
+          "bboxMin": [
+            -2.1268956661224365,
+            -0.8066004514694214,
+            -7.608739376068115
+          ],
+          "bboxMax": [
+            9.381035804748535,
+            6.451079368591309,
+            6.997861385345459
+          ]
+        },
+        "chunkCount": 234,
+        "totalBytes": 713800968,
+        "transformStep": {
+          "splatTransform": "3.10.0",
+          "seconds": 5.705,
+          "peakMemoryBytes": 626769920,
+          "maxRelError": 5.28616326203697e-8
+        },
+        "crop": {
+          "roi": "assets/roi/HighRezOculus/Oculus6Part.json",
+          "roiOutlines": [
+            "Outline 5",
+            "Outline 6"
+          ],
+          "roiDigest": "4c2750c320299621",
+          "keptSplats": 11213520,
+          "droppedSplats": 755823,
+          "droppedOutsideRoi": 755823,
+          "seconds": 2.9
+        }
+      },
+      {
+        "id": "Oculus78",
+        "status": "ok",
+        "radFile": "Oculus78/HighRezOculus-Oculus78-lod.rad",
+        "transformMatrix": [
+          8,
+          0,
+          0,
+          0,
+          0,
+          1.7763568394002505e-15,
+          -8,
+          0,
+          0,
+          8,
+          1.7763568394002505e-15,
+          0,
+          -1.2173382742979126,
+          -0.5149450234734789,
+          5.064170343211911,
+          1
+        ],
+        "source": "assets/source_ply/Oculus78.ply",
+        "sourceBytes": 2956751525,
+        "sourceModified": "2026-10-23T02:47:45.762Z",
+        "buildLodFlags": [
+          "--quality",
+          "--rad-chunked",
+          "--max-sh=3"
+        ],
+        "sparkTag": "v2.3.1",
+        "startedAt": "2026-10-23T08:49:02.804Z",
+        "finishedAt": "2026-10-23T08:52:13.861Z",
+        "wallClockSeconds": 191.1,
+        "buildLodSeconds": 182.703,
+        "peakMemoryBytes": 5156417536,
+        "splatCount": {
+          "input": 10982441,
+          "final": 14609466
+        },
+        "bounds": {
+          "bboxMin": [
+            -13.933667182922363,
+            -0.7689485549926758,
+            -6.591001033782959
+          ],
+          "bboxMax": [
+            -0.9904261231422424,
+            6.265651226043701,
+            4.504654884338379
+          ]
+        },
+        "chunkCount": 223,
+        "totalBytes": 681781552,
+        "transformStep": {
+          "splatTransform": "3.10.0",
+          "seconds": 4.958,
+          "peakMemoryBytes": 627318784,
+          "maxRelError": 5.169098003243535e-8
+        },
+        "crop": {
+          "roi": "assets/roi/HighRezOculus/Oculus6Part.json",
+          "roiOutlines": [
+            "Outline 7",
+            "Outline 8"
+          ],
+          "roiDigest": "7f3c953b307edc26",
+          "keptSplats": 10982441,
+          "droppedSplats": 939938,
+          "droppedOutsideRoi": 939938,
+          "seconds": 2.4
+        }
+      }
+    ]
+  },
+  "buildAttempt": {
+    "status": "ok",
+    "startedAt": "2026-10-23T08:38:45.090Z",
+    "finishedAt": "2026-10-23T08:52:14.151Z",
+    "error": null,
+    "parts": [
+      {
+        "id": "Oculus12",
+        "status": "built",
+        "seconds": 217.6,
+        "peakMemoryBytes": 5233905664
+      },
+      {
+        "id": "Oculus34",
+        "status": "built",
+        "seconds": 215.4,
+        "peakMemoryBytes": 5200306176
+      },
+      {
+        "id": "Oculus56",
+        "status": "built",
+        "seconds": 184.1,
+        "peakMemoryBytes": 5231435776
+      },
+      {
+        "id": "Oculus78",
+        "status": "built",
+        "seconds": 191.1,
+        "peakMemoryBytes": 5156417536
+      }
+    ]
+  },
+  "hotspots": [],
+  "createdAt": "2026-10-23T03:28:26.955Z",
+  "updatedAt": "2026-10-23T08:38:44.117Z",
+  "roi": "assets/roi/HighRezOculus/Oculus6Part.json"
+}

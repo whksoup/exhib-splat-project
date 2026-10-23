@@ -25,3 +25,12 @@ scenes/*/build/
 scenes/*/.build-tmp/
 scenes/*/.build-old-*/
 scenes/.build.lock
+
+# Static site assembled by viewer-v2/scripts/publish-static.mjs (hard links to scene builds)
+publish/
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example

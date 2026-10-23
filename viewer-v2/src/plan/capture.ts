@@ -148,7 +148,8 @@ function renderUntilSettled(
   opts: CaptureOptions,
   onTick: (idleMs: number, elapsedMs: number) => void,
 ): Promise<TileResult> {
-  const { renderer, spark } = viewer;
+  const renderer = viewer.webgl;
+  const spark = viewer.requireSpark();
   return new Promise((resolve, reject) => {
     const start = performance.now();
     let idleSince: number | null = null;
@@ -197,7 +198,8 @@ function renderUntilSettled(
 
 export async function captureView(viewer: Viewer, opts: CaptureOptions): Promise<CaptureResult> {
   const t0 = performance.now();
-  const { renderer, spark } = viewer;
+  const renderer = viewer.webgl;
+  const spark = viewer.requireSpark();
   const mpp = opts.metresPerPixel;
   const W = Math.round((opts.region.r1 - opts.region.r0) / mpp);
   const H = Math.round((opts.region.u1 - opts.region.u0) / mpp);

@@ -25,6 +25,8 @@ export interface WalkModeController {
   reset(): void;
   /** Start walking from the current camera view (dropped onto the floor below it). */
   enterFrom(camera: THREE.PerspectiveCamera): void;
+  /** Multiply walk / run / fly speeds (the camera speed slider). */
+  setSpeedScale(scale: number): void;
 }
 
 export class CameraRig {
@@ -34,6 +36,10 @@ export class CameraRig {
   private walk: WalkModeController | null = null;
   /** While true, no camera mode takes input (e.g. Align mode is dragging its gizmo). */
   private suspended = false;
+  /** Movement multiplier (speed slider): fly move speed, walk speeds, orbit pan + zoom. Turning is not scaled. */
+  private _speedScale = 1;
+  /** Fly speed before the multiplier, from the scene size implied by the start pose. */
+  private baseMoveSpeed = 1;
 
   constructor(
     private readonly camera: THREE.PerspectiveCamera,
@@ -79,7 +85,22 @@ export class CameraRig {
 
   attachWalk(walk: WalkModeController): void {
     this.walk = walk;
+    walk.setSpeedScale(this._speedScale);
     this.applyMode();
+  }
+
+  get speedScale(): number {
+    return this._speedScale;
+  }
+
+  /** Scale camera movement in every mode (1 = the speeds the controls were tuned with). */
+  setSpeedScale(scale: number): void {
+    if (!(scale > 0) || !Number.isFinite(scale)) return;
+    this._speedScale = scale;
+    this.fly.fpsMovement.moveSpeed = this.baseMoveSpeed * scale;
+    this.orbit.panSpeed = scale;
+    this.orbit.zoomSpeed = scale;
+    this.walk?.setSpeedScale(scale);
   }
 
   /** In walk mode, send the player back to spawn. Returns false in other modes. */
@@ -114,7 +135,8 @@ export class CameraRig {
     this.orbit.target.copy(target);
     // Scale movement speeds to the scene size implied by the pose.
     const dist = Math.max(0.1, position.distanceTo(target));
-    this.fly.fpsMovement.moveSpeed = Math.max(0.5, dist * 0.75);
+    this.baseMoveSpeed = Math.max(0.5, dist * 0.75);
+    this.fly.fpsMovement.moveSpeed = this.baseMoveSpeed * this._speedScale;
     this.orbit.update();
   }
 

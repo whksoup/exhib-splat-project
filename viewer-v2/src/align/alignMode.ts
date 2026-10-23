@@ -245,7 +245,7 @@ export class AlignMode {
   }
 
   get meshes(): SplatMesh[] {
-    return this.viewer.models.filter((m) => m.ready).map((m) => m.mesh);
+    return this.viewer.models.flatMap((m) => (m.ready && m.mesh ? [m.mesh] : []));
   }
 
   toggle(): void {
@@ -254,6 +254,11 @@ export class AlignMode {
 
   setActive(on: boolean): void {
     if (on === this.active) return;
+    if (on && !this.viewer.spark) {
+      this.setStatus("Align needs the Spark renderer: open the page without ?renderer=gsl.", true);
+      this.flashToggle();
+      return;
+    }
     if (on && this.meshes.length === 0) {
       this.setStatus("Load a model first.", true);
       this.flashToggle();
