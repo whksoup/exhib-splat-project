@@ -13,15 +13,14 @@
 import * as THREE from "three";
 import type { WebGPURenderer } from "three/webgpu";
 import { SparkRenderer, SplatMesh, type SplatFileType } from "@sparkjsdev/spark";
-import type { RadStreamScheduler } from "gaussian-splat-lite";
 import { decomposeTRS, isIdentityMatrix } from "../../shared/scene-schema.mjs";
 import type { ModelSpec, ViewerConfig } from "./config";
-import { isRadUrl } from "./config";
+import { isRadUrl, isSogLodUrl } from "./config";
 import { CameraRig } from "./controls";
 import { gpuInfo, type DeviceInfo } from "./device";
 import type { BenchResult } from "./bench";
 import { GpuTimer, HitchLog, SparkStats } from "./diagnostics";
-import type { GslSplats, WebGpuFrameTimer } from "./gsl";
+import type { GslSplats, GslStream, WebGpuFrameTimer } from "./gsl";
 import { FrameStats, LoadTimeline, NetworkTracker } from "./metrics";
 import { checkModelUrl, type PreflightResult } from "./preflight";
 import { PAGE_SPLATS, PREF_CAMERA_SPEED, PREF_DETAIL, poolPagesFor, readPref } from "./viewPrefs";
@@ -46,7 +45,7 @@ export interface LoadedModel {
   /** The Spark mesh; null on the GSL path. */
   mesh: SplatMesh | null;
   /** The GSL stream of a paged model on the GSL path, else null. */
-  stream: RadStreamScheduler | null;
+  stream: GslStream | null;
   /** Removes the model from the scene and frees it. */
   dispose: () => void;
   paged: boolean;
@@ -346,8 +345,15 @@ export class Viewer {
 
   private async loadModel(spec: ModelSpec): Promise<void> {
     const rad = isRadUrl(spec.url);
-    const paged = spec.paged ?? rad;
-    if (paged && !rad && spec.fileType !== "rad") {
+    const sogLod = isSogLodUrl(spec.url);
+    if (sogLod && !this.gsl) throw new Error(`"${spec.url}": a lod-meta.json streams on Gaussian Splat Lite only (add ?renderer=gsl).`);
+    // GSL 1.4.0 draws a SOG stream under a scaled / rotated group as large blurred blobs (positions
+    // land right, splat shapes don't): bake the transform into the levels before packing instead.
+    if (sogLod && spec.matrix && !isIdentityMatrix(spec.matrix, 1e-12)) {
+      throw new Error(`"${spec.url}": a lod-meta.json must be packed in scene coordinates (bake the transform with pipeline/transform.mjs); it can't take a model matrix.`);
+    }
+    const paged = spec.paged ?? (rad || sogLod);
+    if (paged && !rad && !sogLod && spec.fileType !== "rad") {
       throw new Error(`"${spec.url}": paged streaming needs a .rad file (built with build-lod). Load it with paged=0.`);
     }
     // Check reachability + Range support before handing the URL to Spark: a

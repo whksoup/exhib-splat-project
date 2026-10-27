@@ -6,6 +6,7 @@
 import { benchRunning, formatBench, runOrbitBenchmark } from "./bench";
 import { HitchLog, type Dist } from "./diagnostics";
 import { buildResults, GSL_VERSION, SPARK_VERSION } from "./results";
+import { PUBLISHED } from "./scene/published";
 import { isTypingTarget } from "./ui/dom";
 import type { Viewer } from "./viewer";
 
@@ -104,12 +105,14 @@ export class Overlay {
       else if (e.code === "KeyK") void this.bench(10);
     });
 
-    // "Save to reports/" only works against the Vite dev/preview server.
-    fetch("/__models", { method: "GET", cache: "no-store" })
-      .then((r) => {
-        if (r.ok && (r.headers.get("content-type") ?? "").includes("json")) this.saveButton.hidden = false;
-      })
-      .catch(() => undefined);
+    // "Save to reports/" only works against the Vite dev/preview server (a static host would answer 404).
+    if (!PUBLISHED) {
+      fetch("/__models", { method: "GET", cache: "no-store" })
+        .then((r) => {
+          if (r.ok && (r.headers.get("content-type") ?? "").includes("json")) this.saveButton.hidden = false;
+        })
+        .catch(() => undefined);
+    }
 
     window.setInterval(() => this.render(), 250);
     this.render();

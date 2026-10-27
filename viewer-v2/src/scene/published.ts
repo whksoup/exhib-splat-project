@@ -11,7 +11,7 @@ import { viewSliders } from "./viewSliders";
 
 export const PUBLISHED = import.meta.env.VITE_STATIC === "1";
 
-/** One entry of scenes/index.json. */
+/** One entry of scenes/index.json: a scene, or a prebuilt model (`publish-static.mjs --model`). */
 export interface PublishedScene {
   name: string;
   title?: string;
@@ -19,9 +19,13 @@ export interface PublishedScene {
   splats: number | null;
   bytes: number;
   builtAt: string | null;
+  /** A model's page (?config=models/<name>/viewer.json); scenes open with ?scene=<name>. */
+  href?: string;
+  /** "model": one SOG file loaded once (nothing streams). */
+  kind?: "scene" | "model";
 }
 
-const sceneHref = (name: string) => `?scene=${encodeURIComponent(name)}`;
+const sceneHref = (s: PublishedScene) => s.href ?? `?scene=${encodeURIComponent(s.name)}`;
 
 export class PublishedIndex {
   constructor(host: HTMLElement) {
@@ -55,14 +59,18 @@ export class PublishedIndex {
     grid.replaceChildren(
       ...scenes.map((s) =>
         el("div", { className: "scene-card" }, [
-          el("h2", {}, [el("a", { href: sceneHref(s.name), textContent: s.title ?? s.name })]),
+          el("h2", {}, [el("a", { href: sceneHref(s), textContent: s.title ?? s.name })]),
           el("dl", {}, [
             el("dt", { textContent: "Splats" }),
             el("dd", { textContent: s.splats ? fmtCount(s.splats) : "—" }),
-            el("dt", { textContent: "Streamed data" }),
-            el("dd", { textContent: `${fmtBytes(s.bytes)} in ${s.parts} part${s.parts === 1 ? "" : "s"} (only what the view needs is downloaded)` }),
+            el("dt", { textContent: s.kind === "model" ? "Download" : "Streamed data" }),
+            el("dd", {
+              textContent: s.kind === "model"
+                ? `${fmtBytes(s.bytes)}, loaded once (nothing streams)`
+                : `${fmtBytes(s.bytes)} in ${s.parts} part${s.parts === 1 ? "" : "s"} (only what the view needs is downloaded)`,
+            }),
           ]),
-          el("div", { className: "actions" }, [el("button", { className: "primary open", textContent: "Open", onclick: () => (window.location.href = sceneHref(s.name)) })]),
+          el("div", { className: "actions" }, [el("button", { className: "primary open", textContent: "Open", onclick: () => (window.location.href = sceneHref(s)) })]),
         ]),
       ),
     );

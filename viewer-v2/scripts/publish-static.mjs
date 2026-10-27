@@ -5,7 +5,13 @@
 // Run Wrangler only through that config: without one, current Wrangler
 // auto-configures from the working folder and can publish the wrong directory.
 //
-//   node scripts/publish-static.mjs --scene <name> [--scene <name>]... [--out <dir>] [--skip-build]
+//   node scripts/publish-static.mjs --scene <name> [--scene <name>]... [--model <name>=<dir>]... [--out <dir>] [--skip-build]
+//
+// --model publishes a prebuilt splat-transform SOG folder (lod-meta.json + chunks,
+// e.g. assets/rad_output/Splice/a-in-b) as models/<name>/, with a view-only
+// models/<name>/viewer.json (Gaussian Splat Lite, the folder's viewer.json camera
+// and navigation, its whole splat count as the budget) and a landing-page entry
+// that opens ?config=models/<name>/viewer.json.
 //
 // Output (default <repo>/publish/site, gitignored):
 //   index.html, assets/...          VITE_STATIC=1 vite build (landing page + view-only scenes)
@@ -30,7 +36,7 @@ const PAGES_MAX_FILES = 20000;
 const PAGES_MAX_FILE_BYTES = 25 * 1024 * 1024;
 
 function parseArgs(argv) {
-  const o = { scenes: [], out: path.join(REPO, 'publish', 'site'), build: true, errors: [] };
+  const o = { scenes: [], models: [], out: path.join(REPO, 'publish', 'site'), build: true, errors: [] };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     const value = () => {
@@ -44,14 +50,65 @@ function parseArgs(argv) {
       const v = value();
       if (v !== undefined && !isValidSceneName(v)) o.errors.push(`invalid scene name "${v}"`);
       else if (v !== undefined && !o.scenes.includes(v)) o.scenes.push(v);
+    } else if (a.startsWith('--model')) {
+      const v = value();
+      const m = v === undefined ? null : /^([A-Za-z0-9][A-Za-z0-9_-]{0,63})=(.+)$/.exec(v);
+      if (v !== undefined && !m) o.errors.push(`--model wants <name>=<dir>, got "${v}"`);
+      else if (m) o.models.push({ name: m[1], dir: path.resolve(REPO, m[2]) });
     } else if (a.startsWith('--out')) {
       const v = value();
       if (v !== undefined) o.out = path.resolve(v);
     } else if (a === '--skip-build') o.build = false;
     else o.errors.push(`unknown option ${a}`);
   }
-  if (o.scenes.length === 0) o.errors.push('pass at least one --scene <name>');
+  if (o.scenes.length === 0 && o.models.length === 0) o.errors.push('pass at least one --scene <name> or --model <name>=<dir>');
   return o;
+}
+
+/** A prebuilt SOG folder as models/<name>/ with a view-only viewer.json. */
+function publishModel({ name, dir }, out) {
+  const meta = path.join(dir, 'lod-meta.json');
+  if (!fs.existsSync(meta)) throw new Error(`--model ${name}: no lod-meta.json in ${dir}`);
+  const target = path.join(out, 'models', name);
+  fs.mkdirSync(target, { recursive: true });
+  let files = 0;
+  let bytes = 0;
+  const walk = (d) => {
+    for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+      const abs = path.join(d, e.name);
+      if (e.isDirectory()) walk(abs);
+      else if (e.name !== 'viewer.json' && !e.name.startsWith('.')) {
+        linkOrCopy(abs, path.join(target, path.relative(dir, abs)));
+        files++;
+        bytes += fs.statSync(abs).size;
+      }
+    }
+  };
+  walk(dir);
+  // Splat count from the index: every leaf's LoD ranges (one level for a single-SOG model).
+  let splats = 0;
+  const count = (n) => {
+    if (n.lods) for (const l of Object.values(n.lods)) splats += l.count;
+    for (const c of n.children ?? []) count(c);
+  };
+  count(JSON.parse(fs.readFileSync(meta, 'utf8')).tree);
+  const local = fs.existsSync(path.join(dir, 'viewer.json')) ? JSON.parse(fs.readFileSync(path.join(dir, 'viewer.json'), 'utf8')) : {};
+  const config = {
+    renderer: 'gsl',
+    overlay: false,
+    models: [{ url: `models/${name}/lod-meta.json` }],
+    // Room for every splat: a single SOG level can't trade detail for budget.
+    budget: Math.max(splats, 1_000_000),
+    lodScale: 1,
+    ...(local.camera && { camera: local.camera }),
+    ...(local.navigation && { navigation: local.navigation }),
+  };
+  fs.writeFileSync(path.join(target, 'viewer.json'), JSON.stringify(config, null, 2) + '\n');
+  return {
+    entry: { name, kind: 'model', href: `?config=models/${encodeURIComponent(name)}/viewer.json`, parts: 1, splats, bytes, builtAt: fs.statSync(meta).mtime.toISOString() },
+    files: files + 1,
+    bytes,
+  };
 }
 
 function linkOrCopy(src, dst) {
@@ -134,6 +191,10 @@ const HEADERS = `# Cloudflare Pages response headers (written by scripts/publish
 /scenes/*
   Cache-Control: public, max-age=0, must-revalidate
   Access-Control-Allow-Origin: *
+
+/models/*
+  Cache-Control: public, max-age=0, must-revalidate
+  Access-Control-Allow-Origin: *
 `;
 
 const NOT_FOUND = `<!doctype html>
@@ -166,7 +227,7 @@ function main() {
   const o = parseArgs(process.argv.slice(2));
   if (o.errors.length) {
     for (const e of o.errors) console.error(`error: ${e}`);
-    console.error('usage: node scripts/publish-static.mjs --scene <name> [--scene <name>]... [--out <dir>] [--skip-build]');
+    console.error('usage: node scripts/publish-static.mjs --scene <name> [--scene <name>]... [--model <name>=<dir>]... [--out <dir>] [--skip-build]');
     return 2;
   }
   if (o.build) {
@@ -186,7 +247,19 @@ function main() {
     return 2;
   }
   fs.rmSync(path.join(o.out, 'scenes'), { recursive: true, force: true });
+  fs.rmSync(path.join(o.out, 'models'), { recursive: true, force: true });
+  fs.mkdirSync(path.join(o.out, 'scenes'), { recursive: true });
   const index = [];
+  for (const m of o.models) {
+    try {
+      const r = publishModel(m, o.out);
+      index.push(r.entry);
+      console.log(`model ${m.name}: ${r.files} files, ${(r.bytes / 1e6).toFixed(0)} MB`);
+    } catch (e) {
+      console.error(`error: ${e.message}`);
+      return 1;
+    }
+  }
   for (const name of o.scenes) {
     try {
       const r = publishScene(name, o.out);

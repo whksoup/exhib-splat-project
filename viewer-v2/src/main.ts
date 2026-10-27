@@ -118,10 +118,12 @@ async function main(): Promise<void> {
 
   new Overlay(ui, viewer);
 
-  if (opened && PUBLISHED) {
+  if (PUBLISHED) {
+    // View-only: a scene, or a prebuilt model's ?config=models/<name>/viewer.json (publish-static.mjs --model).
     guardTyping(ui);
     attachNavigation(viewer, ui);
-    publishedChrome(viewer, ui, opened.scene.name);
+    const model = /(?:^|\/)models\/([^/]+)\/viewer\.json$/.exec(q.get("config") ?? "")?.[1];
+    publishedChrome(viewer, ui, opened?.scene.name ?? model ?? "Model");
   } else if (opened) {
     const editor = new SceneEditor(viewer, ui, opened.scene, opened.load, opened.info);
     Object.assign(w, { editor, store: editor.store, align: editor.align, plan: editor.plan });
