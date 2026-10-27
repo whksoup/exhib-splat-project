@@ -1,0 +1,233 @@
+[
+ {
+  "view": "start",
+  "tag": "5M",
+  "url": "http://localhost:5174/?scene=HighRezOculus&cam=0,0,0&target=-1.8084,-0.4109,4.8796&pixelRatio=1&renderer=gsl",
+  "file": "start-5M.png",
+  "secs": 13.116,
+  "status": "settled",
+  "settledMs": 5855.300000071526,
+  "budget": 5000000,
+  "active": 5008830,
+  "parts": [
+   [
+    "Oculus12",
+    1207702,
+    1199118
+   ],
+   [
+    "Oculus34",
+    1236506,
+    1229877
+   ],
+   [
+    "Oculus56",
+    1324940,
+    1310370
+   ],
+   [
+    "Oculus78",
+    1239682,
+    1229877
+   ]
+  ]
+ },
+ {
+  "view": "start",
+  "tag": "40M",
+  "url": "http://localhost:5174/?scene=HighRezOculus&cam=0,0,0&target=-1.8084,-0.4109,4.8796&pixelRatio=1&renderer=gsl&lodScale=16",
+  "file": "start-40M.png",
+  "secs": 17.94,
+  "status": "settled",
+  "settledMs": 11482.5,
+  "budget": 40000000,
+  "active": 14206874,
+  "parts": [
+   [
+    "Oculus56",
+    4241215,
+    10000000
+   ],
+   [
+    "Oculus34",
+    2902984,
+    10000000
+   ],
+   [
+    "Oculus12",
+    2782047,
+    10000000
+   ],
+   [
+    "Oculus78",
+    4280628,
+    10000000
+   ]
+  ]
+ },
+ {
+  "view": "close",
+  "tag": "5M",
+  "url": "http://localhost:5174/?scene=HighRezOculus&cam=-0.75,-0.17,2.0&target=-1.8084,-0.4109,4.8796&pixelRatio=1&renderer=gsl",
+  "file": "close-5M.png",
+  "secs": 10.302,
+  "status": "settled",
+  "settledMs": 3670,
+  "budget": 5000000,
+  "active": 4942788,
+  "parts": [
+   [
+    "Oculus34",
+    1261338,
+    1250000
+   ],
+   [
+    "Oculus12",
+    1265111,
+    1250000
+   ],
+   [
+    "Oculus56",
+    1161390,
+    1250000
+   ],
+   [
+    "Oculus78",
+    1254949,
+    1250000
+   ]
+  ]
+ },
+ {
+  "view": "close",
+  "tag": "40M",
+  "url": "http://localhost:5174/?scene=HighRezOculus&cam=-0.75,-0.17,2.0&target=-1.8084,-0.4109,4.8796&pixelRatio=1&renderer=gsl&lodScale=16",
+  "file": "close-40M.png",
+  "secs": 12.386,
+  "status": "settled",
+  "settledMs": 5897.399999976158,
+  "budget": 40000000,
+  "active": 9519945,
+  "parts": [
+   [
+    "Oculus12",
+    3497285,
+    10000000
+   ],
+   [
+    "Oculus34",
+    3327264,
+    10000000
+   ],
+   [
+    "Oculus78",
+    1534006,
+    10000000
+   ],
+   [
+    "Oculus56",
+    1161390,
+    10000000
+   ]
+  ]
+ },
+ {
+  "view": "start",
+  "tag": "1.5M-phone",
+  "url": "http://localhost:5174/?scene=HighRezOculus&cam=0,0,0&target=-1.8084,-0.4109,4.8796&pixelRatio=1&renderer=gsl&budget=1500000&lodScale=1",
+  "file": "start-1.5M-phone.png",
+  "secs": 9.123,
+  "status": "settled",
+  "settledMs": 2188.600000023842,
+  "budget": 1500000,
+  "active": 1510382,
+  "parts": [
+   [
+    "Oculus12",
+    380623,
+    375000
+   ],
+   [
+    "Oculus34",
+    375814,
+    375000
+   ],
+   [
+    "Oculus56",
+    375131,
+    375000
+   ],
+   [
+    "Oculus78",
+    378814,
+    375000
+   ]
+  ]
+ },
+ {
+  "view": "start",
+  "tag": "60M-dpr2",
+  "url": "http://localhost:5174/?scene=HighRezOculus&cam=0,0,0&target=-1.8084,-0.4109,4.8796&renderer=gsl&pixelRatio=2&lodScale=24",
+  "file": "start-60M-dpr2.png",
+  "secs": 15.821,
+  "status": "settled",
+  "settledMs": 8324.399999976158,
+  "budget": 60000000,
+  "active": 14206874,
+  "parts": [
+   [
+    "Oculus12",
+    2782047,
+    15000000
+   ],
+   [
+    "Oculus78",
+    4280628,
+    15000000
+   ],
+   [
+    "Oculus34",
+    2902984,
+    15000000
+   ],
+   [
+    "Oculus56",
+    4241215,
+    15000000
+   ]
+  ]
+ },
+ {
+  "view": "start",
+  "tag": "5M-dpr2",
+  "url": "http://localhost:5174/?scene=HighRezOculus&cam=0,0,0&target=-1.8084,-0.4109,4.8796&renderer=gsl&pixelRatio=2",
+  "file": "start-5M-dpr2.png",
+  "secs": 11.347,
+  "status": "settled",
+  "settledMs": 4059.4000000953674,
+  "budget": 5000000,
+  "active": 5023857,
+  "parts": [
+   [
+    "Oculus12",
+    1256109,
+    1250000
+   ],
+   [
+    "Oculus56",
+    1252219,
+    1250000
+   ],
+   [
+    "Oculus34",
+    1255739,
+    1250000
+   ],
+   [
+    "Oculus78",
+    1259790,
+    1250000
+   ]
+  ]
+ }
+]
