@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs, quantifyModel } from '../focus-regions.mjs';
 import { tmpDir, writeGaussianPly } from './fixtures.mjs';
-import { FOCUS_TIERS, nextRegionId, regionContains, regionsToSpirula, regionToSourcePrism, validateFocusRegions } from '../../shared/focus-regions.mjs';
+import { FOCUS_TIERS, nextRegionId, quatToMat3, regionBackContains, regionContains, regionFacing, regionsToSpirula, regionToSourcePrism, validateFocusRegions } from '../../shared/focus-regions.mjs';
 import { createScene, mat4Invert, mat4ApplyPoint, transformFromTRS, validateScene } from '../../shared/scene-schema.mjs';
 import { parseRoi } from '../lib/roi.mjs';
 
@@ -130,4 +130,37 @@ test('parseArgs', () => {
 test('nextRegionId fills the first gap', () => {
   assert.equal(nextRegionId([]), 'r1');
   assert.equal(nextRegionId(['r1', 'r3']), 'r2');
+});
+
+test('regionFacing: the camera side of a wall panel, both sides for a free-standing one', () => {
+  const r = box(); // thinnest axis: local z (0.4)
+  const R = quatToMat3(r.quaternion);
+  const n = [R[2], R[5], R[8]];
+  const at = (d, lateral = 0) => r.center.map((c, i) => c + d * n[i] + lateral * R[3 * i]);
+  const looking = (p) => ({ center: p, forward: r.center.map((c, i) => c - p[i]).map((v, _, a) => v / Math.hypot(...a)) });
+  const front = Array.from({ length: 10 }, (_, k) => looking(at(2 + k * 0.1, k * 0.2 - 1)));
+  assert.deepEqual(regionFacing(r, front), { axis: 2, normal: n, front: 1, counts: [0, 10] });
+  // Cameras looking away, or standing within the box's depth, don't count.
+  const away = front.map((c) => ({ ...c, forward: c.forward.map((v) => -v) }));
+  const edgeOn = [looking(at(0.1, 3))];
+  assert.equal(regionFacing(r, [...away, ...edgeOn]).front, 0);
+  const behind = Array.from({ length: 3 }, (_, k) => looking(at(-2 - k * 0.1)));
+  assert.equal(regionFacing(r, [...front, behind[0]]).front, 1); // 1 in 10 behind: still a wall panel
+  assert.deepEqual(regionFacing(r, [...front, ...behind]).counts, [3, 10]); // 3 in 10: seen from both sides
+  assert.equal(regionFacing(r, [...front, ...behind]).front, 0);
+  assert.equal(regionFacing(r, front.slice(0, 4)).front, 0); // too few cameras
+});
+
+test('regionBackContains: the footprint extruded behind the box, away from the front', () => {
+  const r = box();
+  const R = quatToMat3(r.quaternion);
+  const p = (lx, ly, lz) => r.center.map((c, i) => c + lx * R[3 * i] + ly * R[3 * i + 1] + lz * R[3 * i + 2]);
+  const back = regionBackContains(r, 1, 0.5); // front +z: behind is -z, from -0.2 to -0.7
+  assert.equal(back(...p(0, 0, -0.3)), true);
+  assert.equal(back(...p(0.9, 0.4, -0.69)), true);
+  assert.equal(back(...p(0, 0, -0.1)), false); // inside the box
+  assert.equal(back(...p(0, 0, -0.75)), false); // past the depth
+  assert.equal(back(...p(0, 0, 0.3)), false); // in front
+  assert.equal(back(...p(1.1, 0, -0.3)), false); // outside the footprint
+  assert.equal(regionBackContains(r, -1, 0.5)(...p(0, 0, 0.3)), true);
 });

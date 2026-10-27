@@ -1,0 +1,25 @@
+[
+ {
+  "arm": "models/Sample1-A-in-B-1_5x",
+  "view": "close-r3",
+  "budget": "12M",
+  "url": "https://oculussplat-test.exhib-splat-project.workers.dev/?config=/models/Sample1-A-in-B-1_5x/viewer.json&cam=2.142,-0.064,5.024&target=3.673,-0.064,5.176&renderer=gsl&pixelRatio=1&budget=12000000&lodScale=1&overlay=0",
+  "file": "models_Sample1-A-in-B-1_5x-close-r3-12M.png",
+  "status": "settled",
+  "settledMs": 5772.700000047684,
+  "firstSplatMs": 5724.200000047684,
+  "budgetSplats": 12000000,
+  "drawn": 1885619,
+  "errors": [],
+  "gsl": {
+   "visibleSplats": 1885619,
+   "residentCpuMB": 511.8,
+   "residentGpuMB": 250,
+   "downloadedMB": 45.1,
+   "loadingChunks": 0,
+   "loadProgress": 1,
+   "peakWasmMB": 70.6,
+   "lodTimeMs": null
+  }
+ }
+]

@@ -97,6 +97,9 @@ Sample1-A-in-B-1_5x (10.0M, 179 MB), Sample2-W010-focus-6M (5.95M, 102 MB),
 Sample3-Mid12M (9.84M, 178 MB) and Sample4-Unweighted-6M (5.96M, 103 MB, this W100).
 Each opens at `?config=models/<name>/viewer.json` and settled on the live site in 7-12 s.
 
+Sample1 was republished on 2026-10-27 from `a-in-b-x1.5-b1` (10.06M): the 1.5x splice plus each
+one-sided box's backing, which fixes a ghost on the r3 panel (../2026-10-26-focus-splice).
+
 ## Not checked yet
 
 - **Steps:** whether 80k steps sharpen the rest of the room as well.

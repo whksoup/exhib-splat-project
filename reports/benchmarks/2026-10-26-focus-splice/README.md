@@ -93,6 +93,57 @@ A's texture (with A's own floater blob). The shelves, tote and screens look as a
 the artifacts showed) and leave the thin axis at 1x or a few cm. That covers the edges
 without taking in the wall behind.
 
+## Ghost on the r3 panel, fixed with the backing (2026-10-27)
+
+Seen online in Sample 1 (`a-in-b-x1.5`): on the "Anatomy of an AI system" panel (r3) a
+blurred image, like a reflection of the room, covered the upper half. A alone and B
+alone are clean there, and both splices (1x and 1.5x) show it. Close-up camera
+`close-r3`; sheets in `shots-r3/` and `shots-back/`.
+
+**Cause: the panel's backing was cut away.** `depth-profile.mjs r3` bins the splats in
+the box's footprint by distance along its thin axis:
+
+- **The panel surface:** A's splats there average only ~0.4 opacity.
+- **Behind the surface:** A has ~6.6k large (20-60 mm), sparse splats 0.1-0.6 m deep, the
+  backing that makes the panel read as solid black. The box (±0.18 m at 1.5x) cut most of it.
+- **What showed through:** B has only ~270 splats behind the wall, but they are opaque
+  blobs 4-40 cm across. In B they're hidden by B's own panel (opacity ~0.65-0.75); through
+  A's thinner panel they appear as the ghost.
+
+`probe.mjs r3` packs small local models around the box to test this (`shots-probe/`):
+
+| Local arm | Ghost |
+| --- | --- |
+| A alone, B alone | no |
+| splice: A in the box, B everywhere else | yes |
+| B's splats in front of the panel removed, or replaced by A's | yes |
+| A's backing added behind the box, B's dropped there | **no**, matches A |
+| the same, with B's ~270 behind-the-wall splats added back | yes |
+
+(The dense "haze" in front of the panel in the profile is the floor, which the
+1.5x footprint reaches.)
+
+**Fix: `--back <m>` extrudes each one-sided box behind itself.** A's splats are taken
+there and the base's dropped.
+
+- **Which side is the room:** taken from the training cameras (COLMAP `images.bin`,
+  `pipeline/lib/colmap.mjs`). It's the side the cameras viewing the box stand on
+  (`regionFacing`).
+- **Boxes left alone:** a box with a fifth or more of those cameras on the other side
+  counts as seen from both sides and isn't extruded. That covers r4, r5, r7 and r12.
+- **Depth:** adaptive (`backingDepths`), in 2.5 cm slabs up to the first slab at a tenth of
+  the box's own density. The backing is sparse (~9k splats/m³ against ~0.5M in the box), so
+  the extrusion stops at the next real surface. Without that, the floor under r9/r10 and
+  the wall behind r1 and r8 would have cost 1.4M splats at a fixed 1 m.
+
+| Arm | Backing taken (per box) | A in the boxes | B outside | Total |
+| --- | --- | --- | --- | --- |
+| `a-in-b-x1.5` | none | 6.60M | 3.43M | 10.03M |
+| `a-in-b-x1.5-b1` | r3 6.6k (1 m), r10 15k (15 cm), r9 6.2k (12.5 cm), r2 1.6k, r1/r8/r13 none (surface right behind) | 6.63M | 3.43M | **10.06M** |
+
+The cost is +30k splats. The r3 panel now matches A. The r2, r10 and `near` views are
+unchanged (`shots-back/`).
+
 ## Read it as
 
 - **The splice is a working tool for hero pieces.** A's best detail on chosen objects, no

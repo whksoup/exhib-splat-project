@@ -37,6 +37,7 @@ const ARMS = {
   'splice-a-in-b-x1.5': 'config=/models/Splice/a-in-b-x1.5/viewer.json', //       the same with every box grown 1.5x about its centre
   'splice-a-in-w010-x1.5': 'config=/models/Splice/a-in-w010-x1.5/viewer.json',
   'splice-a-in-b-m0.2': 'config=/models/Splice/a-in-b-m0.2/viewer.json', //       every box face pushed out 20 cm
+  'splice-a-in-b-x1.5-b1': 'config=/models/Splice/a-in-b-x1.5-b1/viewer.json', // x1.5 plus each one-sided box's backing (A's) behind it
   smoke: 'config=/models/LowCap/smoke/viewer.json', //         HighRezOculus miniatures, packaging test only
 };
 /** The views of reports/benchmarks/2026-10-23-blur-diagnosis, plus three more around the room. */
@@ -52,6 +53,9 @@ const VIEWS = {
   'close-r6': 'cam=-0.473,-0.14,9.837&target=-0.776,-0.14,8.322',
   'close-r8': 'cam=-3.289,-0.16,5.915&target=-4.71,-0.16,6.892',
   'close-r10': 'cam=-5.22,-0.247,1.501&target=-4.596,-0.247,2.175',
+  'close-r1': 'cam=1.116,-0.213,2.211&target=1.898,-0.213,1.706',
+  'close-r3': 'cam=2.142,-0.064,5.024&target=3.673,-0.064,5.176',
+  'close-r5': 'cam=0.132,-0.274,6.340&target=1.060,-0.274,7.101',
 };
 /** Desktop (the published default), iPhone, Android profile budgets. */
 const BUDGETS = { '5M': 5_000_000, '1.5M': 1_500_000, '1M': 1_000_000, '10M': 10_000_000, '12M': 12_000_000, '15M': 15_000_000 };
@@ -61,6 +65,8 @@ if (!outDir) {
   console.log('usage: node compare.mjs <outDir> [arms] [views] [budgets]');
   process.exit(1);
 }
+// An arm may also be any packed folder: models/<path> loads /models/<path>/viewer.json.
+for (const a of (armArg ?? '').split(',')) if (a.startsWith('models/')) ARMS[a] = `config=/${a}/viewer.json`;
 const pick = (arg, all) => (arg ? arg.split(',') : Object.keys(all)).map((k) => {
   if (!(k in all)) throw new Error(`unknown "${k}" (known: ${Object.keys(all).join(', ')})`);
   return k;
@@ -120,7 +126,7 @@ async function shot(arm, view, budget) {
     await c.evaluate("document.querySelectorAll('#ui > *').forEach((e) => (e.style.visibility = 'hidden')); 0");
     await sleep(500);
     const img = await c.send('Page.captureScreenshot', { format: 'png' });
-    const file = `${arm}-${view}-${budget}.png`;
+    const file = `${arm.replace(/\//g, '_')}-${view}-${budget}.png`;
     fs.writeFileSync(path.join(outDir, file), Buffer.from(img.result.data, 'base64'));
     c.close();
     return { arm, view, budget, url, file, ...stats };

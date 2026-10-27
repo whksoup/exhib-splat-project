@@ -1,0 +1,128 @@
+{
+  "regions": 13,
+  "scale": 1.5,
+  "margin": 0,
+  "back": 1,
+  "volume": 14.355953289221628,
+  "facing": {
+    "r1": {
+      "front": -1,
+      "cameras": [
+        819,
+        25
+      ],
+      "depth": 0,
+      "splats": 0
+    },
+    "r2": {
+      "front": -1,
+      "cameras": [
+        768,
+        49
+      ],
+      "depth": 1,
+      "splats": 1562
+    },
+    "r3": {
+      "front": -1,
+      "cameras": [
+        836,
+        0
+      ],
+      "depth": 1,
+      "splats": 6612
+    },
+    "r4": {
+      "front": 0,
+      "cameras": [
+        174,
+        562
+      ]
+    },
+    "r5": {
+      "front": 0,
+      "cameras": [
+        174,
+        757
+      ]
+    },
+    "r6": {
+      "front": 1,
+      "cameras": [
+        72,
+        850
+      ],
+      "depth": 1,
+      "splats": 4
+    },
+    "r7": {
+      "front": 0,
+      "cameras": [
+        0,
+        0
+      ]
+    },
+    "r8": {
+      "front": -1,
+      "cameras": [
+        754,
+        142
+      ],
+      "depth": 0,
+      "splats": 0
+    },
+    "r9": {
+      "front": 1,
+      "cameras": [
+        37,
+        640
+      ],
+      "depth": 0.125,
+      "splats": 6231
+    },
+    "r10": {
+      "front": 1,
+      "cameras": [
+        36,
+        639
+      ],
+      "depth": 0.15000000000000002,
+      "splats": 15263
+    },
+    "r11": {
+      "front": 1,
+      "cameras": [
+        69,
+        925
+      ],
+      "depth": 1,
+      "splats": 2
+    },
+    "r12": {
+      "front": 0,
+      "cameras": [
+        582,
+        263
+      ]
+    },
+    "r13": {
+      "front": 1,
+      "cameras": [
+        5,
+        378
+      ],
+      "depth": 0,
+      "splats": 0
+    }
+  },
+  "inside": {
+    "Hybrid-A-Oculus12-scene.ply": 3331078,
+    "Hybrid-A-Oculus34-scene.ply": 1269668,
+    "Hybrid-A-Oculus56-scene.ply": 1029594,
+    "Hybrid-A-Oculus78-scene.ply": 1001252
+  },
+  "outside": {
+    "LowCap-L0-scene.ply": 3425041,
+    "FocusPilot-W010-scene.ply": 4066531
+  }
+}
