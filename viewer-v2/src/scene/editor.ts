@@ -35,6 +35,7 @@ import { api, fetchSceneJson, type NavFile } from "./api";
 import { BuildPanel } from "./buildPanel";
 import { NavPanel } from "./navPanel";
 import { PartsPanel } from "./partsPanel";
+import { RegionsPanel } from "./regionsPanel";
 import { previewCapBytes, sceneCamera, sceneModels, sceneNavigation, type PartFileInfo, type SceneModels } from "./sceneConfig";
 import { meshTRSFor, sceneTransformFromTRS } from "./sceneMath";
 import { SceneStore } from "./store";
@@ -49,6 +50,7 @@ export class SceneEditor {
   private nav: Navigation;
   private readonly navPanel: NavPanel;
   private readonly partsPanel: PartsPanel;
+  readonly regions: RegionsPanel;
   private readonly build: BuildPanel;
   /** What each part loads (built .rad / source / nothing) and the root + part matrices. */
   private load: SceneModels;
@@ -123,6 +125,7 @@ export class SceneEditor {
       tbBtn("parts", "Parts", "L", "Source parts: build state, show / hide, enable, add, remove", () => this.partsPanel.show(!this.partsPanel.visible)),
       tbBtn("plan", "Plan", "M", "Plan section view and export for drawing colliders", () => this.plan.toggle()),
       tbBtn("nav", "Navigation", "N", "Collision mesh, spawn, start camera, floor", () => this.navPanel.show(!this.navPanel.visible)),
+      tbBtn("regions", "Regions", "I", "Focus regions: boxes marking where the model needs more or less detail", () => this.toggleRegions()),
       tbBtn("controls", "Orbit", "C", "Camera: orbit / fly / walk (C cycles)", () => {
         if (this.align.active && viewer.rig.mode === "fly") this.align.setActive(false);
         viewer.rig.toggleMode();
@@ -161,7 +164,9 @@ export class SceneEditor {
         },
       },
     });
-    this.align = new AlignMode(ui, viewer, this.alignBinding(), [this.plan], this.dock);
+    this.regions = new RegionsPanel(this.store, viewer);
+    // Align and the region gizmo both drive a TransformControls: starting Align closes Regions.
+    this.align = new AlignMode(ui, viewer, this.alignBinding(), [this.plan, this.regions], this.dock);
     this.navPanel = new NavPanel(this.store, viewer, {
       collisionStatus: () => this.nav.collisionStatus,
       collidersVisible: (on?: boolean) => {
@@ -199,7 +204,7 @@ export class SceneEditor {
         this.renderBanners();
       },
     });
-    this.dock.append(this.partsPanel.panel, this.navPanel.panel, this.build.panel);
+    this.dock.append(this.partsPanel.panel, this.navPanel.panel, this.regions.panel, this.build.panel);
     this.nav = attachNavigation(viewer, ui);
 
     // --- store -> everything
@@ -235,6 +240,7 @@ export class SceneEditor {
       if (e.code === "KeyN" && !e.shiftKey) this.navPanel.show(!this.navPanel.visible);
       else if (e.code === "KeyL") this.partsPanel.show(!this.partsPanel.visible);
       else if (e.code === "KeyB") this.build.show(!this.build.visible);
+      else if (e.code === "KeyI") this.toggleRegions();
       else if (e.key === "?" || (e.code === "Slash" && e.shiftKey)) void this.showHelp();
     });
     window.addEventListener("beforeunload", (e) => {
@@ -299,6 +305,12 @@ export class SceneEditor {
     if (!d.build) return;
     const block = this.builtTransform && matricesEqual(this.builtTransform.matrix, d.build.transformMatrix) ? this.builtTransform : transformFromMatrix(d.build.transformMatrix);
     this.store.update((x) => (x.transform = clone(block)), "transform");
+  }
+
+  /** Open / close the Regions panel; opening it ends Align (one transform gizmo at a time). */
+  private toggleRegions(): void {
+    if (!this.regions.visible && this.align.active) this.align.setActive(false);
+    this.regions.toggle();
   }
 
   // --- parts ----------------------------------------------------------------------
@@ -521,6 +533,7 @@ export class SceneEditor {
     this.tb.plan.classList.toggle("on", this.plan.active);
     this.tb.nav.classList.toggle("on", this.navPanel.visible);
     this.tb.parts.classList.toggle("on", this.partsPanel.visible);
+    this.tb.regions.classList.toggle("on", this.regions.visible);
     const mode = this.viewer.rig.mode;
     const label = mode === "orbit" ? "Orbit" : mode === "fly" ? "Fly" : "Walk";
     const first = this.tb.controls.firstChild;
@@ -639,6 +652,9 @@ export class SceneEditor {
       ["L", "Parts: show / hide, enable, add, remove"],
       ["M", "Plan view and export (to nav/)"],
       ["N", "Navigation panel"],
+      ["I", "Focus regions: add / select boxes (click), name, tier"],
+      ["1 / 2 / 3", "Regions: move / rotate / size the selected box"],
+      ["Del / Esc", "Regions: delete / deselect the selected box"],
       ["B", "Build panel"],
       ["C", "Camera: orbit → fly → walk"],
       ["V", "Reset view (walk: back to spawn)"],

@@ -3,6 +3,8 @@
 // Per run: time to first splat / LoD settled, process RAM + GPU memory after
 // settling, then the viewer's own 20 s orbit benchmark (window.bench).
 //   node bench-renderers.mjs <outFile.json> [scene]
+// RUNS (JSON env) replaces the run list; a run's "page" replaces scene=<scene>
+// (e.g. "config=/models/LowCap/l0/viewer.json").
 import { execFileSync, spawn } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
@@ -68,7 +70,7 @@ async function cdp(wsUrl) {
   return { send, evaluate, close: () => ws.close() };
 }
 
-async function run({ name, q, freezeShare, shot, js }) {
+async function run({ name, q, page: pageQuery, freezeShare, shot, js }) {
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), "splat-bench-")).replace(/\\/g, "/");
   const chrome = spawn(
     CHROME,
@@ -103,7 +105,7 @@ async function run({ name, q, freezeShare, shot, js }) {
     await c.send("Runtime.enable");
     await c.send("Page.bringToFront");
     await c.send("Emulation.setFocusEmulationEnabled", { enabled: true });
-    const url = `${BASE}?scene=${SCENE}&${VIEW}${q}`;
+    const url = `${BASE}?${pageQuery ?? `scene=${SCENE}`}&${VIEW}${q}`;
     const t0 = Date.now();
     await c.send("Page.navigate", { url });
     // Trace: once a second, how long the page took to answer (main-thread stalls) and frames rendered since.

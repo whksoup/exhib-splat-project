@@ -33,6 +33,13 @@
 // top-level region; a part with no outlines and no own `roi` is not cropped.
 // (`roiOutline`, a single name, is read as `roiOutlines: [name]`.) Both crops
 // can apply to one part (a splat must pass both).
+//
+// Focus regions (optional): `focusRegions` holds named, tiered boxes in scene
+// coordinates marking where a model needs more or less detail. The build does
+// not use them; pipeline/focus-regions.mjs counts splats in them and exports
+// them as a Spirula training region. See focus-regions.mjs.
+
+import { validateFocusRegions } from './focus-regions.mjs';
 
 export const SCENE_SCHEMA_VERSION = 2;
 /** Part id given to the single source of a migrated schema-1 scene. */
@@ -166,6 +173,7 @@ export const SOURCE_EXTS = ['.ply', '.sog', '.spz', '.splat', '.ksplat'];
  * @property {SceneBuild|null} build
  * @property {SceneBuildAttempt|null} buildAttempt
  * @property {any[]} hotspots
+ * @property {import('./focus-regions.mjs').FocusRegion[]} [focusRegions]  boxes (scene coordinates) needing more or less detail; see focus-regions.mjs
  * @property {string} [createdAt]
  * @property {string} [updatedAt]
  */
@@ -695,6 +703,7 @@ export function validateScene(raw) {
   }
   const hotspots = raw.hotspots ?? [];
   if (!Array.isArray(hotspots)) errors.push('"hotspots" must be an array');
+  if (raw.focusRegions !== undefined) errors.push(...validateFocusRegions(raw.focusRegions));
 
   if (errors.length) return { scene: null, errors, warnings };
   const { source: _legacySource, ...rest } = raw;

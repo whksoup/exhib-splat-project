@@ -1,0 +1,610 @@
+{
+  "scene": "LowCap",
+  "createdAt": "2026-10-25T14:01:57.941Z",
+  "regions": [
+    {
+      "id": "r1",
+      "name": "Region 1",
+      "tier": "hero",
+      "center": [
+        1.8976,
+        -0.2126,
+        1.7063
+      ],
+      "size": [
+        0.7753,
+        0.734,
+        0.1365
+      ],
+      "quaternion": [
+        0,
+        0.8783016,
+        0,
+        0.4781069
+      ],
+      "volume": 0.0776780823,
+      "models": {
+        "LowCap": {
+          "count": 23207,
+          "sizeMm": 3.7384750843048096
+        },
+        "FocusPilot-W010": {
+          "count": 78642,
+          "sizeMm": 1.2801982164382935
+        },
+        "FocusPilot-W030": {
+          "count": 49287,
+          "sizeMm": 1.9719195365905762
+        },
+        "Mid12M": {
+          "count": 45156,
+          "sizeMm": 1.991003155708313
+        },
+        "HighRezOculus": {
+          "count": 192649,
+          "sizeMm": 1.0996925830841064
+        }
+      }
+    },
+    {
+      "id": "r2",
+      "name": "Region 1 copy",
+      "tier": "hero",
+      "center": [
+        2.9606,
+        -0.1274,
+        3.4288
+      ],
+      "size": [
+        0.496,
+        0.3152,
+        0.1365
+      ],
+      "quaternion": [
+        0,
+        0.9166292,
+        0,
+        0.3997385
+      ],
+      "volume": 0.0213403008,
+      "models": {
+        "LowCap": {
+          "count": 29206,
+          "sizeMm": 0.9495931267738342
+        },
+        "FocusPilot-W010": {
+          "count": 139477,
+          "sizeMm": 0.4076199531555176
+        },
+        "FocusPilot-W030": {
+          "count": 78182,
+          "sizeMm": 0.6079041957855225
+        },
+        "Mid12M": {
+          "count": 39720,
+          "sizeMm": 0.8002738356590271
+        },
+        "HighRezOculus": {
+          "count": 146269,
+          "sizeMm": 0.5579389333724976
+        }
+      }
+    },
+    {
+      "id": "r3",
+      "name": "Region 3",
+      "tier": "hero",
+      "center": [
+        3.6727,
+        -0.0635,
+        5.1757
+      ],
+      "size": [
+        1.2821,
+        0.9165,
+        0.238
+      ],
+      "quaternion": [
+        0,
+        0.6712467,
+        0,
+        0.741234
+      ],
+      "volume": 0.27966062669999997,
+      "models": {
+        "LowCap": {
+          "count": 62081,
+          "sizeMm": 1.5369983911514282
+        },
+        "FocusPilot-W010": {
+          "count": 208553,
+          "sizeMm": 0.7786350846290588
+        },
+        "FocusPilot-W030": {
+          "count": 147106,
+          "sizeMm": 1.0299904346466064
+        },
+        "Mid12M": {
+          "count": 85811,
+          "sizeMm": 1.1740915775299072
+        },
+        "HighRezOculus": {
+          "count": 303217,
+          "sizeMm": 0.867742657661438
+        }
+      }
+    },
+    {
+      "id": "r4",
+      "name": "Region 3 copy",
+      "tier": "hero",
+      "center": [
+        3.6887,
+        -0.1378,
+        5.8495
+      ],
+      "size": [
+        0.0548,
+        0.0369,
+        0.0404
+      ],
+      "quaternion": [
+        0,
+        0.6712467,
+        0,
+        0.741234
+      ],
+      "volume": 0.000081693648,
+      "models": {
+        "LowCap": {
+          "count": 224,
+          "sizeMm": 4.392067909240723
+        },
+        "FocusPilot-W010": {
+          "count": 1072,
+          "sizeMm": 0.9717459678649902
+        },
+        "FocusPilot-W030": {
+          "count": 649,
+          "sizeMm": 1.92533278465271
+        },
+        "Mid12M": {
+          "count": 439,
+          "sizeMm": 3.4062161445617676
+        },
+        "HighRezOculus": {
+          "count": 1229,
+          "sizeMm": 2.0849382877349854
+        }
+      }
+    },
+    {
+      "id": "r5",
+      "name": "Region 5",
+      "tier": "hero",
+      "center": [
+        1.0595,
+        -0.2739,
+        7.1011
+      ],
+      "size": [
+        1,
+        1,
+        0.1734
+      ],
+      "quaternion": [
+        0,
+        -0.9038832,
+        0,
+        0.4277793
+      ],
+      "volume": 0.1734,
+      "models": {
+        "LowCap": {
+          "count": 17474,
+          "sizeMm": 2.9833192825317383
+        },
+        "FocusPilot-W010": {
+          "count": 38619,
+          "sizeMm": 1.9535683393478394
+        },
+        "FocusPilot-W030": {
+          "count": 23529,
+          "sizeMm": 3.126596212387085
+        },
+        "Mid12M": {
+          "count": 49975,
+          "sizeMm": 2.8158371448516846
+        },
+        "HighRezOculus": {
+          "count": 242789,
+          "sizeMm": 1.729158639907837
+        }
+      }
+    },
+    {
+      "id": "r6",
+      "name": "Region 6",
+      "tier": "hero",
+      "center": [
+        -0.7765,
+        -0.1395,
+        8.3224
+      ],
+      "size": [
+        1.1316,
+        0.443,
+        0.1602
+      ],
+      "quaternion": [
+        0,
+        -0.9951001,
+        0,
+        0.0988727
+      ],
+      "volume": 0.08030806775999999,
+      "models": {
+        "LowCap": {
+          "count": 14300,
+          "sizeMm": 6.210668563842773
+        },
+        "FocusPilot-W010": {
+          "count": 166740,
+          "sizeMm": 1.2736830711364746
+        },
+        "FocusPilot-W030": {
+          "count": 49700,
+          "sizeMm": 2.3139538764953613
+        },
+        "Mid12M": {
+          "count": 91532,
+          "sizeMm": 2.4404983520507812
+        },
+        "HighRezOculus": {
+          "count": 666182,
+          "sizeMm": 0.8680993914604187
+        }
+      }
+    },
+    {
+      "id": "r7",
+      "name": "Region 7",
+      "tier": "hero",
+      "center": [
+        -6.3043,
+        -0.1094,
+        7.8836
+      ],
+      "size": [
+        2.1518,
+        1.1147,
+        1.2477
+      ],
+      "quaternion": [
+        0,
+        -0.4655518,
+        0,
+        0.8850206
+      ],
+      "volume": 2.992747518642,
+      "models": {
+        "LowCap": {
+          "count": 55438,
+          "sizeMm": 3.4867660999298096
+        },
+        "FocusPilot-W010": {
+          "count": 233867,
+          "sizeMm": 1.9918140172958374
+        },
+        "FocusPilot-W030": {
+          "count": 132166,
+          "sizeMm": 2.4001495838165283
+        },
+        "Mid12M": {
+          "count": 140240,
+          "sizeMm": 2.40618634223938
+        },
+        "HighRezOculus": {
+          "count": 632454,
+          "sizeMm": 1.6920515298843384
+        }
+      }
+    },
+    {
+      "id": "r8",
+      "name": "Region 7 copy",
+      "tier": "hero",
+      "center": [
+        -4.7104,
+        -0.1597,
+        6.892
+      ],
+      "size": [
+        1.2955,
+        0.6711,
+        0.4297
+      ],
+      "quaternion": [
+        0,
+        -0.4655518,
+        0,
+        0.8850206
+      ],
+      "volume": 0.3735854984850001,
+      "models": {
+        "LowCap": {
+          "count": 62370,
+          "sizeMm": 2.749495029449463
+        },
+        "FocusPilot-W010": {
+          "count": 282444,
+          "sizeMm": 1.1191662549972534
+        },
+        "FocusPilot-W030": {
+          "count": 161678,
+          "sizeMm": 1.4698163270950317
+        },
+        "Mid12M": {
+          "count": 181612,
+          "sizeMm": 2.135830879211426
+        },
+        "HighRezOculus": {
+          "count": 949130,
+          "sizeMm": 0.8512333035469055
+        }
+      }
+    },
+    {
+      "id": "r9",
+      "name": "Region 9",
+      "tier": "hero",
+      "center": [
+        -5.0359,
+        -0.2474,
+        2.6277
+      ],
+      "size": [
+        0.5628,
+        0.1504,
+        0.4166
+      ],
+      "quaternion": [
+        0,
+        0.4442735,
+        0,
+        0.8958912
+      ],
+      "volume": 0.03526315699200001,
+      "models": {
+        "LowCap": {
+          "count": 14562,
+          "sizeMm": 1.9230573177337646
+        },
+        "FocusPilot-W010": {
+          "count": 99098,
+          "sizeMm": 0.5513783097267151
+        },
+        "FocusPilot-W030": {
+          "count": 38989,
+          "sizeMm": 1.0891075134277344
+        },
+        "Mid12M": {
+          "count": 46936,
+          "sizeMm": 1.266558289527893
+        },
+        "HighRezOculus": {
+          "count": 226933,
+          "sizeMm": 0.6906585693359375
+        }
+      }
+    },
+    {
+      "id": "r10",
+      "name": "Region 9 copy",
+      "tier": "hero",
+      "center": [
+        -4.5963,
+        -0.2474,
+        2.1755
+      ],
+      "size": [
+        0.5628,
+        0.1504,
+        0.2784
+      ],
+      "quaternion": [
+        0,
+        0.3645008,
+        0,
+        0.9312031
+      ],
+      "volume": 0.023565201408,
+      "models": {
+        "LowCap": {
+          "count": 41781,
+          "sizeMm": 0.9459965825080872
+        },
+        "FocusPilot-W010": {
+          "count": 168431,
+          "sizeMm": 0.3687410056591034
+        },
+        "FocusPilot-W030": {
+          "count": 82189,
+          "sizeMm": 0.7234968543052673
+        },
+        "Mid12M": {
+          "count": 137798,
+          "sizeMm": 0.5515334606170654
+        },
+        "HighRezOculus": {
+          "count": 696075,
+          "sizeMm": 0.3065752387046814
+        }
+      }
+    },
+    {
+      "id": "r11",
+      "name": "Region 9 copy copy",
+      "tier": "hero",
+      "center": [
+        -4.1047,
+        -0.1327,
+        2.1451
+      ],
+      "size": [
+        0.1448,
+        0.1841,
+        0.0598
+      ],
+      "quaternion": [
+        0,
+        0.0676124,
+        0,
+        0.9977117
+      ],
+      "volume": 0.0015941292640000001,
+      "models": {
+        "LowCap": {
+          "count": 768,
+          "sizeMm": 7.617271900177002
+        },
+        "FocusPilot-W010": {
+          "count": 9643,
+          "sizeMm": 1.64980947971344
+        },
+        "FocusPilot-W030": {
+          "count": 3224,
+          "sizeMm": 2.8301327228546143
+        },
+        "Mid12M": {
+          "count": 3832,
+          "sizeMm": 2.4427011013031006
+        },
+        "HighRezOculus": {
+          "count": 18832,
+          "sizeMm": 0.6512778997421265
+        }
+      }
+    },
+    {
+      "id": "r12",
+      "name": "Region 1 copy",
+      "tier": "hero",
+      "center": [
+        2.7971,
+        -0.1174,
+        0.642
+      ],
+      "size": [
+        0.039,
+        1.322,
+        2.6373
+      ],
+      "quaternion": [
+        0,
+        0.8783016,
+        0,
+        0.4781069
+      ],
+      "volume": 0.1359739134,
+      "models": {
+        "LowCap": {
+          "count": 11539,
+          "sizeMm": 7.187461853027344
+        },
+        "FocusPilot-W010": {
+          "count": 15605,
+          "sizeMm": 5.5238752365112305
+        },
+        "FocusPilot-W030": {
+          "count": 15344,
+          "sizeMm": 5.732014179229736
+        },
+        "Mid12M": {
+          "count": 20126,
+          "sizeMm": 4.723507404327393
+        },
+        "HighRezOculus": {
+          "count": 88108,
+          "sizeMm": 2.60831618309021
+        }
+      }
+    },
+    {
+      "id": "r13",
+      "name": "Region 1 copy copy",
+      "tier": "hero",
+      "center": [
+        2.8158,
+        -0.2196,
+        0.5266
+      ],
+      "size": [
+        0.32,
+        0.2518,
+        0.725
+      ],
+      "quaternion": [
+        0,
+        0.8783016,
+        0,
+        0.4781069
+      ],
+      "volume": 0.05841760000000001,
+      "models": {
+        "LowCap": {
+          "count": 1439,
+          "sizeMm": 14.776785850524902
+        },
+        "FocusPilot-W010": {
+          "count": 7673,
+          "sizeMm": 4.537597179412842
+        },
+        "FocusPilot-W030": {
+          "count": 3855,
+          "sizeMm": 7.244345188140869
+        },
+        "Mid12M": {
+          "count": 2754,
+          "sizeMm": 10.042250633239746
+        },
+        "HighRezOculus": {
+          "count": 9889,
+          "sizeMm": 6.297025203704834
+        }
+      }
+    }
+  ],
+  "models": [
+    {
+      "scene": "LowCap",
+      "splats": 3993425,
+      "inAny": 333753,
+      "seconds": 0.776
+    },
+    {
+      "scene": "FocusPilot-W010",
+      "splats": 5946276,
+      "inAny": 1447980,
+      "seconds": 1.366
+    },
+    {
+      "scene": "FocusPilot-W030",
+      "splats": 5958842,
+      "inAny": 784853,
+      "seconds": 1.317
+    },
+    {
+      "scene": "Mid12M",
+      "splats": 9842207,
+      "inAny": 844643,
+      "seconds": 2.639
+    },
+    {
+      "scene": "HighRezOculus",
+      "splats": 44518753,
+      "inAny": 4166457,
+      "seconds": 11.254
+    }
+  ]
+}

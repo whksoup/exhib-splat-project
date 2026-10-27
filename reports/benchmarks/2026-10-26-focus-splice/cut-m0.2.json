@@ -1,0 +1,16 @@
+{
+  "regions": 13,
+  "scale": 1,
+  "margin": 0.2,
+  "volume": 16.044420445399002,
+  "inside": {
+    "Hybrid-A-Oculus12-scene.ply": 3153042,
+    "Hybrid-A-Oculus34-scene.ply": 3658618,
+    "Hybrid-A-Oculus56-scene.ply": 1472251,
+    "Hybrid-A-Oculus78-scene.ply": 2507431
+  },
+  "outside": {
+    "LowCap-L0-scene.ply": 2991810,
+    "FocusPilot-W010-scene.ply": 3530921
+  }
+}

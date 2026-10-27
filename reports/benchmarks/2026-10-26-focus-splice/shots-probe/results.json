@@ -1,0 +1,94 @@
+[
+ {
+  "arm": "models/Probe/r3-a",
+  "view": "close-r3",
+  "budget": "15M",
+  "url": "http://localhost:5174/?config=/models/Probe/r3-a/viewer.json&cam=2.142,-0.064,5.024&target=3.673,-0.064,5.176&renderer=gsl&pixelRatio=1&budget=15000000&lodScale=1&overlay=0",
+  "file": "models_Probe_r3-a-close-r3-15M.png",
+  "status": "settled",
+  "settledMs": 1108.2000000476837,
+  "firstSplatMs": 878.3000001907349,
+  "budgetSplats": 15000000,
+  "drawn": 3760478,
+  "errors": [],
+  "gsl": {
+   "visibleSplats": 3760478,
+   "residentCpuMB": 920.1,
+   "residentGpuMB": 449.5,
+   "downloadedMB": 78,
+   "loadingChunks": 0,
+   "loadProgress": 1,
+   "peakWasmMB": 78.3,
+   "lodTimeMs": null
+  }
+ },
+ {
+  "arm": "models/Probe/r3-splice",
+  "view": "close-r3",
+  "budget": "15M",
+  "url": "http://localhost:5174/?config=/models/Probe/r3-splice/viewer.json&cam=2.142,-0.064,5.024&target=3.673,-0.064,5.176&renderer=gsl&pixelRatio=1&budget=15000000&lodScale=1&overlay=0",
+  "file": "models_Probe_r3-splice-close-r3-15M.png",
+  "status": "settled",
+  "settledMs": 817.2000000476837,
+  "firstSplatMs": 817.2000000476837,
+  "budgetSplats": 15000000,
+  "drawn": 1172949,
+  "errors": [],
+  "gsl": {
+   "visibleSplats": 1172949,
+   "residentCpuMB": 240.4,
+   "residentGpuMB": 118,
+   "downloadedMB": 21,
+   "loadingChunks": 0,
+   "loadProgress": 1,
+   "peakWasmMB": 34.2,
+   "lodTimeMs": null
+  }
+ },
+ {
+  "arm": "models/Probe/r3-a-back",
+  "view": "close-r3",
+  "budget": "15M",
+  "url": "http://localhost:5174/?config=/models/Probe/r3-a-back/viewer.json&cam=2.142,-0.064,5.024&target=3.673,-0.064,5.176&renderer=gsl&pixelRatio=1&budget=15000000&lodScale=1&overlay=0",
+  "file": "models_Probe_r3-a-back-close-r3-15M.png",
+  "status": "settled",
+  "settledMs": 834.7999999523163,
+  "firstSplatMs": 834.7999999523163,
+  "budgetSplats": 15000000,
+  "drawn": 1179493,
+  "errors": [],
+  "gsl": {
+   "visibleSplats": 1179493,
+   "residentCpuMB": 240.8,
+   "residentGpuMB": 118,
+   "downloadedMB": 21,
+   "loadingChunks": 0,
+   "loadProgress": 1,
+   "peakWasmMB": 34.2,
+   "lodTimeMs": null
+  }
+ },
+ {
+  "arm": "models/Probe/r3-a-back-b-too",
+  "view": "close-r3",
+  "budget": "15M",
+  "url": "http://localhost:5174/?config=/models/Probe/r3-a-back-b-too/viewer.json&cam=2.142,-0.064,5.024&target=3.673,-0.064,5.176&renderer=gsl&pixelRatio=1&budget=15000000&lodScale=1&overlay=0",
+  "file": "models_Probe_r3-a-back-b-too-close-r3-15M.png",
+  "status": "settled",
+  "settledMs": 824.5,
+  "firstSplatMs": 824.5,
+  "budgetSplats": 15000000,
+  "drawn": 1179763,
+  "errors": [],
+  "gsl": {
+   "visibleSplats": 1179763,
+   "residentCpuMB": 243,
+   "residentGpuMB": 119.7,
+   "downloadedMB": 21.1,
+   "loadingChunks": 0,
+   "loadProgress": 1,
+   "peakWasmMB": 35.5,
+   "lodTimeMs": null
+  }
+ }
+]

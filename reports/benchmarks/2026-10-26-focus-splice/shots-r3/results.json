@@ -1,0 +1,94 @@
+[
+ {
+  "arm": "current",
+  "view": "close-r3",
+  "budget": "15M",
+  "url": "http://localhost:5174/?scene=HighRezOculus&cam=2.142,-0.064,5.024&target=3.673,-0.064,5.176&renderer=gsl&pixelRatio=1&budget=15000000&lodScale=1&overlay=0",
+  "file": "current-close-r3-15M.png",
+  "status": "settled",
+  "settledMs": 2553.7000000476837,
+  "firstSplatMs": 686.5,
+  "budgetSplats": 15000000,
+  "drawn": 2412525,
+  "errors": [],
+  "gsl": {
+   "visibleSplats": 2412525,
+   "residentCpuMB": 1124.1,
+   "residentGpuMB": 969.6,
+   "downloadedMB": 457.4,
+   "loadingChunks": 0,
+   "loadProgress": 1,
+   "peakWasmMB": 514.9,
+   "lodTimeMs": null
+  }
+ },
+ {
+  "arm": "lowcap-rad",
+  "view": "close-r3",
+  "budget": "15M",
+  "url": "http://localhost:5174/?scene=LowCap&cam=2.142,-0.064,5.024&target=3.673,-0.064,5.176&renderer=gsl&pixelRatio=1&budget=15000000&lodScale=1&overlay=0",
+  "file": "lowcap-rad-close-r3-15M.png",
+  "status": "settled",
+  "settledMs": 1130.5999999046326,
+  "firstSplatMs": 630.0999999046326,
+  "budgetSplats": 15000000,
+  "drawn": 504797,
+  "errors": [],
+  "gsl": {
+   "visibleSplats": 504797,
+   "residentCpuMB": 237,
+   "residentGpuMB": 204.1,
+   "downloadedMB": 100.4,
+   "loadingChunks": 0,
+   "loadProgress": 1,
+   "peakWasmMB": 121.6,
+   "lodTimeMs": null
+  }
+ },
+ {
+  "arm": "splice-a-in-b",
+  "view": "close-r3",
+  "budget": "15M",
+  "url": "http://localhost:5174/?config=/models/Splice/a-in-b/viewer.json&cam=2.142,-0.064,5.024&target=3.673,-0.064,5.176&renderer=gsl&pixelRatio=1&budget=15000000&lodScale=1&overlay=0",
+  "file": "splice-a-in-b-close-r3-15M.png",
+  "status": "settled",
+  "settledMs": 1008.3999998569489,
+  "firstSplatMs": 925.3999998569489,
+  "budgetSplats": 15000000,
+  "drawn": 1956533,
+  "errors": [],
+  "gsl": {
+   "visibleSplats": 1956533,
+   "residentCpuMB": 596.9,
+   "residentGpuMB": 291.2,
+   "downloadedMB": 48.5,
+   "loadingChunks": 0,
+   "loadProgress": 1,
+   "peakWasmMB": 64,
+   "lodTimeMs": null
+  }
+ },
+ {
+  "arm": "splice-a-in-b-x1.5",
+  "view": "close-r3",
+  "budget": "15M",
+  "url": "http://localhost:5174/?config=/models/Splice/a-in-b-x1.5/viewer.json&cam=2.142,-0.064,5.024&target=3.673,-0.064,5.176&renderer=gsl&pixelRatio=1&budget=15000000&lodScale=1&overlay=0",
+  "file": "splice-a-in-b-x1.5-close-r3-15M.png",
+  "status": "settled",
+  "settledMs": 905,
+  "firstSplatMs": 888.2999999523163,
+  "budgetSplats": 15000000,
+  "drawn": 1880693,
+  "errors": [],
+  "gsl": {
+   "visibleSplats": 1880693,
+   "residentCpuMB": 511.8,
+   "residentGpuMB": 250,
+   "downloadedMB": 45,
+   "loadingChunks": 0,
+   "loadProgress": 1,
+   "peakWasmMB": 69.2,
+   "lodTimeMs": null
+  }
+ }
+]

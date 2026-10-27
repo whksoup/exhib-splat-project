@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "published-site",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["../hosting/local-server.mjs", "--root", "../publish/site", "--port", "8091"],
+      "port": 8091
+    }
+  ]
+}

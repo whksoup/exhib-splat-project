@@ -51,6 +51,13 @@ With no parameters the viewer opens the **scene list** (see Scenes below).
 save or build; the scene list has a "Debug: open a model file directly" list
 of every model file the dev server can find.
 
+On Gaussian Splat Lite (`?renderer=gsl`) a model URL ending in `lod-meta.json`
+(a PlayCanvas `splat-transform` streamed SOG with discrete LoD levels) streams
+through GSL's `SogStreamScheduler` and shares the splat budget with any `.rad`
+parts. Pack it in scene coordinates: GSL 1.4.0 draws a SOG stream under a
+scaled group as blurred blobs, so such a model refuses a non-identity `matrix`.
+Used by `reports/benchmarks/2026-10-23-lowcap-retrained-lod`.
+
 ## Scenes: the editing workflow
 
 A scene is a save file in `../scenes/<name>/`:
@@ -75,7 +82,7 @@ a one-part scene and are written as schema 2 on the next save or build.
 
 Open a scene with `?scene=<name>`. The top bar shows the scene name, a yellow
 dot when there are unsaved changes, **Align (G)**, **Plan (M)**,
-**Navigation (N)**, the camera mode (**C**), the build status, **Save
+**Navigation (N)**, **Regions (I)**, the camera mode (**C**), the build status, **Save
 (Ctrl+S)**, **Build** and **?** (all shortcuts). Panels open in a column on
 the right (a bottom sheet on narrow screens) and collapse by clicking their
 title. Keys typed into a panel field never reach the shortcuts or the camera;
@@ -93,6 +100,21 @@ Esc leaves the field. The browser warns before you leave with unsaved changes.
 7. **Pick the collision.** Press `N`, choose the GLB in **Collision mesh** (the list is that folder; ↻ re-reads it). The status line says when it has loaded; **Show colliders** (`Shift+N`) draws the wireframe.
 8. **Spawn and start camera.** Look from where walking should start and click **Set spawn here**; set the view the scene opens with using **Set start camera**. Set **Fallback floor Y** (used when there is no collision mesh), **Allow jump**, **Allow fly**.
 9. **Walk.** Press `C` until the button says Walk (or click **Walk** in the panel). Save.
+
+**Focus regions (`I`).** Boxes marking where the model needs more detail
+(**Hero**: artworks and text seen up close; **High**: exhibits) or less
+(**Low**: glass, reflective floor, bare walls), for planning a training run.
+**+ Box in view** puts a 1 m box 2.5 m in front of the camera, facing it.
+Click a box to select it. Move (`1`, world axes), Rotate (`2`) and Size (`3`,
+along its own axes) drive the gizmo, or type the size in metres. Set a
+name and tier, then **Look at**, **Duplicate** or **Delete** (`Del`); `Esc`
+deselects. Boxes show while the panel is open (**Show when closed** keeps
+them). They are saved in scene.json as `focusRegions` in scene coordinates, so
+every scene with the same transform shares them. Starting Align closes the
+panel (one gizmo at a time). Works on both renderers. Measure them with
+`node pipeline/focus-regions.mjs quantify <scene> --compare <scene>...`: splat
+counts and median splat size per region and model. Export them as a Spirula
+training region with `focus-regions.mjs export` (see `../pipeline/README.md`).
 
 **Parts panel (`L`).** One row per part: id, build state (built / outdated
 / not built / disabled), whether it is loaded (streaming `.rad`, source

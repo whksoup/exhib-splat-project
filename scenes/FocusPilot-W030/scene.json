@@ -1,0 +1,493 @@
+{
+  "schemaVersion": 2,
+  "name": "FocusPilot-W030",
+  "parts": [
+    {
+      "id": "FocusPilot-W030",
+      "source": "assets/source_ply/FocusPilot-W030.ply",
+      "enabled": true,
+      "roi": "assets/roi/LowCap/AllOutlines.json"
+    }
+  ],
+  "transform": {
+    "position": [
+      -1.2173382742979126,
+      -0.5149450234734789,
+      5.064170343211911
+    ],
+    "rotationDeg": [
+      -90,
+      0,
+      0
+    ],
+    "eulerOrder": "XYZ",
+    "quaternion": [
+      -0.7071067811865475,
+      0,
+      0,
+      0.7071067811865476
+    ],
+    "scale": 8,
+    "matrix": [
+      8,
+      0,
+      0,
+      0,
+      0,
+      1.7763568394002505e-15,
+      -8,
+      0,
+      0,
+      8,
+      1.7763568394002505e-15,
+      0,
+      -1.2173382742979126,
+      -0.5149450234734789,
+      5.064170343211911,
+      1
+    ],
+    "appliedOrder": "scale, then rotate, then translate, about the world origin (three.js Object3D: M = T * R * S, column vectors)"
+  },
+  "floorY": -1.6,
+  "navigation": {
+    "spawn": {
+      "position": [
+        -2.3351,
+        0.1265,
+        -3.1628
+      ],
+      "yaw": 165.36,
+      "pitch": -3.95
+    }
+  },
+  "camera": {
+    "position": [
+      0,
+      0,
+      0
+    ],
+    "target": [
+      -1.8084,
+      -0.4109,
+      4.8796
+    ],
+    "fov": 60
+  },
+  "navTransformMatrix": null,
+  "buildOptions": {
+    "maxSh": 3
+  },
+  "build": {
+    "status": "ok",
+    "transformMatrix": [
+      8,
+      0,
+      0,
+      0,
+      0,
+      1.7763568394002505e-15,
+      -8,
+      0,
+      0,
+      8,
+      1.7763568394002505e-15,
+      0,
+      -1.2173382742979126,
+      -0.5149450234734789,
+      5.064170343211911,
+      1
+    ],
+    "startedAt": "2026-10-26T12:01:37.723Z",
+    "finishedAt": "2026-10-26T12:02:54.926Z",
+    "wallClockSeconds": 77.2,
+    "splatCount": {
+      "input": 5958842,
+      "final": 8248564
+    },
+    "bounds": {
+      "bboxMin": [
+        -13.345355987548828,
+        -0.8064807057380676,
+        -7.551456928253174
+      ],
+      "bboxMax": [
+        9.33181381225586,
+        6.450268745422363,
+        14.852482795715332
+      ]
+    },
+    "chunkCount": 126,
+    "totalBytes": 392092920,
+    "peakMemoryBytes": 2748493824,
+    "buildLodFlags": [
+      "--quality",
+      "--rad-chunked",
+      "--max-sh=3"
+    ],
+    "sparkTag": "v2.3.1",
+    "parts": [
+      {
+        "id": "FocusPilot-W030",
+        "status": "ok",
+        "radFile": "FocusPilot-W030/FocusPilot-W030-FocusPilot-W030-lod.rad",
+        "transformMatrix": [
+          8,
+          0,
+          0,
+          0,
+          0,
+          1.7763568394002505e-15,
+          -8,
+          0,
+          0,
+          8,
+          1.7763568394002505e-15,
+          0,
+          -1.2173382742979126,
+          -0.5149450234734789,
+          5.064170343211911,
+          1
+        ],
+        "source": "assets/source_ply/FocusPilot-W030.ply",
+        "sourceBytes": 1482618196,
+        "sourceModified": "2026-10-25T14:01:37.261Z",
+        "buildLodFlags": [
+          "--quality",
+          "--rad-chunked",
+          "--max-sh=3"
+        ],
+        "sparkTag": "v2.3.1",
+        "startedAt": "2026-10-26T12:01:37.724Z",
+        "finishedAt": "2026-10-26T12:02:54.836Z",
+        "wallClockSeconds": 77.1,
+        "buildLodSeconds": 72.372,
+        "peakMemoryBytes": 2748493824,
+        "splatCount": {
+          "input": 5958842,
+          "final": 8248564
+        },
+        "bounds": {
+          "bboxMin": [
+            -13.345355987548828,
+            -0.8064807057380676,
+            -7.551456928253174
+          ],
+          "bboxMax": [
+            9.33181381225586,
+            6.450268745422363,
+            14.852482795715332
+          ]
+        },
+        "chunkCount": 126,
+        "totalBytes": 392092920,
+        "transformStep": {
+          "splatTransform": "3.10.0",
+          "seconds": 2.72,
+          "peakMemoryBytes": 627539968,
+          "maxRelError": 5.7050170399636205e-8
+        },
+        "crop": {
+          "roi": "assets/roi/LowCap/AllOutlines.json",
+          "roiDigest": "38822de77f53c62f",
+          "keptSplats": 5958842,
+          "droppedSplats": 19451,
+          "droppedOutsideRoi": 19451,
+          "seconds": 1.4
+        }
+      }
+    ]
+  },
+  "buildAttempt": {
+    "status": "ok",
+    "startedAt": "2026-10-26T12:01:37.723Z",
+    "finishedAt": "2026-10-26T12:02:54.926Z",
+    "error": null,
+    "parts": [
+      {
+        "id": "FocusPilot-W030",
+        "status": "built",
+        "seconds": 77.1,
+        "peakMemoryBytes": 2748493824
+      }
+    ]
+  },
+  "hotspots": [],
+  "createdAt": "2026-10-25T14:01:40.374Z",
+  "updatedAt": "2026-10-25T14:01:40.374Z",
+  "transformFrom": "HighRezOculus",
+  "focusRegions": [
+    {
+      "id": "r1",
+      "name": "Region 1",
+      "tier": "hero",
+      "center": [
+        1.8976,
+        -0.2126,
+        1.7063
+      ],
+      "size": [
+        0.7753,
+        0.734,
+        0.1365
+      ],
+      "quaternion": [
+        0,
+        0.8783016,
+        0,
+        0.4781069
+      ]
+    },
+    {
+      "id": "r2",
+      "name": "Region 1 copy",
+      "tier": "hero",
+      "center": [
+        2.9606,
+        -0.1274,
+        3.4288
+      ],
+      "size": [
+        0.496,
+        0.3152,
+        0.1365
+      ],
+      "quaternion": [
+        0,
+        0.9166292,
+        0,
+        0.3997385
+      ]
+    },
+    {
+      "id": "r3",
+      "name": "Region 3",
+      "tier": "hero",
+      "center": [
+        3.6727,
+        -0.0635,
+        5.1757
+      ],
+      "size": [
+        1.2821,
+        0.9165,
+        0.238
+      ],
+      "quaternion": [
+        0,
+        0.6712467,
+        0,
+        0.741234
+      ]
+    },
+    {
+      "id": "r4",
+      "name": "Region 3 copy",
+      "tier": "hero",
+      "center": [
+        3.6887,
+        -0.1378,
+        5.8495
+      ],
+      "size": [
+        0.0548,
+        0.0369,
+        0.0404
+      ],
+      "quaternion": [
+        0,
+        0.6712467,
+        0,
+        0.741234
+      ]
+    },
+    {
+      "id": "r5",
+      "name": "Region 5",
+      "tier": "hero",
+      "center": [
+        1.0595,
+        -0.2739,
+        7.1011
+      ],
+      "size": [
+        1,
+        1,
+        0.1734
+      ],
+      "quaternion": [
+        0,
+        -0.9038832,
+        0,
+        0.4277793
+      ]
+    },
+    {
+      "id": "r6",
+      "name": "Region 6",
+      "tier": "hero",
+      "center": [
+        -0.7765,
+        -0.1395,
+        8.3224
+      ],
+      "size": [
+        1.1316,
+        0.443,
+        0.1602
+      ],
+      "quaternion": [
+        0,
+        -0.9951001,
+        0,
+        0.0988727
+      ]
+    },
+    {
+      "id": "r7",
+      "name": "Region 7",
+      "tier": "hero",
+      "center": [
+        -6.3043,
+        -0.1094,
+        7.8836
+      ],
+      "size": [
+        2.1518,
+        1.1147,
+        1.2477
+      ],
+      "quaternion": [
+        0,
+        -0.4655518,
+        0,
+        0.8850206
+      ]
+    },
+    {
+      "id": "r8",
+      "name": "Region 7 copy",
+      "tier": "hero",
+      "center": [
+        -4.7104,
+        -0.1597,
+        6.892
+      ],
+      "size": [
+        1.2955,
+        0.6711,
+        0.4297
+      ],
+      "quaternion": [
+        0,
+        -0.4655518,
+        0,
+        0.8850206
+      ]
+    },
+    {
+      "id": "r9",
+      "name": "Region 9",
+      "tier": "hero",
+      "center": [
+        -5.0359,
+        -0.2474,
+        2.6277
+      ],
+      "size": [
+        0.5628,
+        0.1504,
+        0.4166
+      ],
+      "quaternion": [
+        0,
+        0.4442735,
+        0,
+        0.8958912
+      ]
+    },
+    {
+      "id": "r10",
+      "name": "Region 9 copy",
+      "tier": "hero",
+      "center": [
+        -4.5963,
+        -0.2474,
+        2.1755
+      ],
+      "size": [
+        0.5628,
+        0.1504,
+        0.2784
+      ],
+      "quaternion": [
+        0,
+        0.3645008,
+        0,
+        0.9312031
+      ]
+    },
+    {
+      "id": "r11",
+      "name": "Region 9 copy copy",
+      "tier": "hero",
+      "center": [
+        -4.1047,
+        -0.1327,
+        2.1451
+      ],
+      "size": [
+        0.1448,
+        0.1841,
+        0.0598
+      ],
+      "quaternion": [
+        0,
+        0.0676124,
+        0,
+        0.9977117
+      ]
+    },
+    {
+      "id": "r12",
+      "name": "Region 1 copy",
+      "tier": "hero",
+      "center": [
+        2.7971,
+        -0.1174,
+        0.642
+      ],
+      "size": [
+        0.039,
+        1.322,
+        2.6373
+      ],
+      "quaternion": [
+        0,
+        0.8783016,
+        0,
+        0.4781069
+      ]
+    },
+    {
+      "id": "r13",
+      "name": "Region 1 copy copy",
+      "tier": "hero",
+      "center": [
+        2.8158,
+        -0.2196,
+        0.5266
+      ],
+      "size": [
+        0.32,
+        0.2518,
+        0.725
+      ],
+      "quaternion": [
+        0,
+        0.8783016,
+        0,
+        0.4781069
+      ]
+    }
+  ]
+}

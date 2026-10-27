@@ -1,0 +1,494 @@
+{
+  "scene": "LowCap",
+  "createdAt": "2026-10-26T22:31:07.299Z",
+  "regions": [
+    {
+      "id": "r1",
+      "name": "Region 1",
+      "tier": "hero",
+      "center": [
+        1.8976,
+        -0.2126,
+        1.7063
+      ],
+      "size": [
+        0.7753,
+        0.734,
+        0.1365
+      ],
+      "quaternion": [
+        0,
+        0.8783016,
+        0,
+        0.4781069
+      ],
+      "volume": 0.0776780823,
+      "models": {
+        "LowCap": {
+          "count": 23207,
+          "sizeMm": 3.7384750843048096
+        },
+        "FocusPilot-W100": {
+          "count": 41011,
+          "sizeMm": 2.3595407009124756
+        },
+        "FocusPilot-W010": {
+          "count": 78642,
+          "sizeMm": 1.2854514122009277
+        }
+      }
+    },
+    {
+      "id": "r2",
+      "name": "Region 1 copy",
+      "tier": "hero",
+      "center": [
+        2.9606,
+        -0.1274,
+        3.4288
+      ],
+      "size": [
+        0.496,
+        0.3152,
+        0.1365
+      ],
+      "quaternion": [
+        0,
+        0.9166292,
+        0,
+        0.3997385
+      ],
+      "volume": 0.0213403008,
+      "models": {
+        "LowCap": {
+          "count": 29206,
+          "sizeMm": 0.9495931267738342
+        },
+        "FocusPilot-W100": {
+          "count": 46372,
+          "sizeMm": 0.8345484733581543
+        },
+        "FocusPilot-W010": {
+          "count": 139477,
+          "sizeMm": 0.4078419804573059
+        }
+      }
+    },
+    {
+      "id": "r3",
+      "name": "Region 3",
+      "tier": "hero",
+      "center": [
+        3.6727,
+        -0.0635,
+        5.1757
+      ],
+      "size": [
+        1.2821,
+        0.9165,
+        0.238
+      ],
+      "quaternion": [
+        0,
+        0.6712467,
+        0,
+        0.741234
+      ],
+      "volume": 0.27966062669999997,
+      "models": {
+        "LowCap": {
+          "count": 62081,
+          "sizeMm": 1.5377916097640991
+        },
+        "FocusPilot-W100": {
+          "count": 127862,
+          "sizeMm": 1.1503256559371948
+        },
+        "FocusPilot-W010": {
+          "count": 208553,
+          "sizeMm": 0.7786580920219421
+        }
+      }
+    },
+    {
+      "id": "r4",
+      "name": "Region 3 copy",
+      "tier": "hero",
+      "center": [
+        3.6887,
+        -0.1378,
+        5.8495
+      ],
+      "size": [
+        0.0548,
+        0.0369,
+        0.0404
+      ],
+      "quaternion": [
+        0,
+        0.6712467,
+        0,
+        0.741234
+      ],
+      "volume": 0.000081693648,
+      "models": {
+        "LowCap": {
+          "count": 224,
+          "sizeMm": 4.392067909240723
+        },
+        "FocusPilot-W100": {
+          "count": 406,
+          "sizeMm": 2.8162038326263428
+        },
+        "FocusPilot-W010": {
+          "count": 1072,
+          "sizeMm": 0.9717459678649902
+        }
+      }
+    },
+    {
+      "id": "r5",
+      "name": "Region 5",
+      "tier": "hero",
+      "center": [
+        1.0595,
+        -0.2739,
+        7.1011
+      ],
+      "size": [
+        1,
+        1,
+        0.1734
+      ],
+      "quaternion": [
+        0,
+        -0.9038832,
+        0,
+        0.4277793
+      ],
+      "volume": 0.1734,
+      "models": {
+        "LowCap": {
+          "count": 17474,
+          "sizeMm": 2.9833192825317383
+        },
+        "FocusPilot-W100": {
+          "count": 22064,
+          "sizeMm": 2.749952793121338
+        },
+        "FocusPilot-W010": {
+          "count": 38619,
+          "sizeMm": 1.9535683393478394
+        }
+      }
+    },
+    {
+      "id": "r6",
+      "name": "Region 6",
+      "tier": "hero",
+      "center": [
+        -0.7765,
+        -0.1395,
+        8.3224
+      ],
+      "size": [
+        1.1316,
+        0.443,
+        0.1602
+      ],
+      "quaternion": [
+        0,
+        -0.9951001,
+        0,
+        0.0988727
+      ],
+      "volume": 0.08030806775999999,
+      "models": {
+        "LowCap": {
+          "count": 14300,
+          "sizeMm": 6.210668563842773
+        },
+        "FocusPilot-W100": {
+          "count": 14894,
+          "sizeMm": 5.057666778564453
+        },
+        "FocusPilot-W010": {
+          "count": 166740,
+          "sizeMm": 1.2582464218139648
+        }
+      }
+    },
+    {
+      "id": "r7",
+      "name": "Region 7",
+      "tier": "hero",
+      "center": [
+        -6.3043,
+        -0.1094,
+        7.8836
+      ],
+      "size": [
+        2.1518,
+        1.1147,
+        1.2477
+      ],
+      "quaternion": [
+        0,
+        -0.4655518,
+        0,
+        0.8850206
+      ],
+      "volume": 2.992747518642,
+      "models": {
+        "LowCap": {
+          "count": 55438,
+          "sizeMm": 3.4847500324249268
+        },
+        "FocusPilot-W100": {
+          "count": 71557,
+          "sizeMm": 3.1167123317718506
+        },
+        "FocusPilot-W010": {
+          "count": 233867,
+          "sizeMm": 1.9916545152664185
+        }
+      }
+    },
+    {
+      "id": "r8",
+      "name": "Region 7 copy",
+      "tier": "hero",
+      "center": [
+        -4.7104,
+        -0.1597,
+        6.892
+      ],
+      "size": [
+        1.2955,
+        0.6711,
+        0.4297
+      ],
+      "quaternion": [
+        0,
+        -0.4655518,
+        0,
+        0.8850206
+      ],
+      "volume": 0.3735854984850001,
+      "models": {
+        "LowCap": {
+          "count": 62370,
+          "sizeMm": 2.758897066116333
+        },
+        "FocusPilot-W100": {
+          "count": 106048,
+          "sizeMm": 1.6790103912353516
+        },
+        "FocusPilot-W010": {
+          "count": 282444,
+          "sizeMm": 1.1224477291107178
+        }
+      }
+    },
+    {
+      "id": "r9",
+      "name": "Region 9",
+      "tier": "hero",
+      "center": [
+        -5.0359,
+        -0.2474,
+        2.6277
+      ],
+      "size": [
+        0.5628,
+        0.1504,
+        0.4166
+      ],
+      "quaternion": [
+        0,
+        0.4442735,
+        0,
+        0.8958912
+      ],
+      "volume": 0.03526315699200001,
+      "models": {
+        "LowCap": {
+          "count": 14562,
+          "sizeMm": 1.9230573177337646
+        },
+        "FocusPilot-W100": {
+          "count": 19278,
+          "sizeMm": 1.5712264776229858
+        },
+        "FocusPilot-W010": {
+          "count": 99098,
+          "sizeMm": 0.5540602207183838
+        }
+      }
+    },
+    {
+      "id": "r10",
+      "name": "Region 9 copy",
+      "tier": "hero",
+      "center": [
+        -4.5963,
+        -0.2474,
+        2.1755
+      ],
+      "size": [
+        0.5628,
+        0.1504,
+        0.2784
+      ],
+      "quaternion": [
+        0,
+        0.3645008,
+        0,
+        0.9312031
+      ],
+      "volume": 0.023565201408,
+      "models": {
+        "LowCap": {
+          "count": 41781,
+          "sizeMm": 0.9459965825080872
+        },
+        "FocusPilot-W100": {
+          "count": 62711,
+          "sizeMm": 0.8658768534660339
+        },
+        "FocusPilot-W010": {
+          "count": 168431,
+          "sizeMm": 0.37055402994155884
+        }
+      }
+    },
+    {
+      "id": "r11",
+      "name": "Region 9 copy copy",
+      "tier": "hero",
+      "center": [
+        -4.1047,
+        -0.1327,
+        2.1451
+      ],
+      "size": [
+        0.1448,
+        0.1841,
+        0.0598
+      ],
+      "quaternion": [
+        0,
+        0.0676124,
+        0,
+        0.9977117
+      ],
+      "volume": 0.0015941292640000001,
+      "models": {
+        "LowCap": {
+          "count": 768,
+          "sizeMm": 7.617271900177002
+        },
+        "FocusPilot-W100": {
+          "count": 1067,
+          "sizeMm": 4.649407386779785
+        },
+        "FocusPilot-W010": {
+          "count": 9643,
+          "sizeMm": 1.64980947971344
+        }
+      }
+    },
+    {
+      "id": "r12",
+      "name": "Region 1 copy",
+      "tier": "hero",
+      "center": [
+        2.7971,
+        -0.1174,
+        0.642
+      ],
+      "size": [
+        0.039,
+        1.322,
+        2.6373
+      ],
+      "quaternion": [
+        0,
+        0.8783016,
+        0,
+        0.4781069
+      ],
+      "volume": 0.1359739134,
+      "models": {
+        "LowCap": {
+          "count": 11539,
+          "sizeMm": 7.187461853027344
+        },
+        "FocusPilot-W100": {
+          "count": 17347,
+          "sizeMm": 5.135471820831299
+        },
+        "FocusPilot-W010": {
+          "count": 15605,
+          "sizeMm": 5.5238752365112305
+        }
+      }
+    },
+    {
+      "id": "r13",
+      "name": "Region 1 copy copy",
+      "tier": "hero",
+      "center": [
+        2.8158,
+        -0.2196,
+        0.5266
+      ],
+      "size": [
+        0.32,
+        0.2518,
+        0.725
+      ],
+      "quaternion": [
+        0,
+        0.8783016,
+        0,
+        0.4781069
+      ],
+      "volume": 0.05841760000000001,
+      "models": {
+        "LowCap": {
+          "count": 1439,
+          "sizeMm": 14.776785850524902
+        },
+        "FocusPilot-W100": {
+          "count": 1699,
+          "sizeMm": 12.555380821228027
+        },
+        "FocusPilot-W010": {
+          "count": 7673,
+          "sizeMm": 4.537597179412842
+        }
+      }
+    }
+  ],
+  "models": [
+    {
+      "scene": "LowCap",
+      "splats": 3993425,
+      "inAny": 333753,
+      "seconds": 0.915
+    },
+    {
+      "scene": "FocusPilot-W100",
+      "splats": 5961027,
+      "inAny": 531300,
+      "seconds": 1.133
+    },
+    {
+      "scene": "FocusPilot-W010",
+      "splats": 5946276,
+      "inAny": 1447980,
+      "seconds": 1.4
+    }
+  ]
+}

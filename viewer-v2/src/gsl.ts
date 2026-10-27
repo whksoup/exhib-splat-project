@@ -12,14 +12,27 @@
  * each part's bounds cover. One GaussianSplatRenderer sorts every part
  * together, so there are no seams between parts.
  *
+ * A splat-transform `lod-meta.json` (discrete, separately trained LoD levels,
+ * e.g. reports/benchmarks/2026-10-23-lowcap-retrained-lod) streams through a
+ * SogStreamScheduler instead and takes part in the same budget split. Its
+ * detail follows distance bands that GSL widens to fill the budget, so it has
+ * no pixel threshold and no LoD selection timing.
+ *
  * Not supported on this path yet: Align and Plan modes (they read Spark's
  * splat buffers, dyno modifiers and WebGL render targets), and in-browser LoD
  * for plain files (they load whole).
  */
 import * as THREE from "three";
 import { WebGPURenderer } from "three/webgpu";
-import { GaussianSplatRenderer, RadStreamScheduler, SplatMesh as GslSplatMesh, type RadStreamStats } from "gaussian-splat-lite";
-import type { GslOptions } from "./config";
+import {
+  GaussianSplatRenderer,
+  RadStreamScheduler,
+  SogStreamScheduler,
+  SplatMesh as GslSplatMesh,
+  type RadStreamStats,
+  type SogStreamStats,
+} from "gaussian-splat-lite";
+import { isSogLodUrl, type GslOptions } from "./config";
 import { dist, SampleRing, type Dist } from "./diagnostics";
 
 /** Bytes per resident splat at SH3 (measured on HighRezOculus: ~480 CPU, ~415 GPU), rounded up. */
@@ -140,14 +153,17 @@ export interface GslStatsSummary {
   lodTimeMs: Dist | null;
 }
 
+/** A streamed part: a RAD build (build-lod) or a SOG lod-meta.json (splat-transform). */
+export type GslStream = RadStreamScheduler | SogStreamScheduler;
+
 /** The GSL renderer plus every streamed part; the Viewer owns one in GSL mode. */
 export class GslSplats {
   readonly splatRenderer: GaussianSplatRenderer;
-  readonly streams: RadStreamScheduler[] = [];
+  readonly streams: GslStream[] = [];
   /** Total splat budget, re-split between visible streamed parts. */
   budget: number;
   private readonly lodTime = new SampleRing();
-  private readonly lastLodTime = new WeakMap<RadStreamScheduler, number>();
+  private readonly lastLodTime = new WeakMap<GslStream, number>();
   private lastShareAt = -Infinity;
   private lastShareView = "";
   private stillSince = 0;
@@ -168,12 +184,29 @@ export class GslSplats {
   }
 
   /**
-   * Stream a RAD file. Memory caps are per part: ?gslMemMB=, else sized so one
-   * part could hold the whole budget. The caps also bound how many pages GSL
-   * keeps, so a tight cap evicts pages that are then downloaded again.
+   * Stream a RAD file, or a SOG lod-meta.json. Memory caps (RAD only) are per
+   * part: ?gslMemMB=, else sized so one part could hold the whole budget. The
+   * caps also bound how many pages GSL keeps, so a tight cap evicts pages that
+   * are then downloaded again.
    */
-  addStream(url: string, camera: THREE.Camera, onError: (message: string) => void): RadStreamScheduler {
+  addStream(url: string, camera: THREE.Camera, onError: (message: string) => void): GslStream {
     const o = this.opts;
+    const splatBudget = Math.max(1, Math.round(this.budget / (this.streams.length + 1)));
+    const report = (err: unknown, from?: string) => onError(`${from ?? url}: ${err instanceof Error ? err.message : String(err)}`);
+    if (isSogLodUrl(url)) {
+      const stream = new SogStreamScheduler({
+        url,
+        splatBudget,
+        cooldownMs: o.cooldownMs ?? DEFAULT_COOLDOWN_MS,
+        ...(o.maxConcurrentLoads !== undefined && { maxConcurrentLoads: o.maxConcurrentLoads }),
+        ...(o.fadeDurationMs !== undefined && { fadeDurationMs: o.fadeDurationMs }),
+        onError: report,
+      });
+      stream.setCamera(camera);
+      this.streams.push(stream);
+      this.lastShareAt = -Infinity;
+      return stream;
+    }
     const cap = o.memMB ? o.memMB * 1e6 : Math.max(GIB, Math.round(this.budget * BYTES_PER_SPLAT));
     const stream = new RadStreamScheduler({
       url,
@@ -184,16 +217,16 @@ export class GslSplats {
         u.search = new URL(url, location.href).search;
         return u.href;
       },
-      splatBudget: Math.max(1, Math.round(this.budget / (this.streams.length + 1))),
+      splatBudget,
       maxResidentCpuBytes: cap,
       maxResidentGpuBytes: cap,
       cooldownMs: o.cooldownMs ?? DEFAULT_COOLDOWN_MS,
       ...(o.maxConcurrentLoads !== undefined && { maxConcurrentLoads: o.maxConcurrentLoads }),
       ...(o.fadeDurationMs !== undefined && { fadeDurationMs: o.fadeDurationMs }),
-      onError: (err, from) => onError(`${from ?? url}: ${err instanceof Error ? err.message : String(err)}`),
+      onError: report,
     });
     stream.setCamera(camera);
-    stream.setResolutionFromRenderer(camera, this.renderer);
+    this.setResolution(stream, camera);
     this.streams.push(stream);
     this.lastShareAt = -Infinity;
     return stream;
@@ -204,7 +237,7 @@ export class GslSplats {
     return new GslSplatMesh({ url });
   }
 
-  removeStream(stream: RadStreamScheduler): void {
+  removeStream(stream: GslStream): void {
     const i = this.streams.indexOf(stream);
     if (i >= 0) this.streams.splice(i, 1);
     stream.dispose();
@@ -217,7 +250,17 @@ export class GslSplats {
   }
 
   resize(camera: THREE.Camera): void {
-    for (const s of this.streams) s.setResolutionFromRenderer(camera, this.renderer);
+    for (const s of this.streams) if (s instanceof RadStreamScheduler) this.setResolution(s, camera);
+  }
+
+  /**
+   * The renderer's size as the stream's LoD resolution, at least 1x1: a page opened in a
+   * hidden or collapsed container has a 0x0 canvas, which GSL rejects ("Camera resolution
+   * must be positive and finite"). resize() sets the real size once the canvas has one.
+   */
+  private setResolution(stream: RadStreamScheduler, camera: THREE.Camera): void {
+    const size = this.renderer.getSize(new THREE.Vector2());
+    stream.setResolution(camera, size.set(Math.max(1, size.x), Math.max(1, size.y)));
   }
 
   /**
@@ -243,7 +286,8 @@ export class GslSplats {
     }
     for (const s of this.streams) {
       s.update();
-      // stats.lodTimeMs is the last selection's time: record it once per new selection.
+      // stats.lodTimeMs (RAD only) is the last selection's time: record it once per new selection.
+      if (!(s instanceof RadStreamScheduler)) continue;
       const lod = s.stats.lodTimeMs;
       if (lod > 0 && lod !== this.lastLodTime.get(s)) {
         this.lastLodTime.set(s, lod);
@@ -295,8 +339,8 @@ export class GslSplats {
   }
 
   summary(windowMs = 5000, now = performance.now()): GslStatsSummary {
-    const all: RadStreamStats[] = this.streams.map((s) => s.stats);
-    const mb = (f: (s: RadStreamStats) => number) => Number((all.reduce((n, s) => n + f(s), 0) / 1e6).toFixed(1));
+    const all: (RadStreamStats | SogStreamStats)[] = this.streams.map((s) => s.stats);
+    const mb = (f: (s: RadStreamStats | SogStreamStats) => number) => Number((all.reduce((n, s) => n + f(s), 0) / 1e6).toFixed(1));
     return {
       visibleSplats: this.visibleSplats,
       residentCpuMB: mb((s) => s.residentCpuBytes),

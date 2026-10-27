@@ -1,0 +1,58 @@
+/* Focus regions panel (src/scene/regionsPanel.ts). */
+
+.region-list {
+  margin: 4px 0;
+  max-height: 220px;
+  overflow: auto;
+}
+
+.region-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.region-row:hover {
+  background: #22242b;
+}
+
+.region-row.on {
+  background: #2c3347;
+  outline: 1px solid #5c7cfa;
+}
+
+.region-chip {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.region-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.region-size {
+  flex: none;
+  color: #a9adb8;
+  font-variant-numeric: tabular-nums;
+}
+
+.regions-panel .plan-row input[type="number"] {
+  width: 64px;
+}
+
+.regions-panel select {
+  max-width: 100%;
+}
+
+.regions-panel button.on {
+  background: #3b5bdb;
+  border-color: #5c7cfa;
+}

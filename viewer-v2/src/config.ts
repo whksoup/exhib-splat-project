@@ -18,7 +18,7 @@ export type Vec3 = [number, number, number];
 
 export interface ModelSpec {
   url: string;
-  /** Stream with Spark's paged loader. Default: true for .rad, false otherwise. */
+  /** Stream with Spark's paged loader. Default: true for .rad (and a GSL-only lod-meta.json), false otherwise. */
   paged?: boolean;
   /** Build an LoD tree in the browser for plain files (.ply/.spz/.sog). */
   lod?: boolean | "quality";
@@ -148,6 +148,11 @@ function stdDev(v: string | null): number | undefined {
 
 export function isRadUrl(url: string): boolean {
   return /\.rad(?:$|[?#])/i.test(url);
+}
+
+/** A streamed SOG index (splat-transform `lod-meta.json`): GSL path only. */
+export function isSogLodUrl(url: string): boolean {
+  return /(?:^|\/)lod-meta\.json(?:$|[?#])/i.test(url);
 }
 
 function normalizeModel(m: ModelSpec | string): ModelSpec {

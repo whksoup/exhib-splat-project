@@ -272,6 +272,86 @@ Points are in the training frame of the merged `.ply` (bbox (-5.81, -7.54,
 The splitter uses only the point records; the BVH is ignored (we build our
 own k-d tree).
 
+## Down-res miniature (`miniature.mjs`)
+
+```sh
+node pipeline/miniature.mjs <scene> [--target 1500000] [--sh 0-3] [--out <file.ply>] [--overwrite]
+```
+
+Merges every enabled part of a scene into one small standard 3DGS `.ply`
+(default `assets/source_ply/<scene>-mini-<n>k.ply`) for cleanup in LichtFeld or
+display as a small object. Parts are cropped to their ROI like
+`build-scene.mjs`, and the output stays in the parts' **source frame** (the
+scene transform is not baked). Splats are merged, not dropped: an adaptive grid
+groups each splat only with splats of about its size or smaller, each cell
+becomes one moment-matched Gaussian (mean, covariance, opacity-and-area
+weighted colour/SH), and the base cell size is binary-searched to hit
+`--target`. HighRezOculus (44.5M splats) takes about 60-75 s. For a fixed file
+size, more splats at `--sh 1` look sharper than fewer at SH 3: 3M at SH 1 is
+311 MB, and 1.5M at SH 3 is 370 MB.
+
+## Focus regions (`focus-regions.mjs`)
+
+Boxes drawn in the scene editor's **Regions** panel (`I`) mark where a model
+needs more (`hero`, `high`) or less (`low`) detail. They are saved in scene.json
+as `focusRegions`, in scene coordinates (schema: `shared/focus-regions.mjs`).
+The build ignores them; this script measures and exports them.
+
+```sh
+node pipeline/focus-regions.mjs list <scene>
+node pipeline/focus-regions.mjs quantify <scene> [--compare <scene>]... [--json <file>]
+node pipeline/focus-regions.mjs export <scene> --out <region.json> [--tier hero,high]
+```
+
+- **quantify** counts, for each region of `<scene>`, the splats of `<scene>` and of each
+  `--compare` scene inside it. It also gives each model's share of its total, and the
+  median splat size: the largest standard deviation, in mm. Each model is read from its
+  enabled parts' sources, with the same crop as `build-scene.mjs`, and placed with its own
+  scene transform. Models that share a transform (HighRezOculus, Mid12M and LowCap all
+  use HighRezOculus's) are therefore measured in the same boxes. One streaming pass:
+  HighRezOculus's 44.5M splats take ~8 s.
+- **export** writes the regions as a Spirula `--roi-region` file (a top-level union of box
+  prisms) in the source (training) frame of `<scene>`. `test/focus-regions.test.mjs`
+  checks that the exported prisms, read back by `lib/roi.mjs`, hold exactly the points
+  the boxes hold.
+
+## Cutting with Rhino solids (`cut.mjs`)
+
+```sh
+node pipeline/cut.mjs <in.ply> --cuts <file.3dm> [--remove <layer>]... [--keep <layer>]... [--margin <k>] [--out <file.ply>] [--removed <file.ply>] [--dry-run]
+```
+
+Purely subtractive and lossless: kept splats are copied byte for byte (every
+property and SH band, in file order, header unchanged except the vertex count),
+through the same writer as the ROI crops (`lib/splat-crop.mjs`). Solids on the
+remove layers (default `cut-remove`, sublayers included) delete the splats
+inside them; if the keep layers (default `cut-keep`) hold solids, splats outside
+all of them go too. Remove wins over keep. `--removed` writes the deleted splats
+to a second file for checking.
+
+- **Coordinates.** The `.3dm` must be in the `.ply`'s own coordinates: import
+  a reference cloud of the same file into Rhino, lock it, and model around it.
+  Nothing is converted; the model's unit system is only reported, and a solid
+  that misses the splats' bounding box gets a warning.
+- **What counts as a solid** (read with **rhino3dm 8.32.2**): meshes,
+  polysurfaces, extrusions, and any of those inside blocks (the instance's
+  layer and transform apply). rhino3dm cannot mesh NURBS, so polysurfaces use
+  the render meshes Rhino saves in the file; a "Save Small" file has none and
+  the object is skipped with a note (save normally, or `ExtractRenderMesh`).
+  Curves, open surfaces and SubDs are skipped with a note.
+- **Inside test** (`lib/solids.mjs`): a ray along each of +x, +y and +z counts
+  crossings, with the majority deciding. Ties on shared edges and vertices are
+  broken by a consistent infinitesimal nudge, so axis-aligned boxes are exact.
+  Meshes with open edges are reported; near a gap, the vote can misjudge splats.
+- **Cut edge.** By default only splat centres are tested, so an edge is as
+  soft as the splats along it. `--margin k` also tests the six points at ±k σ
+  along each splat axis: any inside a remove solid, or outside the keep solids,
+  deletes the splat. Cutting the full-res source before making a miniature
+  gives sharper edges, because those splats are smaller.
+
+On the 3M-splat HighRezOculus miniature, two box cuts took 0.5 s. Kept plus
+removed records matched the input byte for byte.
+
 ## Output layout
 
 ```
