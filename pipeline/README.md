@@ -290,6 +290,31 @@ weighted colour/SH), and the base cell size is binary-searched to hit
 size, more splats at `--sh 1` look sharper than fewer at SH 3: 3M at SH 1 is
 311 MB, and 1.5M at SH 3 is 370 MB.
 
+## Focus regions (`focus-regions.mjs`)
+
+Boxes drawn in the scene editor's **Regions** panel (`I`) mark where a model
+needs more (`hero`, `high`) or less (`low`) detail. They are saved in scene.json
+as `focusRegions`, in scene coordinates (schema: `shared/focus-regions.mjs`).
+The build ignores them; this script measures and exports them.
+
+```sh
+node pipeline/focus-regions.mjs list <scene>
+node pipeline/focus-regions.mjs quantify <scene> [--compare <scene>]... [--json <file>]
+node pipeline/focus-regions.mjs export <scene> --out <region.json> [--tier hero,high]
+```
+
+- **quantify** counts, for each region of `<scene>`, the splats of `<scene>` and of each
+  `--compare` scene inside it. It also gives each model's share of its total, and the
+  median splat size: the largest standard deviation, in mm. Each model is read from its
+  enabled parts' sources, with the same crop as `build-scene.mjs`, and placed with its own
+  scene transform. Models that share a transform (HighRezOculus, Mid12M and LowCap all
+  use HighRezOculus's) are therefore measured in the same boxes. One streaming pass:
+  HighRezOculus's 44.5M splats take ~8 s.
+- **export** writes the regions as a Spirula `--roi-region` file (a top-level union of box
+  prisms) in the source (training) frame of `<scene>`. `test/focus-regions.test.mjs`
+  checks that the exported prisms, read back by `lib/roi.mjs`, hold exactly the points
+  the boxes hold.
+
 ## Cutting with Rhino solids (`cut.mjs`)
 
 ```sh
