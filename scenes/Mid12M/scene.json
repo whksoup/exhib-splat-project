@@ -1,0 +1,493 @@
+{
+  "schemaVersion": 2,
+  "name": "Mid12M",
+  "parts": [
+    {
+      "id": "Mid12M-Parts12",
+      "source": "assets/source_ply/Mid12M-Parts12.ply",
+      "enabled": true,
+      "roi": "assets/roi/HighRezOculus/Oculus6Part.json",
+      "roiOutlines": [
+        "Outline 1",
+        "Outline 2"
+      ]
+    },
+    {
+      "id": "Mid12M-Parts34",
+      "source": "assets/source_ply/Mid12M-Parts34.ply",
+      "enabled": true,
+      "roi": "assets/roi/HighRezOculus/Oculus6Part.json",
+      "roiOutlines": [
+        "Outline 3",
+        "Outline 4"
+      ]
+    },
+    {
+      "id": "Mid12M-Parts56",
+      "source": "assets/source_ply/Mid12M-Parts56.ply",
+      "enabled": true,
+      "roi": "assets/roi/HighRezOculus/Oculus6Part.json",
+      "roiOutlines": [
+        "Outline 5",
+        "Outline 6"
+      ]
+    },
+    {
+      "id": "Mid12M-Parts78",
+      "source": "assets/source_ply/Mid12M-Parts78.ply",
+      "enabled": true,
+      "roi": "assets/roi/HighRezOculus/Oculus6Part.json",
+      "roiOutlines": [
+        "Outline 7",
+        "Outline 8"
+      ]
+    }
+  ],
+  "transform": {
+    "position": [
+      -1.2173382742979126,
+      -0.5149450234734789,
+      5.064170343211911
+    ],
+    "rotationDeg": [
+      -90,
+      0,
+      0
+    ],
+    "eulerOrder": "XYZ",
+    "quaternion": [
+      -0.7071067811865475,
+      0,
+      0,
+      0.7071067811865476
+    ],
+    "scale": 8,
+    "matrix": [
+      8,
+      0,
+      0,
+      0,
+      0,
+      1.7763568394002505e-15,
+      -8,
+      0,
+      0,
+      8,
+      1.7763568394002505e-15,
+      0,
+      -1.2173382742979126,
+      -0.5149450234734789,
+      5.064170343211911,
+      1
+    ],
+    "appliedOrder": "scale, then rotate, then translate, about the world origin (three.js Object3D: M = T * R * S, column vectors)"
+  },
+  "floorY": -1.6,
+  "navigation": {
+    "spawn": {
+      "position": [
+        -2.3351,
+        0.1265,
+        -3.1628
+      ],
+      "yaw": 165.36,
+      "pitch": -3.95
+    }
+  },
+  "camera": {
+    "position": [
+      0,
+      0,
+      0
+    ],
+    "target": [
+      -1.8084,
+      -0.4109,
+      4.8796
+    ],
+    "fov": 60
+  },
+  "navTransformMatrix": null,
+  "buildOptions": {
+    "maxSh": 3
+  },
+  "build": {
+    "status": "ok",
+    "transformMatrix": [
+      8,
+      0,
+      0,
+      0,
+      0,
+      1.7763568394002505e-15,
+      -8,
+      0,
+      0,
+      8,
+      1.7763568394002505e-15,
+      0,
+      -1.2173382742979126,
+      -0.5149450234734789,
+      5.064170343211911,
+      1
+    ],
+    "startedAt": "2026-10-25T07:54:04.954Z",
+    "finishedAt": "2026-10-25T07:57:05.691Z",
+    "wallClockSeconds": 180.7,
+    "splatCount": {
+      "input": 9842207,
+      "final": 13663068
+    },
+    "bounds": {
+      "bboxMin": [
+        -12.576766967773438,
+        -0.8062979578971863,
+        -7.378951549530029
+      ],
+      "bboxMax": [
+        8.51498794555664,
+        6.450846195220947,
+        15.096879005432129
+      ]
+    },
+    "chunkCount": 211,
+    "totalBytes": 631024488,
+    "peakMemoryBytes": 1203118080,
+    "buildLodFlags": [
+      "--quality",
+      "--rad-chunked",
+      "--max-sh=3"
+    ],
+    "sparkTag": "v2.3.1",
+    "parts": [
+      {
+        "id": "Mid12M-Parts12",
+        "status": "ok",
+        "radFile": "Mid12M-Parts12/Mid12M-Mid12M-Parts12-lod.rad",
+        "transformMatrix": [
+          8,
+          0,
+          0,
+          0,
+          0,
+          1.7763568394002505e-15,
+          -8,
+          0,
+          0,
+          8,
+          1.7763568394002505e-15,
+          0,
+          -1.2173382742979126,
+          -0.5149450234734789,
+          5.064170343211911,
+          1
+        ],
+        "source": "assets/source_ply/Mid12M-Parts12.ply",
+        "sourceBytes": 743395916,
+        "sourceModified": "2026-10-24T13:42:34.614Z",
+        "buildLodFlags": [
+          "--quality",
+          "--rad-chunked",
+          "--max-sh=3"
+        ],
+        "sparkTag": "v2.3.1",
+        "startedAt": "2026-10-25T07:54:04.955Z",
+        "finishedAt": "2026-10-25T07:54:47.759Z",
+        "wallClockSeconds": 42.8,
+        "buildLodSeconds": 40.559,
+        "peakMemoryBytes": 1188372480,
+        "splatCount": {
+          "input": 2470528,
+          "final": 3429499
+        },
+        "bounds": {
+          "bboxMin": [
+            -12.576766967773438,
+            -0.7664628624916077,
+            3.1830925941467285
+          ],
+          "bboxMax": [
+            -0.9733317494392395,
+            6.367074012756348,
+            13.883137702941895
+          ]
+        },
+        "chunkCount": 53,
+        "totalBytes": 160120024,
+        "transformStep": {
+          "splatTransform": "3.10.0",
+          "seconds": 1.257,
+          "peakMemoryBytes": 627941376,
+          "maxRelError": 5.522933900294774e-8
+        },
+        "crop": {
+          "roi": "assets/roi/HighRezOculus/Oculus6Part.json",
+          "roiOutlines": [
+            "Outline 1",
+            "Outline 2"
+          ],
+          "roiDigest": "0bb9492cea9831b7",
+          "keptSplats": 2470528,
+          "droppedSplats": 527030,
+          "droppedOutsideRoi": 527030,
+          "seconds": 0.7
+        }
+      },
+      {
+        "id": "Mid12M-Parts34",
+        "status": "ok",
+        "radFile": "Mid12M-Parts34/Mid12M-Mid12M-Parts34-lod.rad",
+        "transformMatrix": [
+          8,
+          0,
+          0,
+          0,
+          0,
+          1.7763568394002505e-15,
+          -8,
+          0,
+          0,
+          8,
+          1.7763568394002505e-15,
+          0,
+          -1.2173382742979126,
+          -0.5149450234734789,
+          5.064170343211911,
+          1
+        ],
+        "source": "assets/source_ply/Mid12M-Parts34.ply",
+        "sourceBytes": 743495116,
+        "sourceModified": "2026-10-24T20:05:22.858Z",
+        "buildLodFlags": [
+          "--quality",
+          "--rad-chunked",
+          "--max-sh=3"
+        ],
+        "sparkTag": "v2.3.1",
+        "startedAt": "2026-10-25T07:54:47.826Z",
+        "finishedAt": "2026-10-25T07:55:33.425Z",
+        "wallClockSeconds": 45.6,
+        "buildLodSeconds": 42.908,
+        "peakMemoryBytes": 1184202752,
+        "splatCount": {
+          "input": 2464790,
+          "final": 3422212
+        },
+        "bounds": {
+          "bboxMin": [
+            -6.34168815612793,
+            -0.7687989473342896,
+            3.7912044525146484
+          ],
+          "bboxMax": [
+            6.389057159423828,
+            6.381051063537598,
+            15.096879005432129
+          ]
+        },
+        "chunkCount": 53,
+        "totalBytes": 157965504,
+        "transformStep": {
+          "splatTransform": "3.10.0",
+          "seconds": 1.297,
+          "peakMemoryBytes": 628109312,
+          "maxRelError": 5.704839288932897e-8
+        },
+        "crop": {
+          "roi": "assets/roi/HighRezOculus/Oculus6Part.json",
+          "roiOutlines": [
+            "Outline 3",
+            "Outline 4"
+          ],
+          "roiDigest": "24af1fdc9a12a04e",
+          "keptSplats": 2464790,
+          "droppedSplats": 533168,
+          "droppedOutsideRoi": 533168,
+          "seconds": 1
+        }
+      },
+      {
+        "id": "Mid12M-Parts56",
+        "status": "ok",
+        "radFile": "Mid12M-Parts56/Mid12M-Mid12M-Parts56-lod.rad",
+        "transformMatrix": [
+          8,
+          0,
+          0,
+          0,
+          0,
+          1.7763568394002505e-15,
+          -8,
+          0,
+          0,
+          8,
+          1.7763568394002505e-15,
+          0,
+          -1.2173382742979126,
+          -0.5149450234734789,
+          5.064170343211911,
+          1
+        ],
+        "source": "assets/source_ply/Mid12M-Parts56.ply",
+        "sourceBytes": 743620356,
+        "sourceModified": "2026-10-25T01:58:46.838Z",
+        "buildLodFlags": [
+          "--quality",
+          "--rad-chunked",
+          "--max-sh=3"
+        ],
+        "sparkTag": "v2.3.1",
+        "startedAt": "2026-10-25T07:55:33.490Z",
+        "finishedAt": "2026-10-25T07:56:18.831Z",
+        "wallClockSeconds": 45.3,
+        "buildLodSeconds": 42.696,
+        "peakMemoryBytes": 1203118080,
+        "splatCount": {
+          "input": 2516941,
+          "final": 3524016
+        },
+        "bounds": {
+          "bboxMin": [
+            -2.134136199951172,
+            -0.8062979578971863,
+            -7.378951549530029
+          ],
+          "bboxMax": [
+            8.51498794555664,
+            6.450846195220947,
+            6.79806661605835
+          ]
+        },
+        "chunkCount": 54,
+        "totalBytes": 165774040,
+        "transformStep": {
+          "splatTransform": "3.10.0",
+          "seconds": 1.351,
+          "peakMemoryBytes": 628310016,
+          "maxRelError": 5.3231214797623336e-8
+        },
+        "crop": {
+          "roi": "assets/roi/HighRezOculus/Oculus6Part.json",
+          "roiOutlines": [
+            "Outline 5",
+            "Outline 6"
+          ],
+          "roiDigest": "4c2750c320299621",
+          "keptSplats": 2516941,
+          "droppedSplats": 481522,
+          "droppedOutsideRoi": 481522,
+          "seconds": 0.9
+        }
+      },
+      {
+        "id": "Mid12M-Parts78",
+        "status": "ok",
+        "radFile": "Mid12M-Parts78/Mid12M-Mid12M-Parts78-lod.rad",
+        "transformMatrix": [
+          8,
+          0,
+          0,
+          0,
+          0,
+          1.7763568394002505e-15,
+          -8,
+          0,
+          0,
+          8,
+          1.7763568394002505e-15,
+          0,
+          -1.2173382742979126,
+          -0.5149450234734789,
+          5.064170343211911,
+          1
+        ],
+        "source": "assets/source_ply/Mid12M-Parts78.ply",
+        "sourceBytes": 743198508,
+        "sourceModified": "2026-10-25T07:53:40.611Z",
+        "buildLodFlags": [
+          "--quality",
+          "--rad-chunked",
+          "--max-sh=3"
+        ],
+        "sparkTag": "v2.3.1",
+        "startedAt": "2026-10-25T07:56:18.888Z",
+        "finishedAt": "2026-10-25T07:57:05.611Z",
+        "wallClockSeconds": 46.7,
+        "buildLodSeconds": 44.233,
+        "peakMemoryBytes": 1157083136,
+        "splatCount": {
+          "input": 2389948,
+          "final": 3287341
+        },
+        "bounds": {
+          "bboxMin": [
+            -11.688876152038574,
+            -0.7688422203063965,
+            -6.585744380950928
+          ],
+          "bboxMax": [
+            -0.9908240437507629,
+            6.2636847496032715,
+            4.5049729347229
+          ]
+        },
+        "chunkCount": 51,
+        "totalBytes": 147164920,
+        "transformStep": {
+          "splatTransform": "3.10.0",
+          "seconds": 1.223,
+          "peakMemoryBytes": 627970048,
+          "maxRelError": 5.1148617445593935e-8
+        },
+        "crop": {
+          "roi": "assets/roi/HighRezOculus/Oculus6Part.json",
+          "roiOutlines": [
+            "Outline 7",
+            "Outline 8"
+          ],
+          "roiDigest": "7f3c953b307edc26",
+          "keptSplats": 2389948,
+          "droppedSplats": 606814,
+          "droppedOutsideRoi": 606814,
+          "seconds": 0.9
+        }
+      }
+    ]
+  },
+  "buildAttempt": {
+    "status": "ok",
+    "startedAt": "2026-10-25T07:54:04.954Z",
+    "finishedAt": "2026-10-25T07:57:05.692Z",
+    "error": null,
+    "parts": [
+      {
+        "id": "Mid12M-Parts12",
+        "status": "built",
+        "seconds": 42.8,
+        "peakMemoryBytes": 1188372480
+      },
+      {
+        "id": "Mid12M-Parts34",
+        "status": "built",
+        "seconds": 45.6,
+        "peakMemoryBytes": 1184202752
+      },
+      {
+        "id": "Mid12M-Parts56",
+        "status": "built",
+        "seconds": 45.3,
+        "peakMemoryBytes": 1203118080
+      },
+      {
+        "id": "Mid12M-Parts78",
+        "status": "built",
+        "seconds": 46.7,
+        "peakMemoryBytes": 1157083136
+      }
+    ]
+  },
+  "hotspots": [],
+  "createdAt": "2026-10-25T07:53:59.619Z",
+  "updatedAt": "2026-10-25T07:53:59.619Z",
+  "transformFrom": "HighRezOculus"
+}

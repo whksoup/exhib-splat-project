@@ -34,3 +34,6 @@ publish/
 .dev.vars*
 !.dev.vars.example
 !.env.example
+
+# Benchmark screenshots stay on disk (hundreds of MB); READMEs and results.json / CSVs are committed.
+reports/benchmarks/**/*.png

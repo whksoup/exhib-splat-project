@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 2,
+  "name": "FocusPilot-W100",
+  "parts": [
+    {
+      "id": "FocusPilot-W100",
+      "source": "assets/source_ply/FocusPilot-W100.ply",
+      "enabled": true,
+      "roi": "assets/roi/LowCap/AllOutlines.json"
+    }
+  ],
+  "transform": {
+    "position": [
+      -1.2173382742979126,
+      -0.5149450234734789,
+      5.064170343211911
+    ],
+    "rotationDeg": [
+      -90,
+      0,
+      0
+    ],
+    "eulerOrder": "XYZ",
+    "quaternion": [
+      -0.7071067811865475,
+      0,
+      0,
+      0.7071067811865476
+    ],
+    "scale": 8,
+    "matrix": [
+      8,
+      0,
+      0,
+      0,
+      0,
+      1.7763568394002505e-15,
+      -8,
+      0,
+      0,
+      8,
+      1.7763568394002505e-15,
+      0,
+      -1.2173382742979126,
+      -0.5149450234734789,
+      5.064170343211911,
+      1
+    ],
+    "appliedOrder": "scale, then rotate, then translate, about the world origin (three.js Object3D: M = T * R * S, column vectors)"
+  },
+  "floorY": -1.6,
+  "navigation": {
+    "spawn": {
+      "position": [
+        -2.3351,
+        0.1265,
+        -3.1628
+      ],
+      "yaw": 165.36,
+      "pitch": -3.95
+    }
+  },
+  "camera": {
+    "position": [
+      0,
+      0,
+      0
+    ],
+    "target": [
+      -1.8084,
+      -0.4109,
+      4.8796
+    ],
+    "fov": 60
+  },
+  "navTransformMatrix": null,
+  "buildOptions": {
+    "maxSh": 3
+  },
+  "build": null,
+  "buildAttempt": null,
+  "hotspots": [],
+  "createdAt": "2026-10-26T22:31:03.675Z",
+  "updatedAt": "2026-10-26T22:31:03.675Z",
+  "transformFrom": "HighRezOculus"
+}
