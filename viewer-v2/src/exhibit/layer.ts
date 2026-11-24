@@ -12,6 +12,7 @@
  */
 import * as THREE from "three";
 import { TransformControls } from "three/addons/controls/TransformControls.js";
+import { compassItems, compassTicks } from "./compass";
 import { editOf, gizmoAxes, uprightQuaternion, workFromObject, type GizmoMode, type WorkEdit } from "./colliderEdit";
 import {
   createPreviewTracker,
@@ -104,7 +105,19 @@ body.ex-captured .ex-marker { pointer-events: none; }
 .ex-touch { display: none; }
 .ex-tools { position: absolute; left: 24px; bottom: 24px; display: flex; gap: 8px; flex-wrap: wrap; max-width: calc(100vw - 48px); }
 .ex-tools .ex-resume { background: #293c30 !important; color: #fff !important; border-color: #293c30 !important; }
-.ex-hint { position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); padding: 6px 12px; border-radius: 4px; font-size: 11px;
+.ex-compass { position: absolute; left: 50%; bottom: 18px; width: min(560px, calc(100vw - 32px)); height: 46px; transform: translateX(-50%);
+  pointer-events: none !important; color: #f6f5ec; text-shadow: 0 0 3px #0009; }
+.ex-compass-line { position: absolute; left: 0; right: 0; top: 22px; height: 1px; background: linear-gradient(90deg, transparent, #f6f5ecb0 12%, #f6f5ecb0 88%, transparent); }
+.ex-compass-tick { position: absolute; top: 18px; width: 1px; height: 9px; background: #f6f5ec80; }
+.ex-compass-tick.major { top: 15px; height: 15px; background: #f6f5ecc0; }
+.ex-compass-centre { position: absolute; left: 50%; top: 12px; width: 0; height: 0; border: 5px solid transparent; border-top-color: #f6f5ec; transform: translateX(-50%); }
+.ex-compass-item { position: absolute; top: 22px; display: grid; justify-items: center; transform: translate(-50%, -50%) scale(var(--s, 1)); transform-origin: 50% 50%; }
+.ex-compass-dot { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid #f6f5ec; background: #304a2fcc; box-shadow: 0 0 4px #0008; }
+.ex-compass-item.pinned { opacity: .55; }
+.ex-compass-item.pinned .ex-compass-dot { border-radius: 2px; }
+.ex-compass-item.centred .ex-compass-dot { background: #f6f5ec; }
+.ex-compass-label { position: absolute; top: 14px; white-space: nowrap; font-size: 10px; letter-spacing: .4px; transform: scale(calc(1 / var(--s, 1))); transform-origin: 50% 0; }
+.ex-hint { position: absolute; left: 50%; bottom: 72px; transform: translateX(-50%); padding: 6px 12px; border-radius: 4px; font-size: 11px;
   background: #f0f1e3d9; color: #3d4a3a; pointer-events: none !important; white-space: nowrap; }
 .ex-focus { position: absolute; transform: translate(-50%, -50%); padding: 0 !important; border: 0 !important; background: none !important;
   display: grid; justify-items: center; gap: 8px; pointer-events: auto; }
@@ -134,6 +147,7 @@ body.ex-captured .ex-focus { pointer-events: none; }
   .ex-tools button { padding: 8px 10px; font-size: 12px; }
   .ex-marker { font-size: 10px !important; }
   .ex-hint { display: none; }
+  .ex-compass { bottom: 64px; }
 }
 @media (prefers-reduced-motion: reduce) { .ex-layer * { transition: none !important; animation: none !important; } }
 `;
@@ -187,6 +201,10 @@ export class ExhibitLayer {
   private readonly resumeButton: HTMLButtonElement;
   private readonly pauseButton: HTMLButtonElement;
   private readonly hint = el("div", "ex-hint");
+  // The compass strip: heading ticks, and each artwork's bearing, sized by distance.
+  private readonly compass = el("div", "ex-compass");
+  private readonly compassTicks = el("div");
+  private readonly compassIcons = new Map<string, { root: HTMLElement; label: HTMLElement }>();
   private readonly markerById = new Map<string, HTMLButtonElement>();
   private readonly abort = new AbortController();
   private readonly v = new THREE.Vector3();
@@ -256,7 +274,9 @@ export class ExhibitLayer {
       e.stopPropagation();
       if (this.focused) this.open(this.focused);
     });
-    this.root.append(this.markers, this.focusWidget, this.target, this.card, this.guide, this.tools, this.hint);
+    this.compass.setAttribute("aria-hidden", "true");
+    this.compass.append(el("div", "ex-compass-line"), this.compassTicks, el("div", "ex-compass-centre"));
+    this.root.append(this.markers, this.focusWidget, this.target, this.card, this.guide, this.tools, this.hint, this.compass);
     if (o.debug) this.buildDebug();
     this.editing = !!this.gizmo;
     o.ui.append(this.root);
@@ -303,6 +323,15 @@ export class ExhibitLayer {
       b.hidden = true;
       this.markers.append(b);
       this.markerById.set(w.id, b);
+    }
+    for (const c of this.compassIcons.values()) c.root.remove();
+    this.compassIcons.clear();
+    for (const w of works) {
+      const root = el("div", "ex-compass-item"), label = el("span", "ex-compass-label");
+      root.append(el("span", "ex-compass-dot"), label);
+      root.hidden = true;
+      this.compass.append(root);
+      this.compassIcons.set(w.id, { root, label });
     }
     if (this.preview && !works.some((w) => w.id === this.preview)) this.setPreview(null);
     if (this.o.debug) this.syncDebugSpheres();
@@ -414,7 +443,40 @@ export class ExhibitLayer {
       b.classList.toggle("selected", work.id === this.targeted || work.id === this.preview);
     }
     this.placeFocusWidget(eye, w, h);
+    this.updateCompass(eye, dir, exploring);
     if (this.o.debug) this.updateDebug(eye, dir);
+  }
+
+  /** The compass strip follows the view: ticks every 15°, artworks by bearing, pinned to the edge when behind. */
+  private updateCompass(eye: Vec3, dir: Vec3, exploring: boolean): void {
+    this.compass.hidden = !exploring || !this.guide.hidden;
+    if (this.compass.hidden) return;
+    const pct = (x: number) => `${((x + 1) / 2) * 100}%`;
+    const ticks = compassTicks(dir);
+    while (this.compassTicks.children.length < ticks.length) this.compassTicks.append(el("div", "ex-compass-tick"));
+    [...this.compassTicks.children].forEach((t, i) => {
+      const tick = ticks[i], e = t as HTMLElement;
+      e.hidden = !tick;
+      if (!tick) return;
+      e.style.left = pct(tick.x);
+      e.classList.toggle("major", tick.major);
+    });
+    const items = compassItems(eye, dir, this.works, this.mpu);
+    const shown = new Set(items.map((i) => i.id));
+    for (const [id, c] of this.compassIcons) if (!shown.has(id)) c.root.hidden = true;
+    for (const item of items) {
+      const c = this.compassIcons.get(item.id);
+      if (!c) continue;
+      const work = this.works.find((x) => x.id === item.id);
+      c.root.hidden = false;
+      c.root.style.left = pct(item.x);
+      c.root.style.setProperty("--s", item.scale.toFixed(3));
+      c.root.classList.toggle("pinned", item.pinned);
+      const centred = item.centred || item.id === this.focused;
+      c.root.classList.toggle("centred", centred);
+      c.label.textContent = centred ? `${work?.title ?? item.id} · ${Math.round(item.distance)} m` : "";
+      this.compass.append(c.root); // nearer icons last, so on top
+    }
   }
 
   /** The world-anchored widget at the focused artwork's centre: a ring sized by distance, and its title. */
