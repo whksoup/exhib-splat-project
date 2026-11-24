@@ -69,6 +69,12 @@ export interface ViewerConfig {
   device?: DeviceProfileId;
   /** Base splat budget -> SparkRenderer.lodSplatCount. Unset = Spark platform default. */
   budget?: number;
+  /**
+   * Budget cap for phones and tablets (Spark isMobile, or any non-desktop profile).
+   * Applied over `budget` by effectiveBudget(); unset = no cap. Published models
+   * start near 3M (exhibition embedding plan, decision 7).
+   */
+  mobileBudget?: number;
   /** Budget multiplier -> SparkRenderer.lodSplatScale. Unset = 2 on desktop, 1 on phones (viewer.ts). */
   lodScale?: number;
   /** Camera movement speed multiplier (fly / walk / orbit pan + zoom). Unset = 0.2 (viewer.ts). */
@@ -237,6 +243,7 @@ export async function loadConfig(search = window.location.search, base?: ViewerC
     camera,
     device,
     budget: count(q.get("budget")) ?? file.budget,
+    mobileBudget: count(q.get("mobileBudget")) ?? file.mobileBudget,
     lodScale: num(q.get("lodScale")) ?? file.lodScale,
     speed: num(q.get("speed")) ?? file.speed,
     pages: pageCount(q.get("pages")) ?? file.pages,
@@ -251,4 +258,17 @@ export async function loadConfig(search = window.location.search, base?: ViewerC
     benchSeconds: num(q.get("bench")) ?? file.benchSeconds,
     configUrl,
   };
+}
+
+/**
+ * The base budget for this device: `budget`, capped by `mobileBudget` on phones
+ * and tablets. Undefined when neither is set (renderer default). Pure; unit tested.
+ */
+export function effectiveBudget(
+  config: Pick<ViewerConfig, "budget" | "mobileBudget">,
+  device: { mobile: boolean; profile: { id: DeviceProfileId } },
+): number | undefined {
+  const handheld = device.mobile || device.profile.id !== "desktop";
+  if (!handheld || config.mobileBudget === undefined) return config.budget;
+  return config.budget === undefined ? config.mobileBudget : Math.min(config.budget, config.mobileBudget);
 }

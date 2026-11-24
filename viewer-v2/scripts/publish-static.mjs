@@ -99,6 +99,8 @@ function publishModel({ name, dir }, out) {
     models: [{ url: `models/${name}/lod-meta.json` }],
     // Room for every splat: a single SOG level can't trade detail for budget.
     budget: Math.max(splats, 1_000_000),
+    // Phones and tablets: capped (exhibition embedding plan, decision 7); a model's own viewer.json may set it.
+    mobileBudget: local.mobileBudget ?? Math.min(Math.max(splats, 1_000_000), 3_000_000),
     lodScale: 1,
     ...(local.camera && { camera: local.camera }),
     ...(local.navigation && { navigation: local.navigation }),

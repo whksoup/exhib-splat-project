@@ -176,3 +176,9 @@ button:hover {
   color: #e8e8ea;
   border: 1px solid #33363d;
 }
+
+/* Exhibition walk iframe (?embedded=1, src/embed.ts): the host shows its own
+   status and fallback, so developer warnings (flat floor, collision) stay in the console. */
+body.embedded .nav-hud .nav-warn {
+  display: none !important;
+}

@@ -204,8 +204,28 @@ export class Viewer {
 
     this.timeline = new LoadTimeline(config.settleWindowMs);
 
-    window.addEventListener("resize", () => this.resize(container));
+    this.onResize = () => this.resize(container);
+    window.addEventListener("resize", this.onResize);
     this.renderer.setAnimationLoop((t) => this.frame(t));
+  }
+
+  private readonly onResize: () => void;
+  private disposed = false;
+
+  /**
+   * Stops the render loop and frees every model and the GPU renderer. Used by the
+   * embedded walk (src/embed.ts) when the host page closes it; the page is not
+   * expected to reuse the viewer afterwards.
+   */
+  dispose(): void {
+    if (this.disposed) return;
+    this.disposed = true;
+    this.renderer.setAnimationLoop(null);
+    window.removeEventListener("resize", this.onResize);
+    for (const m of this.models.splice(0)) m.dispose();
+    this.onFrame.length = 0;
+    this.renderer.domElement.remove();
+    this.renderer.dispose();
   }
 
   /** Which splat renderer this page uses ("spark", "gsl" or "gsl-webgl"). */
