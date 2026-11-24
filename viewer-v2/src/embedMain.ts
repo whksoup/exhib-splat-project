@@ -12,9 +12,12 @@ import {
   failureReason,
   hasWebGpu,
   READY_MESSAGE,
+  serveOverMessages,
   tellParent,
   type FailureReason,
 } from "./embed";
+import { ExhibitLayer } from "./exhibit/layer";
+import { parseWorks } from "./exhibit/targeting";
 import { attachNavigation } from "./nav";
 import { Viewer } from "./viewer";
 
@@ -52,7 +55,8 @@ export async function runEmbedded(app: HTMLElement, ui: HTMLElement, config: Vie
     return;
   }
   const nav = attachNavigation(viewer, ui);
-  await viewer.loadModels(false);
+  // The collision GLB loads beside the models; wait for it, since loading it respawns the player.
+  await Promise.all([viewer.loadModels(false), nav.ready]);
   if (viewer.models.length === 0) {
     viewer.dispose();
     nav.dispose();
@@ -60,8 +64,37 @@ export async function runEmbedded(app: HTMLElement, ui: HTMLElement, config: Vie
     return;
   }
 
-  const api = createSplatWalk({
+  let api: ReturnType<typeof createSplatWalk> | null = null;
+  const exhibit = new ExhibitLayer({
+    ui,
+    canvas: viewer.renderer.domElement,
+    camera: viewer.camera,
+    setSuspended: (s) => viewer.rig.setSuspended(s),
+    allowPointerLock: (a) => nav.setPointerLockAllowed(a),
+    metresPerUnit: viewer.config.navigation.metresPerUnit,
+    onOpenWork: (id) => api?.openWork(id),
+    onReset: () => api?.reset(),
+    onChange: () => api?.publish(),
+  });
+  viewer.onFrame.push(({ now }) => exhibit.update(now));
+  const layer = {
+    setWorks: (works: unknown) => exhibit.setWorks(parseWorks(works)),
+    showGuide: () => exhibit.showGuide(),
+    setPreview: (id: string | null) => exhibit.setPreview(id),
+    pause: (focus?: boolean) => exhibit.pause(focus),
+    resume: () => exhibit.resume(),
+    escape: () => exhibit.escape(),
+    get inView() {
+      return exhibit.inView;
+    },
+    get navigation() {
+      return exhibit.navigation;
+    },
+  };
+
+  api = createSplatWalk({
     space,
+    layer,
     target: {
       getPose: () => nav.getPose(),
       teleport: (pose) => nav.teleport(pose),
@@ -79,12 +112,17 @@ export async function runEmbedded(app: HTMLElement, ui: HTMLElement, config: Vie
       models: viewer.models.map((m) => m.spec.url),
       errors: [...viewer.errors],
       collision: nav.collisionStatus,
+      exhibit: exhibit.diagnostics,
     }),
     dispose: () => {
+      stopServing();
+      exhibit.dispose();
       nav.dispose();
       viewer.dispose();
     },
   });
-  (window as unknown as { splatWalk: typeof api }).splatWalk = api;
+  const walk = api;
+  const stopServing = window.parent !== window ? serveOverMessages(walk, window.parent) : () => {};
+  (window as unknown as { splatWalk: typeof walk }).splatWalk = walk;
   tellParent({ type: READY_MESSAGE });
 }
