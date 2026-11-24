@@ -439,7 +439,7 @@ export class ExhibitLayer {
         this.tracker = createPreviewTracker({ dwellMs: t.dwellMs, departureMs: t.departureMs });
       }),
       this.debugReadout,
-      el("p", "ex-debug-note", "Orange: artwork spheres (look and pick). Green: focused. Colours on the floor and walls: collision mesh. Shift+N toggles the collision mesh."),
+      el("p", "ex-debug-note", "Orange: artwork boxes and wall planes (look and pick). Red: marker anchors. Green: focused. Colours on the floor and walls: collision mesh. Shift+N toggles the collision mesh."),
     );
     this.root.append(this.debugPanel);
     this.syncDebugSpheres();
@@ -453,13 +453,25 @@ export class ExhibitLayer {
     this.debugGroup.clear();
     this.debugSpheres.clear();
     for (const w of this.works) {
-      const sphere = new THREE.SphereGeometry(w.radius, 16, 10);
-      const lines = new THREE.LineSegments(new THREE.WireframeGeometry(sphere), new THREE.LineBasicMaterial({ color: 0xffa040, transparent: true, opacity: 0.7, depthTest: false }));
-      sphere.dispose();
+      // The artwork's box, or its wall plane (no depth), as used for looking and clicking.
+      const lines = new THREE.LineSegments(undefined, new THREE.LineBasicMaterial({ color: 0xffa040, transparent: true, opacity: 0.8, depthTest: false }));
+      if (w.box) {
+        const [hx, hy, hz] = w.box.half;
+        const box = new THREE.BoxGeometry(hx * 2, hy * 2, Math.max(hz * 2, 1e-4));
+        lines.geometry = new THREE.EdgesGeometry(box);
+        box.dispose();
+        const [a, b, c] = w.box.axes.map((v) => new THREE.Vector3(...v));
+        lines.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(a, b, c));
+      } else {
+        const sphere = new THREE.SphereGeometry(w.radius, 16, 10);
+        lines.geometry = new THREE.WireframeGeometry(sphere);
+        sphere.dispose();
+      }
       lines.position.set(...w.center);
       lines.renderOrder = 1001;
       const anchor = new THREE.Mesh(new THREE.OctahedronGeometry(w.radius * 0.06), new THREE.MeshBasicMaterial({ color: 0xff3060, depthTest: false }));
-      anchor.position.set(w.anchor[0] - w.center[0], w.anchor[1] - w.center[1], w.anchor[2] - w.center[2]);
+      // Children inherit the box's rotation: place the anchor in the box's own axes.
+      anchor.position.set(w.anchor[0] - w.center[0], w.anchor[1] - w.center[1], w.anchor[2] - w.center[2]).applyQuaternion(lines.quaternion.clone().invert());
       anchor.renderOrder = 1002;
       lines.add(anchor);
       this.debugGroup.add(lines);
