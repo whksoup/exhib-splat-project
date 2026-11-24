@@ -104,6 +104,9 @@ export class PlayerController {
     return this._mode;
   }
 
+  /** Fly through everything, with no height limit or fall-out respawn (the exhibition's debug view). */
+  noclip = false;
+
   /** Returns the mode actually in effect (fly is refused unless allowFly). */
   setMode(mode: NavMode): NavMode {
     if (mode === "fly" && !this.cfg.allowFly) return this._mode;
@@ -262,7 +265,7 @@ export class PlayerController {
     this.eyeSmoothY *= Math.exp(-dt * 12);
     if (Math.abs(this.eyeSmoothY) < 1e-4) this.eyeSmoothY = 0;
 
-    if (this.feet.y < this.killY || !Number.isFinite(this.feet.y + this.feet.x + this.feet.z)) {
+    if ((this.feet.y < this.killY && !this.noclip) || !Number.isFinite(this.feet.y + this.feet.x + this.feet.z)) {
       this.respawnCount++;
       this.respawn();
     }
@@ -319,6 +322,7 @@ export class PlayerController {
     const c = this.cfg;
     _prev.copy(this.feet);
     this.feet.addScaledVector(this.velocity, dt);
+    if (this.noclip) return;
     if (c.maxHeight !== undefined && this.feet.y + c.height > c.maxHeight) {
       this.feet.y = c.maxHeight - c.height;
       if (this.velocity.y > 0) this.velocity.y = 0;

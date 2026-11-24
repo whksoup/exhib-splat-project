@@ -27,6 +27,8 @@ const BLOCK_DEFAULT = new Set(["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "Ar
 
 export class NavInputDevice {
   active = false;
+  /** False keeps the mouse free: a click drags to look instead of capturing (the exhibition's drag-to-look). */
+  allowPointerLock = true;
   /** Degrees per pixel. */
   sensitivity: number;
   private readonly keys = new Set<string>();
@@ -153,7 +155,7 @@ export class NavInputDevice {
     }
     // Mouse / pen.
     if (e.button !== 0) return;
-    if (!this.pointerLocked && !this.pointerLockFailed && this.canvas.requestPointerLock) {
+    if (this.allowPointerLock && !this.pointerLocked && !this.pointerLockFailed && this.canvas.requestPointerLock) {
       try {
         const p = this.canvas.requestPointerLock() as unknown as Promise<void> | undefined;
         p?.catch?.(() => (this.pointerLockFailed = true));

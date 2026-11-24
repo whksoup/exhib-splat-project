@@ -167,6 +167,11 @@ export class Navigation {
     this.player.speedScale = scale;
   }
 
+  /** False: clicks drag to look instead of capturing the mouse. */
+  setPointerLockAllowed(allowed: boolean): void {
+    this.input.allowPointerLock = allowed;
+  }
+
   enterFrom(camera: THREE.PerspectiveCamera): void {
     const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
     const yaw = THREE.MathUtils.radToDeg(Math.atan2(-fwd.x, -fwd.z));

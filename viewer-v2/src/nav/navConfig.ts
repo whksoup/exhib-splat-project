@@ -58,6 +58,13 @@ export interface NavigationConfig {
   spawn?: NavPose;
   /** Show the collider wireframe + capsule gizmo at start (toggle with N). */
   debug: boolean;
+  /**
+   * Metres per world unit, for builds not scaled to metres. When set, the
+   * body and motion values (eyeHeight, radius, height, stepHeight, speeds,
+   * jumpSpeed, gravity) are read as metres and converted to world units.
+   * Positions (floorY, killY, maxHeight, spawn) stay in world units.
+   */
+  metresPerUnit?: number;
 }
 
 /** JSON shape: everything optional. */
@@ -109,7 +116,8 @@ function finiteOr(v: unknown, fallback: number): number {
  *
  * URL params: collision, nav (walk|fly), allowFly, allowJump, eyeHeight,
  * radius, height, stepHeight, maxSlope, walkSpeed, runSpeed, flySpeed,
- * maxHeight, floorY, killY, spawn (x,y,z), spawnYaw, spawnPitch, navDebug.
+ * maxHeight, floorY, killY, spawn (x,y,z), spawnYaw, spawnPitch, navDebug,
+ * mpu (metres per world unit).
  */
 export function resolveNavigationConfig(
   file: NavigationConfigFile | undefined,
@@ -157,19 +165,39 @@ export function resolveNavigationConfig(
     spawn,
     debug: bool(q.get("navDebug")) ?? f.debug ?? d.debug,
   };
-  return sanitize(cfg);
+  const mpu = num(q.get("mpu")) ?? (typeof f.metresPerUnit === "number" ? f.metresPerUnit : undefined);
+  return sanitize(mpu !== undefined && mpu > 0 ? toWorldUnits(cfg, mpu) : cfg);
 }
 
 function vec3OK(v: unknown): boolean {
   return Array.isArray(v) && v.length === 3 && v.every((n) => typeof n === "number" && Number.isFinite(n));
 }
 
-/** Keep the capsule geometrically valid whatever the config says. */
+/** Body and motion values given in metres, converted to world units (`mpu` metres per unit). */
+export function toWorldUnits(c: NavigationConfig, mpu: number): NavigationConfig {
+  const u = (v: number) => v / mpu;
+  return {
+    ...c,
+    metresPerUnit: mpu,
+    eyeHeight: u(c.eyeHeight),
+    radius: u(c.radius),
+    height: u(c.height),
+    stepHeight: u(c.stepHeight),
+    walkSpeed: u(c.walkSpeed),
+    runSpeed: u(c.runSpeed),
+    flySpeed: u(c.flySpeed),
+    jumpSpeed: u(c.jumpSpeed),
+    gravity: u(c.gravity),
+  };
+}
+
+/** Keep the capsule geometrically valid whatever the config says (limits in metres, scaled by metresPerUnit). */
 export function sanitize(c: NavigationConfig): NavigationConfig {
-  const radius = Math.min(Math.max(c.radius, 0.05), 2);
-  const height = Math.max(c.height, radius * 2 + 0.1);
-  const stepHeight = Math.min(Math.max(c.stepHeight, 0), height - radius * 2 - 0.05);
-  const eyeHeight = Math.min(Math.max(c.eyeHeight, 0.1), height);
+  const m = c.metresPerUnit && c.metresPerUnit > 0 ? 1 / c.metresPerUnit : 1;
+  const radius = Math.min(Math.max(c.radius, 0.05 * m), 2 * m);
+  const height = Math.max(c.height, radius * 2 + 0.1 * m);
+  const stepHeight = Math.min(Math.max(c.stepHeight, 0), height - radius * 2 - 0.05 * m);
+  const eyeHeight = Math.min(Math.max(c.eyeHeight, 0.1 * m), height);
   const maxSlopeDeg = Math.min(Math.max(c.maxSlopeDeg, 0), 89);
   return { ...c, radius, height, stepHeight, eyeHeight, maxSlopeDeg };
 }

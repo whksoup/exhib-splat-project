@@ -521,8 +521,25 @@ controls, and defines `window.splatWalk` (`diagnostics`, `connect`, `restore`, `
 `splat-walk-ready`, or `splat-walk-failed` with a `reason` (`no-webgpu`, `renderer`,
 `config`, `model`) so the host can fall back to its own walk. With `renderer: "gsl"`
 it refuses to start without a WebGPU adapter rather than dropping to WebGL2;
-`renderer=gsl-webgl` opts into the WebGL2 backend. The host must be served from the
-same origin as the viewer.
+`renderer=gsl-webgl` opts into the WebGL2 backend.
+
+The walking interface over the splat lives in `src/exhibit/` (markers, the in-view card,
+the crosshair, the controls guide, pause / resume and Reset view). The host passes the
+room's artworks on `connect({works, guide, onOpenWork})` in the build's frame; opening one
+pauses the walk and calls `onOpenWork(id)`, and the host shows its own card. Escape pauses
+first, and a second Escape leaves (`onBack`, else `onExit`). `pause()`, `resume()`,
+`escape()` and `reset()` are on `window.splatWalk` too.
+
+`?mpu=<metres per unit>` makes the body and motion values (eyeHeight, radius, height,
+stepHeight, speeds, gravity) metres for builds not scaled to metres; positions such as
+`floorY` and the spawn stay in world units. The exhibition passes `mpu`, its walker in
+metres, `speed=1`, `floorY` and a `collision` GLB from its own site.
+
+A host on the same origin uses `window.splatWalk` directly. A host on another origin drives
+the same API over postMessage (`serveOverMessages` in `src/embed.ts`): calls
+`{type: "splat-walk-call", id, method, args}`, replies `splat-walk-reply`, and events
+`splat-walk-event` (`change`, `back`, `exit`, `open-work`), answered to the first caller's
+origin only.
 
 ## Testing on a phone or Quest over the LAN
 
