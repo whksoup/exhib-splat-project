@@ -84,3 +84,12 @@ describe("artwork targeting", () => {
     expect(parseWorks("nope")).toEqual([]);
   });
 });
+
+describe("hand-edited colliders", () => {
+  it("keeps the fitted box from the host for Reset", () => {
+    const fitted = { center: [1, 0, 0], anchor: [1, 1, 0], radius: 2, box: { axes: [[1, 0, 0], [0, 1, 0], [0, 0, 1]], half: [1, 1, 1] } };
+    const [a, b] = parseWorks([{ ...plane, fitted }, { ...plane, id: "bad", fitted: { ...fitted, box: null } }]);
+    expect(a.fitted?.center).toEqual([1, 0, 0]);
+    expect(b.fitted).toBeUndefined();
+  });
+});

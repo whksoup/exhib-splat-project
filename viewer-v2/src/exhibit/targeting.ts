@@ -27,6 +27,8 @@ export interface WalkWork {
    */
   box?: { axes: [Vec3, Vec3, Vec3]; half: Vec3 };
   mount?: "object" | "wall";
+  /** When the collider was edited by hand: the fitted one, for "Reset to fitted" in debug mode. */
+  fitted?: { center: Vec3; anchor: Vec3; radius: number; box: { axes: [Vec3, Vec3, Vec3]; half: Vec3 } };
 }
 
 export const PREVIEW_DEFAULTS = Object.freeze({ angleDeg: 8, dwellMs: 250, departureMs: 350 });
@@ -169,6 +171,13 @@ const finite = (v: unknown): v is number => typeof v === "number" && Number.isFi
 const vec3 = (v: unknown): v is Vec3 => Array.isArray(v) && v.length === 3 && v.every(finite);
 const text = (v: unknown, max: number) => (typeof v === "string" ? v.slice(0, max) : "");
 
+function parseBox(input: unknown): { axes: [Vec3, Vec3, Vec3]; half: Vec3 } | undefined {
+  const b = input as { axes?: unknown; half?: unknown } | undefined;
+  return b && typeof b === "object" && Array.isArray(b.axes) && b.axes.length === 3 && b.axes.every(vec3) && vec3(b.half) && b.half.every((h) => h >= 0)
+    ? { axes: b.axes as [Vec3, Vec3, Vec3], half: b.half }
+    : undefined;
+}
+
 /** Works from the host, checked (it may be another origin over postMessage); malformed entries are dropped. */
 export function parseWorks(input: unknown): WalkWork[] {
   if (!Array.isArray(input)) return [];
@@ -177,13 +186,12 @@ export function parseWorks(input: unknown): WalkWork[] {
     if (!w || typeof w !== "object") continue;
     const o = w as Record<string, unknown>;
     if (typeof o.id !== "string" || !o.id || !vec3(o.anchor) || !vec3(o.center) || !finite(o.radius) || o.radius < 0) continue;
-    const b = o.box as { axes?: unknown; half?: unknown } | undefined;
-    const box =
-      b && Array.isArray(b.axes) && b.axes.length === 3 && b.axes.every(vec3) && vec3(b.half) && b.half.every((h) => h >= 0)
-        ? { axes: b.axes as [Vec3, Vec3, Vec3], half: b.half }
-        : undefined;
+    const box = parseBox(o.box);
     const mount = o.mount === "wall" ? "wall" : "object";
-    out.push({ id: o.id.slice(0, 200), title: text(o.title, 300) || o.id, artist: text(o.artist, 300), summary: text(o.summary, 1000), anchor: o.anchor, center: o.center, radius: o.radius, ...(box && { box, mount }) });
+    const f = o.fitted as Record<string, unknown> | undefined;
+    const fittedBox = f && typeof f === "object" ? parseBox(f.box) : undefined;
+    const fitted = fittedBox && vec3(f!.center) && vec3(f!.anchor) && finite(f!.radius) ? { center: f!.center, anchor: f!.anchor, radius: f!.radius, box: fittedBox } : undefined;
+    out.push({ id: o.id.slice(0, 200), title: text(o.title, 300) || o.id, artist: text(o.artist, 300), summary: text(o.summary, 1000), anchor: o.anchor, center: o.center, radius: o.radius, ...(box && { box, mount }), ...(box && fitted && { fitted }) });
   }
   return out;
 }

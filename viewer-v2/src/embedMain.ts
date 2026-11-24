@@ -66,6 +66,13 @@ export async function runEmbedded(app: HTMLElement, ui: HTMLElement, config: Vie
 
   let api: ReturnType<typeof createSplatWalk> | null = null;
   const mpu = viewer.config.navigation.metresPerUnit ?? 1;
+  // ?exhibitDebug=1 (the exhibition's ?walkDebug=1): fly freely through everything, drag to look, edit colliders.
+  const debug = new URLSearchParams(window.location.search).get("exhibitDebug") === "1";
+  const setFlying = (on: boolean) => {
+    nav.player.cfg.allowFly = nav.player.cfg.allowFly || on;
+    nav.player.noclip = on;
+    nav.setMode(on ? "fly" : "walk");
+  };
   const exhibit = new ExhibitLayer({
     ui,
     canvas: viewer.renderer.domElement,
@@ -76,8 +83,9 @@ export async function runEmbedded(app: HTMLElement, ui: HTMLElement, config: Vie
     onOpenWork: (id) => api?.openWork(id),
     onReset: () => api?.reset(),
     onChange: () => api?.publish(),
-    // ?exhibitDebug=1 (the exhibition's ?walkDebug=1): artwork spheres and a tuning panel.
-    debug: new URLSearchParams(window.location.search).get("exhibitDebug") === "1",
+    onEditWork: (edit) => api?.editWork(edit),
+    debug,
+    setFlying,
     scene: viewer.scene,
     eyeHeight: Math.round(nav.config.eyeHeight * mpu * 100) / 100,
     setEyeHeight: (metres) => {
@@ -95,6 +103,7 @@ export async function runEmbedded(app: HTMLElement, ui: HTMLElement, config: Vie
     pause: (focus?: boolean) => exhibit.pause(focus),
     resume: () => exhibit.resume(),
     escape: () => exhibit.escape(),
+    setEditStatus: (text: string) => exhibit.setEditStatus(text),
     get inView() {
       return exhibit.inView;
     },
@@ -111,7 +120,8 @@ export async function runEmbedded(app: HTMLElement, ui: HTMLElement, config: Vie
       teleport: (pose) => nav.teleport(pose),
       respawn: () => nav.respawn(),
       getMode: () => nav.getMode(),
-      setMode: (mode) => nav.setMode(mode),
+      // The debug view always flies; the visitor's walk never does (a debug snapshot can come back in history).
+      setMode: (mode) => (debug ? (setFlying(true), nav.getMode()) : nav.setMode(mode === "fly" ? "walk" : mode)),
       pointerLocked: () => document.pointerLockElement !== null,
     },
     diagnostics: () => ({

@@ -27,6 +27,7 @@ function fakeLayer() {
     pause: () => ((navigation = "paused"), calls.push("pause")),
     resume: () => ((navigation = "explore"), calls.push("resume")),
     escape: () => (navigation === "explore" ? ((navigation = "paused"), true) : false),
+    setEditStatus: (text) => calls.push(`status:${text}`),
     get inView() {
       return preview;
     },
@@ -270,6 +271,16 @@ describe("postMessage bridge", () => {
     expect(b.sent.at(-1)?.message.value.pose.position).toEqual([3, 1.6, -4]);
     b.w.api.openWork("Mimus");
     expect(b.sent.at(-1)?.message).toEqual({ type: "splat-walk-event", name: "open-work", args: ["Mimus"] });
+  });
+
+  it("passes collider edits to the host and its save status back", async () => {
+    const b = bridge();
+    await b.call("connect", [{}]);
+    const edit = { id: "Mimus", center: [0, 0, 0], axes: [[1, 0, 0], [0, 1, 0], [0, 0, 1]], half: [1, 1, 1], anchor: [0, 1, 0] };
+    await b.w.api.editWork(edit);
+    expect(b.sent.at(-1)?.message).toEqual({ type: "splat-walk-event", name: "edit-work", args: [edit] });
+    await b.call("editStatus", ["Mimus: saved"]);
+    expect(b.l.calls).toContain("status:Mimus: saved");
   });
 
   it("turns Escape while paused into a back event for the host to decide", async () => {

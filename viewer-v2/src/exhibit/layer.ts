@@ -11,6 +11,8 @@
  *   explore  walking; Escape (or losing the mouse capture) pauses
  */
 import * as THREE from "three";
+import { TransformControls } from "three/addons/controls/TransformControls.js";
+import { editOf, gizmoAxes, uprightQuaternion, workFromObject, type GizmoMode, type WorkEdit } from "./colliderEdit";
 import {
   createPreviewTracker,
   lookOffset,
@@ -46,6 +48,13 @@ export interface ExhibitLayerOptions {
   /** Eye height in metres now, and a way to change it live (debug panel). */
   eyeHeight?: number;
   setEyeHeight?(metres: number): void;
+  /**
+   * Debug mode: Save sends each edited collider here. The host saves it; a
+   * returned text (or promise of one) shows as the save status.
+   */
+  onEditWork?(edit: WorkEdit): unknown;
+  /** Debug mode: fly freely through everything instead of walking. */
+  setFlying?(on: boolean): void;
 }
 
 /**
@@ -111,6 +120,10 @@ body.ex-captured .ex-focus { pointer-events: none; }
 .ex-debug input { grid-column: 1 / -1; width: 100%; }
 .ex-debug pre { margin: 8px 0; font: 10px/1.45 monospace; white-space: pre; overflow: hidden; }
 .ex-debug-note { margin: 0; color: #b9c4b0; line-height: 1.4; }
+.ex-debug .ex-edit { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0 6px; }
+.ex-debug .ex-edit button { padding: 4px 8px; font-size: 11px; background: #2a3127; color: #e8eee2; border-color: #4d5a46; }
+.ex-debug .ex-edit button[aria-pressed="true"] { background: #a6c28e; color: #10130f; border-color: #a6c28e; }
+.ex-debug .ex-edit-status { margin: 0 0 6px; color: #e8d08e; min-height: 1.4em; }
 @media (pointer: coarse) { .ex-touch { display: block; } .ex-keyboard { display: none; } }
 @media (max-width: 700px) {
   .ex-preview { left: 16px; right: 16px; top: auto; bottom: 150px; width: auto; padding: 13px 16px; }
@@ -187,6 +200,16 @@ export class ExhibitLayer {
   private readonly debugSpheres = new Map<string, THREE.LineSegments>();
   private readonly debugPanel = el("aside", "ex-debug");
   private readonly debugReadout = el("pre");
+  // Collider editing (debug mode): the gizmo, which collider it holds, and the panel's controls.
+  private gizmo: TransformControls | null = null;
+  private editing = false;
+  private editMode: GizmoMode = "translate";
+  private selected: string | null = null;
+  private gizmoUsed = false;
+  private readonly fitted = new Map<string, WalkWork>();
+  private readonly pending = new Map<string, WorkEdit>();
+  private readonly editButtons = new Map<string, HTMLButtonElement>();
+  private readonly editStatus = el("p", "ex-edit-status");
 
   constructor(private readonly o: ExhibitLayerOptions) {
     injectCss();
@@ -235,6 +258,7 @@ export class ExhibitLayer {
     });
     this.root.append(this.markers, this.focusWidget, this.target, this.card, this.guide, this.tools, this.hint);
     if (o.debug) this.buildDebug();
+    this.editing = !!this.gizmo;
     o.ui.append(this.root);
 
     const opts = { signal: this.abort.signal };
@@ -264,6 +288,12 @@ export class ExhibitLayer {
 
   setWorks(works: WalkWork[]): void {
     this.works = works;
+    this.fitted.clear();
+    for (const w of works) {
+      const { fitted, ...rest } = w;
+      this.fitted.set(w.id, structuredClone(fitted ? { ...rest, ...fitted } : rest));
+    }
+    this.select(null);
     this.markers.replaceChildren();
     this.markerById.clear();
     for (const w of works) {
@@ -309,7 +339,9 @@ export class ExhibitLayer {
 
   resume(dragOnly = false): void {
     this.guide.hidden = true;
-    this.dragOnly = dragOnly || coarse();
+    // The debug view: drag to look and fly, so the mouse stays free for the gizmo.
+    this.dragOnly = dragOnly || coarse() || this.editing;
+    if (this.editing) this.o.setFlying?.(true);
     this.o.allowPointerLock(!this.dragOnly);
     this.o.setSuspended(false);
     const changed = this.state !== "explore";
@@ -438,10 +470,13 @@ export class ExhibitLayer {
         t.dwellMs = v;
         this.tracker = createPreviewTracker({ dwellMs: t.dwellMs, departureMs: t.departureMs });
       }),
+      this.buildEditControls(),
+      this.editStatus,
       this.debugReadout,
-      el("p", "ex-debug-note", "Orange: artwork boxes and wall planes (look and pick). Red: marker anchors. Green: focused. Colours on the floor and walls: collision mesh. Shift+N toggles the collision mesh."),
+      el("p", "ex-debug-note", "Orange: artwork boxes and wall planes (look and pick; they don't block walking). Red: marker anchors. Green: focused. Blue: selected for editing. Colours on the floor and walls: collision mesh. Shift+N toggles the collision mesh."),
     );
     this.root.append(this.debugPanel);
+    this.buildGizmo();
     this.syncDebugSpheres();
   }
 
@@ -474,13 +509,169 @@ export class ExhibitLayer {
       anchor.position.set(w.anchor[0] - w.center[0], w.anchor[1] - w.center[1], w.anchor[2] - w.center[2]).applyQuaternion(lines.quaternion.clone().invert());
       anchor.renderOrder = 1002;
       lines.add(anchor);
+      lines.userData = { base: structuredClone(w), anchorLocal: anchor.position.clone() };
       this.debugGroup.add(lines);
       this.debugSpheres.set(w.id, lines);
+    }
+    if (this.selected) this.select(this.selected);
+  }
+
+  // ------------------------------------------------------- collider editing
+
+  private buildEditControls(): HTMLElement {
+    const wrap = el("div", "ex-edit");
+    const add = (key: string, text: string, onClick: () => void) => {
+      const b = button("", text, onClick);
+      this.editButtons.set(key, b);
+      wrap.append(b);
+    };
+    add("save", "Save", () => this.save());
+    add("translate", "Move (1)", () => this.setEditMode("translate"));
+    add("rotate", "Turn (2)", () => this.setEditMode("rotate"));
+    add("scale", "Size (3)", () => this.setEditMode("scale"));
+    add("reset", "Reset to fitted", () => this.resetSelected());
+    this.syncEditControls();
+    return wrap;
+  }
+
+  private buildGizmo(): void {
+    if (!this.o.scene) return;
+    const g = new TransformControls(this.o.camera, this.o.canvas);
+    g.setSpace("local");
+    g.setTranslationSnap(null);
+    g.addEventListener("dragging-changed", (e) => {
+      const dragging = Boolean((e as { value?: unknown }).value);
+      if (dragging) this.gizmoUsed = true;
+      // Walking stops while a handle is dragged, so the drag doesn't also turn the view.
+      this.o.setSuspended(dragging || this.state !== "explore");
+    });
+    g.addEventListener("objectChange", () => this.onGizmoChange());
+    g.addEventListener("mouseUp", () => this.commitSelected());
+    g.getHelper().visible = false;
+    this.o.scene.add(g.getHelper());
+    this.gizmo = g;
+  }
+
+  private setEditMode(mode: GizmoMode): void {
+    this.editMode = mode;
+    this.gizmo?.setMode(mode);
+    this.applyGizmoAxes();
+    this.syncEditControls();
+  }
+
+  private select(id: string | null): void {
+    const g = this.gizmo;
+    this.selected = id && this.debugSpheres.has(id) ? id : null;
+    for (const [k, l] of this.debugSpheres) (l.material as THREE.LineBasicMaterial).color.setHex(k === this.selected ? 0x50a0ff : 0xffa040);
+    if (!g) return;
+    if (this.selected) {
+      g.attach(this.debugSpheres.get(this.selected)!);
+      g.getHelper().visible = true;
+      this.applyGizmoAxes();
+      const w = this.works.find((x) => x.id === this.selected);
+      this.setEditStatus(`${w?.title ?? this.selected}${w?.mount === "wall" ? " (wall plane)" : ""}: drag the handles.`);
+    } else {
+      g.detach();
+      g.getHelper().visible = false;
+    }
+    this.syncEditControls();
+  }
+
+  private applyGizmoAxes(): void {
+    const g = this.gizmo, w = this.works.find((x) => x.id === this.selected);
+    if (!g || !w) return;
+    const show = gizmoAxes(this.editMode, w);
+    g.showX = show.x;
+    g.showY = show.y;
+    g.showZ = show.z;
+  }
+
+  /** The gizmo moved the selected box: update the artwork so looking and clicking follow it at once. */
+  private onGizmoChange(): void {
+    const l = this.selected ? this.debugSpheres.get(this.selected) : undefined;
+    if (!l) return;
+    if (this.editMode === "rotate") l.quaternion.copy(uprightQuaternion(l.quaternion));
+    const { base, anchorLocal } = l.userData as { base: WalkWork; anchorLocal: THREE.Vector3 };
+    const next = workFromObject(base, l, anchorLocal);
+    const i = this.works.findIndex((w) => w.id === next.id);
+    if (i >= 0) this.works[i] = next;
+  }
+
+  /** A handle drag ended: keep the edit until Save. */
+  private commitSelected(): void {
+    const w = this.works.find((x) => x.id === this.selected);
+    if (!w) return;
+    this.pending.set(w.id, editOf(w));
+    this.setEditStatus(this.unsavedText());
+    this.syncEditControls();
+  }
+
+  private unsavedText(): string {
+    const n = this.pending.size;
+    return n ? `${n} unsaved change${n === 1 ? "" : "s"} · Save to keep ${n === 1 ? "it" : "them"}.` : "No unsaved changes.";
+  }
+
+  private resetSelected(): void {
+    const id = this.selected, fitted = id ? this.fitted.get(id) : undefined;
+    if (!id || !fitted) return;
+    const i = this.works.findIndex((w) => w.id === id);
+    if (i >= 0) this.works[i] = structuredClone(fitted);
+    this.syncDebugSpheres();
+    this.pending.set(id, { id, reset: true });
+    this.setEditStatus(this.unsavedText());
+    this.syncEditControls();
+  }
+
+  /** Save: send every edited collider to the host, one after another. */
+  private async save(): Promise<void> {
+    if (!this.pending.size) {
+      this.setEditStatus("No unsaved changes.");
+      return;
+    }
+    if (!this.o.onEditWork) {
+      this.setEditStatus("Nothing can save here: the changes last for this visit only.");
+      return;
+    }
+    const edits = [...this.pending.values()];
+    this.setEditStatus(`Saving ${edits.length}…`);
+    let last = "";
+    for (const edit of edits) {
+      try {
+        const text = await this.o.onEditWork(edit);
+        if (this.pending.get(edit.id) === edit) this.pending.delete(edit.id);
+        if (typeof text === "string") last = text;
+      } catch (err) {
+        this.setEditStatus(`Not saved: ${err instanceof Error ? err.message : String(err)}`);
+        this.syncEditControls();
+        return;
+      }
+    }
+    // Over postMessage the host's status arrives separately (editStatus); otherwise show the last answer.
+    this.setEditStatus(last || (this.pending.size ? this.unsavedText() : "Sent for saving…"));
+    this.syncEditControls();
+  }
+
+  /** Save status from the host. */
+  setEditStatus(text: string): void {
+    this.editStatus.textContent = text;
+  }
+
+  private syncEditControls(): void {
+    for (const [k, b] of this.editButtons) {
+      if (k === "save") {
+        b.textContent = this.pending.size ? `Save (${this.pending.size})` : "Save";
+        b.setAttribute("aria-pressed", "false");
+      } else if (k === "reset") b.hidden = !this.editing || !this.selected;
+      else {
+        b.hidden = !this.editing;
+        b.setAttribute("aria-pressed", String(k === this.editMode));
+      }
     }
   }
 
   private updateDebug(eye: Vec3, dir: Vec3): void {
-    for (const [id, l] of this.debugSpheres) (l.material as THREE.LineBasicMaterial).color.setHex(id === this.focused ? 0x40e080 : 0xffa040);
+    for (const [id, l] of this.debugSpheres)
+      (l.material as THREE.LineBasicMaterial).color.setHex(id === this.selected ? 0x50a0ff : id === this.focused ? 0x40e080 : 0xffa040);
     const m = this.mpu;
     const lines = this.works
       .map((w) => ({ w, d: surfaceDistance(eye, w) * m, a: THREE.MathUtils.radToDeg(lookOffset(eye, dir, w)) }))
@@ -495,6 +686,11 @@ export class ExhibitLayer {
     this.root.remove();
     for (const l of this.debugSpheres.values()) l.geometry.dispose();
     this.debugGroup.removeFromParent();
+    if (this.gizmo) {
+      this.gizmo.detach();
+      this.gizmo.getHelper().removeFromParent();
+      this.gizmo.dispose();
+    }
   }
 
   // ------------------------------------------------------------- internals
@@ -516,7 +712,20 @@ export class ExhibitLayer {
   private onCanvasClick(e: MouseEvent): void {
     const dragged = this.down ? Math.hypot(e.clientX - this.down.x, e.clientY - this.down.y) > 5 : false;
     this.down = null;
-    if (dragged || !this.guide.hidden) return;
+    if (!this.guide.hidden) return;
+    if (this.editing) {
+      // Editing: a click selects the box under the pointer (or clears the selection); a handle drag is not a click.
+      const used = this.gizmoUsed;
+      this.gizmoUsed = false;
+      if (used || dragged) return;
+      if (this.state === "paused") this.resume(true);
+      const r = this.o.canvas.getBoundingClientRect();
+      this.ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, 1 - ((e.clientY - r.top) / r.height) * 2), this.o.camera);
+      const { origin: a, direction: d } = this.ray.ray;
+      this.select(pickWork([a.x, a.y, a.z], [d.x, d.y, d.z], this.works, Infinity));
+      return;
+    }
+    if (dragged) return;
     // The click that resumes walking only resumes, even over an artwork.
     if (this.state === "paused") {
       this.resume(this.dragOnly);
@@ -533,6 +742,13 @@ export class ExhibitLayer {
   }
 
   private onKey(e: KeyboardEvent): void {
+    const t = e.target;
+    const typing = t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement;
+    if (this.gizmo && !typing && !e.repeat) {
+      const k = e.key.toLowerCase();
+      if (this.editing && (k === "1" || k === "2" || k === "3")) return this.setEditMode((["translate", "rotate", "scale"] as const)[Number(k) - 1]);
+    }
+    if (this.editing) return;
     if (e.key !== "Enter" || this.state !== "explore" || !this.targeted) return;
     if (e.target !== this.o.canvas && e.target !== document.body) return;
     e.preventDefault();
@@ -563,7 +779,9 @@ export class ExhibitLayer {
       this.tools.hidden = false;
       for (const b of this.tools.querySelectorAll("button")) b.hidden = b !== this.pauseButton;
     } else for (const b of this.tools.querySelectorAll("button")) b.hidden = b === this.pauseButton;
-    this.hint.textContent = !exploring
+    this.hint.textContent = this.editing
+      ? "Debug · Drag to look · WASD fly, E up, Q down, Shift faster · Click a box, drag its handles · 1 move, 2 turn, 3 size · Save in the panel"
+      : !exploring
       ? "Paused · Click the view to resume"
       : locked
         ? "Explore · Click a work to open it · Esc to pause"

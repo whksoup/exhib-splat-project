@@ -13,6 +13,7 @@
  *   window.splatWalk.state                  the current snapshot
  *   window.splatWalk.pause() / resume()     stop or restart walking (the host pauses while its card is open)
  *   window.splatWalk.escape()               the host's Escape: true when it only paused the walk
+ *   window.splatWalk.editStatus(text)       debug mode: the host's save status for an edited collider
  *   window.splatWalk.disconnect()           stop and free everything
  *
  * The host passes the room's artworks on connect (`works`, in this build's
@@ -64,6 +65,11 @@ export interface ConnectOptions {
   guide?: boolean;
   /** The visitor opened an artwork (its marker, the crosshair, or the in-view card). */
   onOpenWork?: (id: string) => void;
+  /**
+   * Debug mode: an artwork's collider was edited with the gizmo (src/exhibit/colliderEdit.ts
+   * WorkEdit, in this build's frame). A returned text (or promise of one) is the save status.
+   */
+  onEditWork?: (edit: unknown) => unknown;
   onChange?: (snapshot: SplatWalkSnapshot, action: ChangeAction) => void;
   /** Return true when the host handled it (it went back in history). */
   onBack?: () => boolean | void;
@@ -90,6 +96,8 @@ export interface WalkLayer {
   resume(): void;
   /** True when Escape only paused walking. */
   escape(): boolean;
+  /** Debug mode: show the host's save status for an edited collider. */
+  setEditStatus?(text: string): void;
   readonly inView: string | null;
   readonly navigation: "paused" | "explore";
 }
@@ -108,6 +116,10 @@ export interface SplatWalkApi {
   publish(): void;
   /** The visitor opened an artwork: tell the host (the layer calls it). */
   openWork(id: string): void;
+  /** Debug mode: a collider was edited; the host saves it (the layer calls it). */
+  editWork(edit: unknown): Promise<unknown>;
+  /** The host's save status for an edited collider. */
+  editStatus(text: string): void;
   disconnect(): void;
 }
 
@@ -284,6 +296,12 @@ export function createSplatWalk(setup: SplatWalkSetup): SplatWalkApi {
       publish();
       host?.onOpenWork?.(id);
     },
+    async editWork(edit) {
+      return host?.onEditWork ? await host.onEditWork(edit) : undefined;
+    },
+    editStatus(text) {
+      if (typeof text === "string") layer?.setEditStatus?.(text.slice(0, 300));
+    },
     disconnect() {
       if (disposed) return;
       disposed = true;
@@ -317,7 +335,7 @@ export interface MessagePeer {
  * `{type: "splat-walk-reply", id, ok, value | error}` to that host's origin
  * only, and reports callbacks as `{type: "splat-walk-event", name, args}`:
  * change (snapshot, action), back (the host goes Back, else leaves), exit,
- * open-work (id). Calls from anything but `parent` are ignored.
+ * open-work (id), edit-work (edit; the host answers with an editStatus call). Calls from anything but `parent` are ignored.
  *
  * Returns a function that stops listening.
  */
@@ -344,6 +362,7 @@ export function serveOverMessages(
         onBack: () => (emit("back"), true),
         onExit: () => emit("exit"),
         onOpenWork: (id) => emit("open-work", id),
+        onEditWork: (edit) => void emit("edit-work", edit),
       });
     },
     restore: (saved: unknown) => api.restore(saved),
@@ -353,6 +372,7 @@ export function serveOverMessages(
     resume: () => api.resume(),
     escape: () => api.escape(),
     reset: () => api.reset(),
+    editStatus: (text: unknown) => api.editStatus(String(text)),
     disconnect: () => api.disconnect(),
   };
   const onMessage = async (e: Event) => {
