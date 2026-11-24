@@ -65,6 +65,7 @@ export async function runEmbedded(app: HTMLElement, ui: HTMLElement, config: Vie
   }
 
   let api: ReturnType<typeof createSplatWalk> | null = null;
+  const mpu = viewer.config.navigation.metresPerUnit ?? 1;
   const exhibit = new ExhibitLayer({
     ui,
     canvas: viewer.renderer.domElement,
@@ -75,6 +76,16 @@ export async function runEmbedded(app: HTMLElement, ui: HTMLElement, config: Vie
     onOpenWork: (id) => api?.openWork(id),
     onReset: () => api?.reset(),
     onChange: () => api?.publish(),
+    // ?exhibitDebug=1 (the exhibition's ?walkDebug=1): artwork spheres and a tuning panel.
+    debug: new URLSearchParams(window.location.search).get("exhibitDebug") === "1",
+    scene: viewer.scene,
+    eyeHeight: Math.round(nav.config.eyeHeight * mpu * 100) / 100,
+    setEyeHeight: (metres) => {
+      const cfg = nav.player.cfg;
+      cfg.eyeHeight = metres / mpu;
+      // The capsule must stay taller than the eye.
+      cfg.height = Math.max(cfg.height, cfg.eyeHeight + 0.1 / mpu);
+    },
   });
   viewer.onFrame.push(({ now }) => exhibit.update(now));
   const layer = {

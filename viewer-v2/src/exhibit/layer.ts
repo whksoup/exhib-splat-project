@@ -13,11 +13,11 @@
 import * as THREE from "three";
 import {
   createPreviewTracker,
+  lookOffset,
   pickWork,
   previewCandidate,
   surfaceDistance,
   widgetScale,
-  PREVIEW_DEFAULTS,
   type Vec3,
   type WalkWork,
 } from "./targeting";
@@ -39,10 +39,23 @@ export interface ExhibitLayerOptions {
   onReset(): void;
   /** Called when the state or the in-view artwork changes (the host saves it). */
   onChange?(): void;
+  /** Debug mode: artwork spheres in the scene and a tuning panel (the host's ?walkDebug=1). */
+  debug?: boolean;
+  /** Where the debug spheres go. */
+  scene?: THREE.Scene;
+  /** Eye height in metres now, and a way to change it live (debug panel). */
+  eyeHeight?: number;
+  setEyeHeight?(metres: number): void;
 }
 
-/** Distances in metres, as the old walk tuned them (its card range was 4 m; the splat paths are wider). */
-export const LAYER_METRES = Object.freeze({ previewRange: 8, pickRange: 14, markerRange: 30 });
+/**
+ * Tuning, in metres and degrees. One rule picks the focused artwork, and the
+ * centre dot, the in-view card, the artwork's centre widget and click / Enter
+ * all follow it, so they always agree: the artwork the view ray goes through,
+ * else the one nearest the centre of view within `lookAngleDeg`, within
+ * `focusRange` of its surface. `dwellMs` / `departureMs` steady it.
+ */
+export const LAYER_TUNING = Object.freeze({ focusRange: 10, lookAngleDeg: 8, markerRange: 30, dwellMs: 120, departureMs: 300 });
 
 const CSS = `
 body.embedded .nav-hud, body.embedded .nav-cross { display: none !important; }
@@ -84,6 +97,20 @@ body.ex-captured .ex-marker { pointer-events: none; }
 .ex-tools .ex-resume { background: #293c30 !important; color: #fff !important; border-color: #293c30 !important; }
 .ex-hint { position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); padding: 6px 12px; border-radius: 4px; font-size: 11px;
   background: #f0f1e3d9; color: #3d4a3a; pointer-events: none !important; white-space: nowrap; }
+.ex-focus { position: absolute; transform: translate(-50%, -50%); padding: 0 !important; border: 0 !important; background: none !important;
+  display: grid; justify-items: center; gap: 8px; pointer-events: auto; }
+body.ex-captured .ex-focus { pointer-events: none; }
+.ex-focus-ring { width: var(--ring, 64px); height: var(--ring, 64px); border-radius: 50%; border: 3px solid #f6f5ec; box-shadow: 0 0 0 2px #304a2f, inset 0 0 0 2px #304a2f;
+  background: radial-gradient(circle, #304a2f 0 5px, transparent 6px); }
+.ex-focus-label { padding: 5px 10px; border-radius: 3px; background: #f6f5eef2; border: 1px solid #85917a; font-size: 12px; white-space: nowrap; }
+@media (prefers-reduced-motion: no-preference) { .ex-focus-ring { animation: ex-pulse 1.6s ease-in-out infinite; } }
+@keyframes ex-pulse { 50% { transform: scale(1.08); } }
+.ex-debug { position: absolute; left: 16px; top: 16px; width: 300px; padding: 12px 14px; background: #10130fe6; color: #e8eee2; border-radius: 4px; font-size: 11px; }
+.ex-debug .ex-eyebrow { color: #a6c28e; margin-bottom: 8px; }
+.ex-debug label { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; margin: 6px 0; }
+.ex-debug input { grid-column: 1 / -1; width: 100%; }
+.ex-debug pre { margin: 8px 0; font: 10px/1.45 monospace; white-space: pre; overflow: hidden; }
+.ex-debug-note { margin: 0; color: #b9c4b0; line-height: 1.4; }
 @media (pointer: coarse) { .ex-touch { display: block; } .ex-keyboard { display: none; } }
 @media (max-width: 700px) {
   .ex-preview { left: 16px; right: 16px; top: auto; bottom: 150px; width: auto; padding: 13px 16px; }
@@ -132,7 +159,7 @@ export class ExhibitLayer {
   private targeted: string | null = null;
   private dragOnly = false;
   private wasLocked = false;
-  private readonly tracker = createPreviewTracker();
+  private tracker = createPreviewTracker({ dwellMs: LAYER_TUNING.dwellMs, departureMs: LAYER_TUNING.departureMs });
   private readonly root = el("div", "ex-layer");
   private readonly markers = el("div", "ex-markers");
   private readonly target = el("span", "ex-target");
@@ -152,12 +179,18 @@ export class ExhibitLayer {
   private readonly v = new THREE.Vector3();
   private readonly ray = new THREE.Raycaster();
   private down: { x: number; y: number } | null = null;
-  private readonly range: { previewRange: number; pickRange: number; markerRange: number };
+  private readonly mpu: number;
+  readonly tuning: { focusRange: number; lookAngleDeg: number; markerRange: number; dwellMs: number; departureMs: number } = { ...LAYER_TUNING };
+  private focused: string | null = null;
+  private readonly focusWidget = el("button", "ex-focus");
+  private readonly debugGroup = new THREE.Group();
+  private readonly debugSpheres = new Map<string, THREE.LineSegments>();
+  private readonly debugPanel = el("aside", "ex-debug");
+  private readonly debugReadout = el("pre");
 
   constructor(private readonly o: ExhibitLayerOptions) {
     injectCss();
-    const mpu = o.metresPerUnit && o.metresPerUnit > 0 ? o.metresPerUnit : 1;
-    this.range = { previewRange: LAYER_METRES.previewRange / mpu, pickRange: LAYER_METRES.pickRange / mpu, markerRange: LAYER_METRES.markerRange / mpu };
+    this.mpu = o.metresPerUnit && o.metresPerUnit > 0 ? o.metresPerUnit : 1;
     o.canvas.tabIndex = 0;
     o.canvas.setAttribute("aria-label", "Exhibition room. Click to explore, then use W A S D or the arrow keys to move and the mouse to look.");
 
@@ -193,7 +226,15 @@ export class ExhibitLayer {
       this.pauseButton,
     );
 
-    this.root.append(this.markers, this.target, this.card, this.guide, this.tools, this.hint);
+    this.focusWidget.type = "button";
+    this.focusWidget.hidden = true;
+    this.focusWidget.innerHTML = '<span class="ex-focus-ring" aria-hidden="true"></span><span class="ex-focus-label"></span>';
+    this.focusWidget.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (this.focused) this.open(this.focused);
+    });
+    this.root.append(this.markers, this.focusWidget, this.target, this.card, this.guide, this.tools, this.hint);
+    if (o.debug) this.buildDebug();
     o.ui.append(this.root);
 
     const opts = { signal: this.abort.signal };
@@ -234,6 +275,7 @@ export class ExhibitLayer {
       this.markerById.set(w.id, b);
     }
     if (this.preview && !works.some((w) => w.id === this.preview)) this.setPreview(null);
+    if (this.o.debug) this.syncDebugSpheres();
   }
 
   /** The first-visit guide; walking starts from its button. */
@@ -302,16 +344,22 @@ export class ExhibitLayer {
     const dir: Vec3 = [this.v.x, this.v.y, this.v.z];
     const exploring = this.state === "explore";
 
-    this.targeted = exploring ? pickWork(eye, dir, this.works, this.range.pickRange) : null;
-    this.target.classList.toggle("selectable", !!this.targeted);
+    const t = this.tuning, range = t.focusRange / this.mpu;
     if (exploring) {
-      const next = this.tracker.update(previewCandidate(eye, dir, this.works, (PREVIEW_DEFAULTS.angleDeg * Math.PI) / 180, this.range.previewRange), now);
-      if (next !== this.preview) {
-        this.preview = next;
+      // One focused artwork drives the dot, the card, the centre widget and click / Enter.
+      const raw = pickWork(eye, dir, this.works, range) ?? previewCandidate(eye, dir, this.works, (t.lookAngleDeg * Math.PI) / 180, range);
+      this.focused = this.tracker.update(raw, now);
+      this.targeted = this.focused;
+      if (this.focused !== this.preview) {
+        this.preview = this.focused;
         this.renderCard();
         this.o.onChange?.();
       }
+    } else {
+      this.targeted = null;
+      this.focused = null;
     }
+    this.target.classList.toggle("selectable", !!this.targeted);
 
     const w = this.o.canvas.clientWidth;
     const h = this.o.canvas.clientHeight;
@@ -322,7 +370,8 @@ export class ExhibitLayer {
       const camSpace = this.v.set(...work.anchor).applyMatrix4(cam.matrixWorldInverse);
       const lookAngle = Math.atan2(Math.hypot(camSpace.x, camSpace.y), -camSpace.z);
       const p = this.v.set(...work.anchor).project(cam);
-      const visible = camSpace.z < 0 && p.z < 1 && Math.abs(p.x) < 0.95 && Math.abs(p.y) < 0.88 && surfaceDistance(eye, work) <= this.range.markerRange && this.guide.hidden;
+      // The focused artwork shows its centre widget instead of its marker.
+      const visible = work.id !== this.focused && camSpace.z < 0 && p.z < 1 && Math.abs(p.x) < 0.95 && Math.abs(p.y) < 0.88 && surfaceDistance(eye, work) <= t.markerRange / this.mpu && this.guide.hidden;
       b.hidden = !visible;
       if (!visible) continue;
       const s = widgetScale(lookAngle);
@@ -332,11 +381,108 @@ export class ExhibitLayer {
       b.style.setProperty("--o", String(Math.round(s * 100)));
       b.classList.toggle("selected", work.id === this.targeted || work.id === this.preview);
     }
+    this.placeFocusWidget(eye, w, h);
+    if (this.o.debug) this.updateDebug(eye, dir);
+  }
+
+  /** The world-anchored widget at the focused artwork's centre: a ring sized by distance, and its title. */
+  private placeFocusWidget(eye: Vec3, w: number, h: number): void {
+    const work = this.focused ? this.works.find((x) => x.id === this.focused) : undefined;
+    const cam = this.o.camera;
+    if (!work) {
+      this.focusWidget.hidden = true;
+      return;
+    }
+    const camSpace = this.v.set(...work.center).applyMatrix4(cam.matrixWorldInverse);
+    const p = this.v.set(...work.center).project(cam);
+    if (camSpace.z >= 0 || p.z >= 1) {
+      this.focusWidget.hidden = true;
+      return;
+    }
+    const distance = Math.max(1e-6, Math.hypot(work.center[0] - eye[0], work.center[1] - eye[1], work.center[2] - eye[2]));
+    // A ring a fifth of the artwork's sphere across, kept between 44 and 120 px.
+    const px = ((work.radius * 0.4) / (distance * Math.tan(THREE.MathUtils.degToRad(cam.fov) / 2))) * (h / 2);
+    this.focusWidget.hidden = false;
+    this.focusWidget.style.left = `${Math.min(w - 24, Math.max(24, ((p.x + 1) / 2) * w))}px`;
+    this.focusWidget.style.top = `${Math.min(h - 24, Math.max(24, ((1 - p.y) / 2) * h))}px`;
+    this.focusWidget.style.setProperty("--ring", `${Math.round(Math.min(120, Math.max(44, px)))}px`);
+    this.focusWidget.setAttribute("aria-label", `View ${work.title}`);
+    (this.focusWidget.querySelector(".ex-focus-label") as HTMLElement).textContent = `${work.title} · click to view`;
+  }
+
+  private buildDebug(): void {
+    this.debugGroup.name = "exhibit-debug";
+    this.o.scene?.add(this.debugGroup);
+    const row = (label: string, min: number, max: number, step: number, value: number, unit: string, set: (v: number) => void) => {
+      const wrap = el("label");
+      const out = el("output", "", `${value}${unit}`);
+      const input = el("input");
+      Object.assign(input, { type: "range", min: String(min), max: String(max), step: String(step), value: String(value) });
+      input.addEventListener("input", () => {
+        const v = Number(input.value);
+        out.textContent = `${v}${unit}`;
+        set(v);
+      });
+      wrap.append(el("span", "", label), out, input);
+      return wrap;
+    };
+    const t = this.tuning;
+    this.debugPanel.append(el("p", "ex-eyebrow", "WALK DEBUG"));
+    if (this.o.setEyeHeight && this.o.eyeHeight !== undefined)
+      this.debugPanel.append(row("Eye height", 0.8, 3.5, 0.05, this.o.eyeHeight, " m", (v) => this.o.setEyeHeight?.(v)));
+    this.debugPanel.append(
+      row("Focus range", 1, 30, 0.5, t.focusRange, " m", (v) => (t.focusRange = v)),
+      row("Look angle", 0, 20, 0.5, t.lookAngleDeg, "°", (v) => (t.lookAngleDeg = v)),
+      row("Marker range", 5, 80, 1, t.markerRange, " m", (v) => (t.markerRange = v)),
+      row("Card delay", 0, 600, 10, t.dwellMs, " ms", (v) => {
+        t.dwellMs = v;
+        this.tracker = createPreviewTracker({ dwellMs: t.dwellMs, departureMs: t.departureMs });
+      }),
+      this.debugReadout,
+      el("p", "ex-debug-note", "Orange: artwork spheres (look and pick). Green: focused. Colours on the floor and walls: collision mesh. Shift+N toggles the collision mesh."),
+    );
+    this.root.append(this.debugPanel);
+    this.syncDebugSpheres();
+  }
+
+  private syncDebugSpheres(): void {
+    for (const l of this.debugSpheres.values()) {
+      l.geometry.dispose();
+      (l.material as THREE.Material).dispose();
+    }
+    this.debugGroup.clear();
+    this.debugSpheres.clear();
+    for (const w of this.works) {
+      const sphere = new THREE.SphereGeometry(w.radius, 16, 10);
+      const lines = new THREE.LineSegments(new THREE.WireframeGeometry(sphere), new THREE.LineBasicMaterial({ color: 0xffa040, transparent: true, opacity: 0.7, depthTest: false }));
+      sphere.dispose();
+      lines.position.set(...w.center);
+      lines.renderOrder = 1001;
+      const anchor = new THREE.Mesh(new THREE.OctahedronGeometry(w.radius * 0.06), new THREE.MeshBasicMaterial({ color: 0xff3060, depthTest: false }));
+      anchor.position.set(w.anchor[0] - w.center[0], w.anchor[1] - w.center[1], w.anchor[2] - w.center[2]);
+      anchor.renderOrder = 1002;
+      lines.add(anchor);
+      this.debugGroup.add(lines);
+      this.debugSpheres.set(w.id, lines);
+    }
+  }
+
+  private updateDebug(eye: Vec3, dir: Vec3): void {
+    for (const [id, l] of this.debugSpheres) (l.material as THREE.LineBasicMaterial).color.setHex(id === this.focused ? 0x40e080 : 0xffa040);
+    const m = this.mpu;
+    const lines = this.works
+      .map((w) => ({ w, d: surfaceDistance(eye, w) * m, a: THREE.MathUtils.radToDeg(lookOffset(eye, dir, w)) }))
+      .sort((a, b) => a.d - b.d)
+      .slice(0, 6)
+      .map(({ w, d, a }) => `${w.id === this.focused ? "▶" : " "} ${w.id.padEnd(22).slice(0, 22)} ${d.toFixed(1).padStart(5)} m ${a.toFixed(1).padStart(5)}°`);
+    this.debugReadout.textContent = `${this.state} · eye ${(eye[1] * m).toFixed(2)} (exhibition units ×${m})\nfocused: ${this.focused ?? "none"}\n${lines.join("\n")}`;
   }
 
   dispose(): void {
     this.abort.abort();
     this.root.remove();
+    for (const l of this.debugSpheres.values()) l.geometry.dispose();
+    this.debugGroup.removeFromParent();
   }
 
   // ------------------------------------------------------------- internals
@@ -369,7 +515,7 @@ export class ExhibitLayer {
       const r = this.o.canvas.getBoundingClientRect();
       this.ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, 1 - ((e.clientY - r.top) / r.height) * 2), this.o.camera);
       const { origin: a, direction: d } = this.ray.ray;
-      id = pickWork([a.x, a.y, a.z], [d.x, d.y, d.z], this.works, this.range.pickRange);
+      id = pickWork([a.x, a.y, a.z], [d.x, d.y, d.z], this.works, this.tuning.focusRange / this.mpu);
     }
     if (id) this.open(id);
   }

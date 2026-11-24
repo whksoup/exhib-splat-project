@@ -83,7 +83,7 @@ export function widgetScale(lookAngle: number): number {
 }
 
 /** Holds the in-view card steady: a new artwork must stay in view `dwellMs`, a lost one is kept `departureMs`. */
-export function createPreviewTracker(tuning: Partial<typeof PREVIEW_DEFAULTS> = {}) {
+export function createPreviewTracker(tuning: { angleDeg?: number; dwellMs?: number; departureMs?: number } = {}) {
   const t = { ...PREVIEW_DEFAULTS, ...tuning };
   let candidate: string | null = null;
   let since = 0;
