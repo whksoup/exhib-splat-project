@@ -178,6 +178,8 @@ inside `scenes/<name>/` or `assets/source_ply/`.
 | `lod` | `1` / `quality` | Plain files only. Builds an LoD tree in the browser so budgets apply. Rough cost: 1â€“3 s per 1M splats. |
 | `type` | `ply`, `spz`, `pcsogszip`, `rad` | Forces the file type when the extension is misleading. |
 | `budget` | `1500000`, `1.5M`, `500k` | Base splat budget, sent to `SparkRenderer.lodSplatCount`. Leave it unset to get Spark's platform default. |
+| `mobileBudget` | `3M` | Cap on `budget` for phones and tablets (any non-desktop profile, or Spark's `isMobile`). Published models (`publish-static.mjs --model`) set it to 3M, or to the folder's own `viewer.json` value. |
+| `embedded`, `space` | `embedded=1&space=lobby` | Exhibition walk mode (see [Embedding in the exhibition](#embedding-in-the-exhibition)). |
 | `lodScale` | `0.8` | Budget multiplier, sent to `SparkRenderer.lodSplatScale`. This is the main tuning knob. **Default 2 on desktop (5M splats), 1 on phones.** In the editor the top bar's **Detail** slider sets it live and remembers it per browser; this URL parameter overrides the remembered value. |
 | `speed` | `0.5` | Camera movement multiplier: fly and walk speeds, plus orbit pan and zoom. Turning is not scaled. **Default 0.2.** In the editor the top bar's **Speed** slider (0.02–2×) sets it live and remembers it per browser. |
 | `pages` | `768` | Size of Spark's streaming pool in 65,536-splat pages (`SparkRenderer.maxPagedSplats`). It is allocated once, when the first streamed part loads. Chunks stream whole, so far more splats are resident than drawn (HighRezOculus used 201 of 256 pages for a 2.5M frontier). **Default on desktop: 256 × Detail, from 256 to 768 pages** (512 at the default 2×); phones keep Spark's default. With full-precision splats each splat takes 48 B at SH 1 and 96 B at SH 3. A Detail that needs a bigger pool shows "reload" in the top bar. |
@@ -508,6 +510,19 @@ To update it after changing the model or the code:
 Chunk files (`.radc`) keep their names across rebuilds, so the viewer adds the
 scene's build time (`?v=`) to every scene file URL; a returning visitor never
 mixes a new header with chunks cached from the previous build.
+
+## Embedding in the exhibition
+
+The In the Ether exhibition (`whksoup/in-the-ether-prototype`) shows a published model
+inside its walk iframe: `index.html?config=models/<name>/viewer.json&embedded=1&space=<room>`.
+Embedded mode (`src/embed.ts`, `src/embedMain.ts`) has no viewer chrome, starts in walk
+controls, and defines `window.splatWalk` (`diagnostics`, `connect`, `restore`, `state`,
+`disconnect`) for the host, which keeps owning routes, history and return state. It posts
+`splat-walk-ready`, or `splat-walk-failed` with a `reason` (`no-webgpu`, `renderer`,
+`config`, `model`) so the host can fall back to its own walk. With `renderer: "gsl"`
+it refuses to start without a WebGPU adapter rather than dropping to WebGL2;
+`renderer=gsl-webgl` opts into the WebGL2 backend. The host must be served from the
+same origin as the viewer.
 
 ## Testing on a phone or Quest over the LAN
 

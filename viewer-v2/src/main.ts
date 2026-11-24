@@ -23,6 +23,8 @@ import { PUBLISHED, PublishedIndex, publishedChrome } from "./scene/published";
 import { StartPage } from "./scene/startPage";
 import { el, fmtBytes, guardTyping } from "./ui/dom";
 import { Viewer } from "./viewer";
+import { isEmbedded } from "./embed";
+import { embeddedFailure, runEmbedded } from "./embedMain";
 
 const backLink = () => el("p", {}, [el("a", { href: "./", textContent: "← Back to the scene list" })]);
 
@@ -73,6 +75,15 @@ async function main(): Promise<void> {
   app.hidden = true;
 
   const q = new URLSearchParams(window.location.search);
+  if (isEmbedded(window.location.search)) {
+    // Exhibition walk iframe (src/embed.ts): ?config=models/<name>/viewer.json&embedded=1&space=<id>.
+    try {
+      await runEmbedded(app, ui, await loadConfig(window.location.search));
+    } catch (err) {
+      embeddedFailure("config", (err as Error).message);
+    }
+    return;
+  }
   const sceneName = q.get("scene");
   if (!sceneName && q.getAll("model").length === 0 && !q.get("config")) {
     if (PUBLISHED) new PublishedIndex(ui);
