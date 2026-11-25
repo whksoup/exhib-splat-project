@@ -350,6 +350,25 @@ export class Viewer {
     for (const m of this.models) if (m.id === id) m.object.visible = visible;
   }
 
+  /**
+   * Load the config's static meshes (viewer.json `meshes`: GLBs in world coordinates, such as
+   * a baked floor) into the scene beside splat-root. They are opaque, so they write depth and the
+   * splats behind them fail the depth test. Failures go to errors.
+   */
+  async loadSceneMeshes(): Promise<void> {
+    if (this.config.meshes.length === 0) return;
+    const { GLTFLoader } = await import("three/addons/loaders/GLTFLoader.js");
+    const loader = new GLTFLoader();
+    const group = new THREE.Group();
+    group.name = "scene-meshes";
+    this.scene.add(group);
+    const results = await Promise.allSettled(this.config.meshes.map((m) => loader.loadAsync(m.url)));
+    results.forEach((r, i) => {
+      if (r.status === "fulfilled") group.add(r.value.scene);
+      else this.errors.push(`Mesh "${this.config.meshes[i].url}" failed to load: ${r.reason instanceof Error ? r.reason.message : String(r.reason)}`);
+    });
+  }
+
   async loadModels(frame = !this.config.camera): Promise<void> {
     if (this.config.models.length === 0) return;
     this.timeline.modelRequestMs = performance.now();

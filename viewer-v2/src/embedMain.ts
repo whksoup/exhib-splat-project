@@ -56,7 +56,8 @@ export async function runEmbedded(app: HTMLElement, ui: HTMLElement, config: Vie
   }
   const nav = attachNavigation(viewer, ui);
   // The collision GLB loads beside the models; wait for it, since loading it respawns the player.
-  await Promise.all([viewer.loadModels(false), nav.ready]);
+  // The baked floor (viewer.json `meshes`) loads alongside; a failure only adds to viewer.errors.
+  await Promise.all([viewer.loadModels(false), viewer.loadSceneMeshes(), nav.ready]);
   if (viewer.models.length === 0) {
     viewer.dispose();
     nav.dispose();

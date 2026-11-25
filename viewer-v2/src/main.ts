@@ -187,7 +187,7 @@ async function main(): Promise<void> {
     lines: config.models.map((m) => decodeURIComponent(m.url.split("?")[0])),
   });
   loading.classList.add("loading");
-  await viewer.loadModels();
+  await Promise.all([viewer.loadModels(), viewer.loadSceneMeshes()]);
   loading.remove();
 
   if (viewer.errors.length > 0) {

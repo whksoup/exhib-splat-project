@@ -59,8 +59,15 @@ export interface GslOptions {
   share?: "demand" | "coverage";
 }
 
+/** A static mesh shown with the splats (viewer.json `meshes`), e.g. a baked floor: a GLB in world coordinates. */
+export interface SceneMeshSpec {
+  url: string;
+}
+
 export interface ViewerConfig {
   models: ModelSpec[];
+  /** Static GLB meshes drawn with the splats (Viewer.loadSceneMeshes). */
+  meshes: SceneMeshSpec[];
   /** ?renderer=spark|gsl|gsl-webgl. */
   renderer: RendererKind;
   gsl: GslOptions;
@@ -102,7 +109,8 @@ export interface ViewerConfig {
 }
 
 /** Shape of the optional JSON file. Everything optional; URL params override. */
-export interface ViewerConfigFile extends Partial<Omit<ViewerConfig, "models" | "navigation" | "gsl">> {
+export interface ViewerConfigFile extends Partial<Omit<ViewerConfig, "models" | "meshes" | "navigation" | "gsl">> {
+  meshes?: (SceneMeshSpec | string)[];
   gsl?: GslOptions;
   navigation?: NavigationConfigFile;
   models?: (ModelSpec | string)[];
@@ -236,8 +244,12 @@ export async function loadConfig(search = window.location.search, base?: ViewerC
     share: shareParam === "coverage" || shareParam === "demand" ? shareParam : undefined,
   };
 
+  // ?meshes=0 hides them (before/after comparisons).
+  const meshes = bool(q.get("meshes")) === false ? [] : (file.meshes ?? []).map((m) => (typeof m === "string" ? { url: m } : { url: m.url }));
+
   return {
     models,
+    meshes,
     renderer: rendererParam && RENDERER_KINDS.includes(rendererParam) ? rendererParam : "spark",
     gsl,
     camera,
