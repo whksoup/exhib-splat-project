@@ -69,62 +69,78 @@ export const LAYER_TUNING = Object.freeze({ focusRange: 10, lookAngleDeg: 8, mar
 
 const CSS = `
 body.embedded .nav-hud, body.embedded .nav-cross { display: none !important; }
-.ex-layer { position: fixed; inset: 0; pointer-events: none !important; font: 14px/1.4 Arial, sans-serif; color: #29342d; }
-.ex-layer button { font: inherit; cursor: pointer; color: inherit; border: 1px solid #b9bfb0; background: #f4f4e9; padding: 11px 16px; border-radius: 3px; }
-.ex-layer button:hover { background: #e4e8d8; }
-.ex-layer button:focus-visible { outline: 3px solid #587239; outline-offset: 3px; }
+/* Light-mode ArtScience-style chrome (In the Ether style study, Nov 2026): Plus Jakarta Sans standing
+   in for Artex, paper surfaces, charcoal ink, 24/16 px cards, pill actions, instant hover colour. */
+@font-face { font-family: "Plus Jakarta Sans"; src: url("fonts/plus-jakarta-sans-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Plus Jakarta Sans"; src: url("fonts/plus-jakarta-sans-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+.ex-layer { --ex-paper: #fbfaf6; --ex-paper-glass: #fbfaf6f0; --ex-ink: #222222; --ex-soft: #4d4f49; --ex-rule: #e1e1e1; --ex-focus: #1f5fbf;
+  position: fixed; inset: 0; pointer-events: none !important; font: 14px/1.4 "Plus Jakarta Sans", Arial, sans-serif; letter-spacing: .1px; color: var(--ex-ink); }
+.ex-layer button { font: 700 14px/16px "Plus Jakarta Sans", Arial, sans-serif; letter-spacing: .16px; cursor: pointer; color: var(--ex-ink);
+  min-height: 40px; border: 1px solid var(--ex-ink); background: var(--ex-paper-glass); padding: 10px 20px; border-radius: 32px; }
+.ex-layer button:hover { color: var(--ex-soft); border-color: var(--ex-soft); }
+.ex-layer button:focus-visible { outline: 3px solid var(--ex-focus); outline-offset: 3px; }
+.ex-layer .ex-primary, .ex-preview .ex-open, .ex-guide .ex-start, .ex-tools .ex-resume { background: var(--ex-ink) !important; border-color: var(--ex-ink) !important; color: #fff !important; }
+.ex-layer .ex-primary:hover, .ex-preview .ex-open:hover, .ex-guide .ex-start:hover, .ex-tools .ex-resume:hover { background: #3a3a3a !important; border-color: #3a3a3a !important; }
 .ex-layer > * { pointer-events: auto; }
 .ex-markers { position: absolute; inset: 0; pointer-events: none !important; isolation: isolate; }
 .ex-marker { position: absolute; transform: translate(-50%, -50%) scale(var(--s, 1)); z-index: var(--o, 1); pointer-events: auto;
-  display: flex; align-items: center; gap: 6px; min-height: 30px; padding: 5px 10px 5px 5px; font-size: 11px !important;
-  background: #f5f4e8e6 !important; border: 1px solid #85917a !important; border-radius: 16px !important; box-shadow: 0 3px 14px #203b2024; }
-.ex-marker::before { content: ""; width: 18px; height: 18px; border-radius: 50%; background: #455942; box-shadow: inset 0 0 0 5px #f5f4e8; border: 1px solid #455942; }
-.ex-marker.selected { border: 2px solid #304a2f !important; background: #fff !important; }
+  display: flex; align-items: center; gap: 6px; min-height: 30px !important; padding: 4px 12px 4px 4px !important; font: 700 11px/14px "Plus Jakarta Sans", Arial, sans-serif !important;
+  background: var(--ex-paper-glass) !important; border: 1px solid var(--ex-rule) !important; border-radius: 32px !important; box-shadow: 0 4px 16px #14141424; }
+.ex-marker::before { content: ""; width: 18px; height: 18px; border-radius: 50%; background: var(--ex-ink); box-shadow: inset 0 0 0 5px var(--ex-paper); border: 1px solid var(--ex-ink); }
+.ex-marker.selected { border: 2px solid var(--ex-ink) !important; background: #fff !important; }
 body.ex-captured .ex-marker { pointer-events: none; }
-.ex-target { position: absolute; top: 50%; left: 50%; width: 9px; height: 9px; border: 1px solid #fff; background: #324b3a88; border-radius: 50%;
-  transform: translate(-50%, -50%); pointer-events: none !important; box-shadow: 0 0 0 1px #30453180; }
-.ex-target.selectable { width: 17px; height: 17px; background: #f6f5ec; border: 4px solid #405d3e; }
-.ex-preview { position: absolute; right: 32px; top: 28%; width: 288px; background: #f6f5eef5; border: 1px solid #bac2b1; padding: 22px;
-  box-shadow: 0 12px 45px #203b2017; border-radius: 4px; }
-.ex-eyebrow { margin: 0 0 12px; font-size: 10px; letter-spacing: 1.9px; font-weight: 600; color: #637059; }
-.ex-preview h2 { font: normal 27px/1.15 Georgia, serif; margin: 0 0 10px; }
-.ex-preview .ex-artist { font-size: 12px; color: #53604e; margin: 0 0 8px; }
-.ex-preview .ex-summary { font-size: 13px; line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; margin: 0 0 12px; }
-.ex-preview .ex-open { width: 100%; text-align: left; background: #304b37 !important; color: #fff !important; border-color: #304b37 !important; margin: 4px 0 10px; }
-.ex-preview small { display: block; font-size: 10px; line-height: 1.5; color: #56664e; }
-.ex-guide { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(380px, calc(100vw - 32px));
-  max-height: calc(100dvh - 40px); overflow: auto; padding: 20px 22px; background: #f6f5eef7; border: 1px solid #bac2b1; border-radius: 5px; box-shadow: 0 24px 90px #18321840; }
-.ex-guide h2 { margin: 0; font: normal clamp(23px, 4vw, 30px)/1.1 Georgia, serif; letter-spacing: -.02em; }
+.ex-target { position: absolute; top: 50%; left: 50%; width: 9px; height: 9px; border: 1px solid #fff; background: #22222288; border-radius: 50%;
+  transform: translate(-50%, -50%); pointer-events: none !important; box-shadow: 0 0 0 1px #2222227a; transition: width .16s ease, height .16s ease; }
+.ex-target.selectable { width: 17px; height: 17px; background: var(--ex-paper); border: 4px solid var(--ex-ink); }
+/* In-view card: slides in from its edge like the museum's feature cards. */
+.ex-preview { position: absolute; right: 32px; top: 28%; width: 300px; background: var(--ex-paper-glass); border: 1px solid var(--ex-rule); padding: 24px;
+  box-shadow: 0 24px 60px #14141429; border-radius: 24px; backdrop-filter: blur(8px); }
+.ex-preview:not([hidden]) { animation: ex-card-in .32s cubic-bezier(.2, .7, .2, 1) both; }
+@keyframes ex-card-in { from { opacity: 0; transform: translateX(16px); } }
+.ex-eyebrow { margin: 0 0 12px; font-size: 12px; line-height: 15px; letter-spacing: .32px; font-weight: 400; text-transform: uppercase; color: var(--ex-soft); }
+.ex-preview h2 { font: 700 26px/32px "Plus Jakarta Sans", Arial, sans-serif; letter-spacing: .16px; margin: 0 0 6px; }
+.ex-preview .ex-artist { font-size: 14px; line-height: 18px; color: var(--ex-ink); margin: 0 0 10px; }
+.ex-preview .ex-summary { font-size: 14px; line-height: 20px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; margin: 0 0 16px; color: var(--ex-soft); }
+.ex-preview .ex-open { display: inline-flex; align-items: center; min-height: 44px; margin: 0 0 12px; padding: 12px 24px; font-size: 16px; line-height: 20px; }
+.ex-preview small { display: block; font-size: 12px; line-height: 15px; letter-spacing: .32px; color: var(--ex-soft); }
+/* Orientation guide: a paper card that rises in. */
+.ex-guide { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(440px, calc(100vw - 32px));
+  max-height: calc(100dvh - 40px); overflow: auto; padding: 28px 32px 32px; background: var(--ex-paper-glass); border: 1px solid var(--ex-rule); border-radius: 24px;
+  box-shadow: 0 24px 90px #14141440; backdrop-filter: blur(10px); }
+.ex-guide:not([hidden]) { animation: ex-guide-in .4s cubic-bezier(.2, .7, .2, 1) both; }
+@keyframes ex-guide-in { from { opacity: 0; transform: translate(-50%, calc(-50% + 14px)); } }
+.ex-guide h2 { margin: 0; font: 700 clamp(26px, 4vw, 37px)/1.2 "Plus Jakarta Sans", Arial, sans-serif; letter-spacing: 0; }
 .ex-guide h2:focus { outline: none; }
-.ex-guide dl { margin: 12px 0 14px; }
-.ex-guide dl > div { display: grid; grid-template-columns: 64px 1fr; gap: 10px; padding: 7px 0; border-top: 1px solid #b7bbae; }
-.ex-guide dt { font-weight: 600; }
-.ex-guide dd { margin: 0; }
-.ex-guide kbd { display: inline-block; min-width: 18px; padding: 0 2px; border: 1px solid #a5ae9b; border-radius: 2px; text-align: center; font: 12px/1.35 monospace; }
-.ex-guide .ex-start { display: flex; width: 100%; min-height: 44px; align-items: center; justify-content: space-between; background: #344c3b !important; border-color: #344c3b !important; color: #fff !important; }
+.ex-guide dl { margin: 18px 0 20px; }
+.ex-guide dl > div { display: grid; grid-template-columns: 80px 1fr; gap: 12px; padding: 12px 0; border-top: 1px solid var(--ex-rule); }
+.ex-guide dt { font-weight: 700; font-size: 12px; line-height: 18px; letter-spacing: .32px; text-transform: uppercase; }
+.ex-guide dd { margin: 0; line-height: 20px; }
+.ex-guide kbd { display: inline-block; min-width: 22px; padding: 1px 5px; border: 1px solid #b9bdb1; border-bottom-width: 2px; border-radius: 6px; background: #fff;
+  text-align: center; font: 700 11px/16px "Plus Jakarta Sans", Arial, sans-serif; }
+.ex-guide .ex-start { display: inline-flex; min-height: 48px; align-items: center; gap: 10px; padding: 12px 24px; font-size: 18px; line-height: 22px; }
 .ex-touch { display: none; }
 .ex-tools { position: absolute; left: 24px; bottom: 24px; display: flex; gap: 8px; flex-wrap: wrap; max-width: calc(100vw - 48px); }
-.ex-tools .ex-resume { background: #293c30 !important; color: #fff !important; border-color: #293c30 !important; }
+.ex-tools button { box-shadow: 0 4px 16px #14141424; backdrop-filter: blur(6px); }
 .ex-compass { position: absolute; left: 50%; bottom: 18px; width: min(560px, calc(100vw - 32px)); height: 46px; transform: translateX(-50%);
-  pointer-events: none !important; color: #f6f5ec; text-shadow: 0 0 3px #0009; }
-.ex-compass-line { position: absolute; left: 0; right: 0; top: 22px; height: 1px; background: linear-gradient(90deg, transparent, #f6f5ecb0 12%, #f6f5ecb0 88%, transparent); }
-.ex-compass-tick { position: absolute; top: 18px; width: 1px; height: 9px; background: #f6f5ec80; }
-.ex-compass-tick.major { top: 15px; height: 15px; background: #f6f5ecc0; }
-.ex-compass-centre { position: absolute; left: 50%; top: 12px; width: 0; height: 0; border: 5px solid transparent; border-top-color: #f6f5ec; transform: translateX(-50%); }
+  pointer-events: none !important; color: #fbfaf6; text-shadow: 0 0 3px #0009; }
+.ex-compass-line { position: absolute; left: 0; right: 0; top: 22px; height: 1px; background: linear-gradient(90deg, transparent, #fbfaf6b0 12%, #fbfaf6b0 88%, transparent); }
+.ex-compass-tick { position: absolute; top: 18px; width: 1px; height: 9px; background: #fbfaf680; }
+.ex-compass-tick.major { top: 15px; height: 15px; background: #fbfaf6c0; }
+.ex-compass-centre { position: absolute; left: 50%; top: 12px; width: 0; height: 0; border: 5px solid transparent; border-top-color: #fbfaf6; transform: translateX(-50%); }
 .ex-compass-item { position: absolute; top: 22px; display: grid; justify-items: center; transform: translate(-50%, -50%) scale(var(--s, 1)); transform-origin: 50% 50%; }
-.ex-compass-dot { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid #f6f5ec; background: #304a2fcc; box-shadow: 0 0 4px #0008; }
+.ex-compass-dot { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid #fbfaf6; background: #222222cc; box-shadow: 0 0 4px #0008; }
 .ex-compass-item.pinned { opacity: .55; }
 .ex-compass-item.pinned .ex-compass-dot { border-radius: 2px; }
-.ex-compass-item.centred .ex-compass-dot { background: #f6f5ec; }
-.ex-compass-label { position: absolute; top: 14px; white-space: nowrap; font-size: 10px; letter-spacing: .4px; transform: scale(calc(1 / var(--s, 1))); transform-origin: 50% 0; }
-.ex-hint { position: absolute; left: 50%; bottom: 72px; transform: translateX(-50%); padding: 6px 12px; border-radius: 4px; font-size: 11px;
-  background: #f0f1e3d9; color: #3d4a3a; pointer-events: none !important; white-space: nowrap; }
+.ex-compass-item.centred .ex-compass-dot { background: #fbfaf6; }
+.ex-compass-label { position: absolute; top: 14px; white-space: nowrap; font: 700 10px/12px "Plus Jakarta Sans", Arial, sans-serif; letter-spacing: .32px; transform: scale(calc(1 / var(--s, 1))); transform-origin: 50% 0; }
+.ex-hint { position: absolute; left: 50%; bottom: 72px; transform: translateX(-50%); padding: 6px 14px; border-radius: 32px; font-size: 12px; line-height: 15px;
+  background: var(--ex-paper-glass); color: var(--ex-ink); pointer-events: none !important; white-space: nowrap; }
 .ex-focus { position: absolute; transform: translate(-50%, -50%); padding: 0 !important; border: 0 !important; background: none !important;
   display: grid; justify-items: center; gap: 8px; pointer-events: auto; }
 body.ex-captured .ex-focus { pointer-events: none; }
-.ex-focus-ring { width: var(--ring, 64px); height: var(--ring, 64px); border-radius: 50%; border: 3px solid #f6f5ec; box-shadow: 0 0 0 2px #304a2f, inset 0 0 0 2px #304a2f;
-  background: radial-gradient(circle, #304a2f 0 5px, transparent 6px); }
-.ex-focus-label { padding: 5px 10px; border-radius: 3px; background: #f6f5eef2; border: 1px solid #85917a; font-size: 12px; white-space: nowrap; }
+.ex-focus-ring { width: var(--ring, 64px); height: var(--ring, 64px); border-radius: 50%; border: 3px solid #fbfaf6; box-shadow: 0 0 0 2px #222222, inset 0 0 0 2px #222222;
+  background: radial-gradient(circle, #222222 0 5px, transparent 6px); }
+.ex-focus-label { padding: 6px 14px; border-radius: 32px; background: var(--ex-paper-glass); border: 1px solid var(--ex-rule); font: 700 12px/15px "Plus Jakarta Sans", Arial, sans-serif; white-space: nowrap; }
 @media (prefers-reduced-motion: no-preference) { .ex-focus-ring { animation: ex-pulse 1.6s ease-in-out infinite; } }
 @keyframes ex-pulse { 50% { transform: scale(1.08); } }
 .ex-debug { position: absolute; left: 16px; top: 16px; width: 300px; padding: 12px 14px; background: #10130fe6; color: #e8eee2; border-radius: 4px; font-size: 11px; }
@@ -139,16 +155,21 @@ body.ex-captured .ex-focus { pointer-events: none; }
 .ex-debug .ex-edit-status { margin: 0 0 6px; color: #e8d08e; min-height: 1.4em; }
 @media (pointer: coarse) { .ex-touch { display: block; } .ex-keyboard { display: none; } }
 @media (max-width: 700px) {
-  .ex-preview { left: 16px; right: 16px; top: auto; bottom: 150px; width: auto; padding: 13px 16px; }
+  .ex-preview { left: 16px; right: 16px; top: auto; bottom: 150px; width: auto; padding: 16px 20px; border-radius: 16px; }
+  .ex-preview:not([hidden]) { animation-name: ex-card-up; }
   .ex-preview .ex-eyebrow, .ex-preview small { display: none; }
-  .ex-preview h2 { font-size: 21px; margin-bottom: 5px; }
-  .ex-preview .ex-summary { -webkit-line-clamp: 2; font-size: 12px; }
-  .ex-tools { left: 16px; bottom: 16px; gap: 5px; }
-  .ex-tools button { padding: 8px 10px; font-size: 12px; }
+  .ex-preview h2 { font-size: 20px; line-height: 26px; margin-bottom: 4px; }
+  .ex-preview .ex-summary { -webkit-line-clamp: 2; font-size: 13px; line-height: 18px; margin-bottom: 12px; }
+  .ex-preview .ex-open { min-height: 40px; padding: 8px 16px; font-size: 14px; margin: 0; }
+  .ex-guide { padding: 24px; }
+  .ex-guide .ex-start { width: 100%; justify-content: space-between; padding: 8px 16px; font-size: 16px; }
+  .ex-tools { left: 16px; bottom: 16px; gap: 6px; }
+  .ex-tools button { min-height: 36px; padding: 8px 14px; font-size: 12px; }
   .ex-marker { font-size: 10px !important; }
   .ex-hint { display: none; }
   .ex-compass { bottom: 64px; }
 }
+@keyframes ex-card-up { from { opacity: 0; transform: translateY(12px); } }
 @media (prefers-reduced-motion: reduce) { .ex-layer * { transition: none !important; animation: none !important; } }
 `;
 
